@@ -9,10 +9,13 @@ import (
 )
 
 var BotID string
+var Users map[string]bool
 
 func main() {
 	InitialiseConfiguration()
 	SetupServers()
+
+	Users = make(map[string]bool)
 
 	dg, err := discordgo.New(fmt.Sprintf("Bot %s", Conf.DiscordToken))
 	if err != nil {
@@ -57,27 +60,43 @@ func MessageCreate(s *discordgo.Session, m *discordgo.MessageCreate) {
 		log.Println("Booking a server for", m.Author.Username, "!")
 
 		User := &PatchUser{m.Author}
+
+		if value, _ := Users[m.Author.ID]; value == true {
+			// User has already booked a server.
+			s.ChannelMessageSend(m.ChannelID, fmt.Sprintf("%s: You've already booked a server. Type `unbook` to return the server.", User.GetMention()))
+			return
+		}
+
 		Serv := GetAvailableServer()
 
 		if Serv != nil {
 			// Book the server.
-			_, _, err := Serv.Book(m.Author)
+			RCONPassword, ServerPassword, err := Serv.Book(m.Author)
 			if err != nil {
 				s.ChannelMessageSend(m.ChannelID, fmt.Sprintf("%s: Something went wrong while trying to book your server, please try again later.", User.GetMention()))
 			} else {
+				// Send message to public channel, without server details.
 				s.ChannelMessageSend(m.ChannelID, fmt.Sprintf("%s: Server details have been sent via private message.", User.GetMention()))
 
-				// Send message.
+				// Send message to private DM, with server details.
+				UserChannel, _ := s.UserChannelCreate(m.Author.ID)
+				s.ChannelMessageSend(
+					UserChannel.ID,
+					fmt.Sprintf(
+						"Here is your server:\n\tServer address: %s\n\tRCON Password: %s\n\tPassword: %s\n\tConnect string: `connect %s; password %s`",
+						Serv.Address,
+						RCONPassword,
+						ServerPassword,
+						Serv.Address,
+						ServerPassword,
+					),
+				)
+
+				Users[m.Author.ID] = true
 			}
 		} else {
 			s.ChannelMessageSend(m.ChannelID, fmt.Sprintf("%s: No servers are currently available.", User.GetMention()))
 		}
-
-		// RCON, Server, err := Serv.Book(m.Author)
-		// if err != nil {
-		//	log.Println("Booking server failed:", err)
-		//}
-		// log.Println("Server booked:", RCON, Server)
 	case "return", "return a server", "unbook", "unbook a server":
 		log.Println("Unbooking a server for", m.Author.Username, "!")
 	}
