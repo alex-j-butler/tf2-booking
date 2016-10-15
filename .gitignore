@@ -4,6 +4,8 @@
 ### Custom ###
 config.json
 tf2-booking
+.vscode
+debug
 
 ### Go ###
 # Compiled Object files, Static and Dynamic libs (Shared Objects)
