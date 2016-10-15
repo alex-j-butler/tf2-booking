@@ -1,9 +1,6 @@
 package main
 
-import (
-	"fmt"
-	"log"
-)
+import ()
 
 type ServerConfig struct {
 	Name    string
@@ -26,11 +23,20 @@ func SetupServers() {
 
 func GetAvailableServer() *Server {
 	for i := 0; i < len(Servers); i++ {
-		log.Println(fmt.Sprintf("Server %s is available: %d", Servers[i].Name, Servers[i].IsAvailable()))
 		if Servers[i].IsAvailable() {
 			return &Servers[i]
 		}
 	}
 
 	return nil
+}
+
+func GetAvailableServers() []*Server {
+	servers := make([]*Server, 0, len(Servers))
+	for i := 0; i < len(Servers); i++ {
+		if Servers[i].IsAvailable() {
+			servers = append(servers, &Servers[i])
+		}
+	}
+	return servers
 }

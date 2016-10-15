@@ -50,6 +50,9 @@ func main() {
 		return
 	}
 
+	log.Println("Updated game string.")
+	UpdateGameString()
+
 	log.Println("Discord bot successfully started.")
 
 	// Keep running until Control-C pressed.
@@ -68,8 +71,6 @@ func MessageCreate(s *discordgo.Session, m *discordgo.MessageCreate) {
 
 	switch Message {
 	case "book a server", "book":
-		log.Println("Booking a server for", m.Author.Username, "!")
-
 		User := &PatchUser{m.Author}
 
 		// Check if the user has already booked a server out.
@@ -106,6 +107,10 @@ func MessageCreate(s *discordgo.Session, m *discordgo.MessageCreate) {
 
 				Users[m.Author.ID] = true
 				UserServers[m.Author.ID] = Serv
+
+				UpdateGameString()
+
+				log.Println(fmt.Sprintf("Booked server \"%s\" from \"%s\"", Serv.Name, m.Author.ID))
 			}
 		} else {
 			s.ChannelMessageSend(m.ChannelID, fmt.Sprintf("%s: No servers are currently available.", User.GetMention()))
@@ -140,6 +145,10 @@ func MessageCreate(s *discordgo.Session, m *discordgo.MessageCreate) {
 				s.ChannelMessageSend(m.ChannelID, fmt.Sprintf("%s: %s", User.GetMention(), STVMessage))
 			}
 
+			UpdateGameString()
+
+			log.Println(fmt.Sprintf("Unbooked server \"%s\" from \"%s\"", Serv.Name, m.Author.ID))
+
 			return
 		} else {
 			s.ChannelMessageSend(m.ChannelID, fmt.Sprintf("%s: You haven't booked a server. Type `book` to book a server.", User.GetMention()))
@@ -165,7 +174,7 @@ func CheckServers() {
 	// Iterate through servers.
 	for i := 0; i < len(Servers); i++ {
 		since := time.Since(Servers[i].GetBookedTime())
-		if !Servers[i].IsAvailable() && since > (1*time.Minute) {
+		if !Servers[i].IsAvailable() && since > (4*time.Hour) {
 			UserID := Servers[i].GetBooker()
 			UserMention := Servers[i].GetBookerMention()
 
@@ -187,7 +196,9 @@ func CheckServers() {
 				Session.ChannelMessageSend(Conf.DefaultChannel, fmt.Sprintf("%s: %s", UserMention, STVMessage))
 			}
 
-			log.Println(fmt.Sprintf("Unbooked server %s from %s", Servers[i].Name, UserID))
+			UpdateGameString()
+
+			log.Println(fmt.Sprintf("Automatically unbooked server \"%s\" from \"%s\"", Servers[i].Name, UserID))
 		}
 	}
 }
