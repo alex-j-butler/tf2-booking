@@ -4,18 +4,25 @@ import (
 	"fmt"
 	"log"
 	"strings"
+	"time"
 
 	"github.com/bwmarrin/discordgo"
+	"github.com/robfig/cron"
 )
 
+var c *cron.Cron
+var Session *discordgo.Session
 var BotID string
 var Users map[string]bool
+var UserServers map[string]*Server
 
 func main() {
 	InitialiseConfiguration()
 	SetupServers()
+	SetupCron()
 
 	Users = make(map[string]bool)
+	UserServers = make(map[string]*Server)
 
 	dg, err := discordgo.New(fmt.Sprintf("Bot %s", Conf.DiscordToken))
 	if err != nil {
@@ -30,6 +37,7 @@ func main() {
 		return
 	}
 
+	Session = dg
 	BotID = u.ID
 
 	// Register a message create handler.
@@ -46,6 +54,9 @@ func main() {
 
 	// Keep running until Control-C pressed.
 	<-make(chan struct{})
+
+	// Stop cron.
+	c.Stop()
 }
 
 func MessageCreate(s *discordgo.Session, m *discordgo.MessageCreate) {
@@ -61,8 +72,9 @@ func MessageCreate(s *discordgo.Session, m *discordgo.MessageCreate) {
 
 		User := &PatchUser{m.Author}
 
+		// Check if the user has already booked a server out.
 		if value, _ := Users[m.Author.ID]; value == true {
-			// User has already booked a server.
+			// Send a message to let the user know they've already booked a server.
 			s.ChannelMessageSend(m.ChannelID, fmt.Sprintf("%s: You've already booked a server. Type `unbook` to return the server.", User.GetMention()))
 			return
 		}
@@ -93,11 +105,89 @@ func MessageCreate(s *discordgo.Session, m *discordgo.MessageCreate) {
 				)
 
 				Users[m.Author.ID] = true
+				UserServers[m.Author.ID] = Serv
 			}
 		} else {
 			s.ChannelMessageSend(m.ChannelID, fmt.Sprintf("%s: No servers are currently available.", User.GetMention()))
 		}
 	case "return", "return a server", "unbook", "unbook a server":
+		User := &PatchUser{m.Author}
+
+		// Check if the user has already booked a server out.
+		if value, ok := Users[m.Author.ID]; !ok || value == false {
+			// Send a message to let the user know they do not have a server booked.
+			s.ChannelMessageSend(m.ChannelID, fmt.Sprintf("%s: You haven't booked a server. Type `book` to book a server.", User.GetMention()))
+
+			return
+		}
+
+		if Serv, ok := UserServers[m.Author.ID]; ok && Serv != nil {
+			// Remove the user's booked state.
+			Users[m.Author.ID] = false
+			UserServers[m.Author.ID] = nil
+
+			// Unbook the server.
+			Serv.Unbook()
+
+			// Upload STV demos
+			STVMessage, err := Serv.UploadSTV()
+
+			// Send 'returned' message.
+			s.ChannelMessageSend(m.ChannelID, fmt.Sprintf("%s: Server returned.", User.GetMention()))
+
+			// Send 'stv' message, if it uploaded successfully.
+			if err == nil {
+				s.ChannelMessageSend(m.ChannelID, fmt.Sprintf("%s: %s", User.GetMention(), STVMessage))
+			}
+
+			return
+		} else {
+			s.ChannelMessageSend(m.ChannelID, fmt.Sprintf("%s: You haven't booked a server. Type `book` to book a server.", User.GetMention()))
+
+			// We're in an invalid state, reset back to normal.
+			Users[m.Author.ID] = false
+			UserServers[m.Author.ID] = nil
+
+			return
+		}
+
 		log.Println("Unbooking a server for", m.Author.Username, "!")
+	}
+}
+
+func SetupCron() {
+	c = cron.New()
+	c.AddFunc("*/1 * * * *", CheckServers)
+	c.Start()
+}
+
+func CheckServers() {
+	// Iterate through servers.
+	for i := 0; i < len(Servers); i++ {
+		since := time.Since(Servers[i].GetBookedTime())
+		if !Servers[i].IsAvailable() && since > (1*time.Minute) {
+			UserID := Servers[i].GetBooker()
+			UserMention := Servers[i].GetBookerMention()
+
+			// Remove the user's booked state.
+			Users[UserID] = false
+			UserServers[UserID] = nil
+
+			// Unbook the server.
+			Servers[i].Unbook()
+
+			// Upload STV demos
+			STVMessage, err := Servers[i].UploadSTV()
+
+			// Send 'returned' message
+			Session.ChannelMessageSend(Conf.DefaultChannel, fmt.Sprintf("%s: Your server was automatically unbooked.", UserMention))
+
+			// Send 'stv' message, if it uploaded successfully.
+			if err == nil {
+				Session.ChannelMessageSend(Conf.DefaultChannel, fmt.Sprintf("%s: %s", UserMention, STVMessage))
+			}
+
+			log.Println(fmt.Sprintf("Unbooked server %s from %s", Servers[i].Name, UserID))
+		}
 	}
 }

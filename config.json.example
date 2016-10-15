@@ -1,5 +1,10 @@
 {
     "discord_token": "discord bot token",
+    "default_channel": "channel id",
+    "acceptable_channels":
+    [
+        "channel id"
+    ],
     "servers":
     [
         {
