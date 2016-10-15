@@ -66,6 +66,10 @@ func MessageCreate(s *discordgo.Session, m *discordgo.MessageCreate) {
 		return
 	}
 
+	if !Contains(Conf.AcceptableChannels, m.ChannelID) {
+		return
+	}
+
 	Message := strings.ToLower(m.Content)
 
 	switch Message {
