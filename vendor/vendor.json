@@ -3,6 +3,12 @@
 	"ignore": "test",
 	"package": [
 		{
+			"checksumSHA1": "2avCvSn0XonfApKKuTMyiQmk7s0=",
+			"path": "github.com/Sirupsen/logrus",
+			"revision": "3ec0642a7fb6488f65b06f9040adc67e3990296a",
+			"revisionTime": "2016-08-29T20:23:21Z"
+		},
+		{
 			"checksumSHA1": "Vzxe0C8yKCQwMZglGqmztF+HD9w=",
 			"path": "github.com/bwmarrin/discordgo",
 			"revision": "f878362d73b01a051091faaa012deeb7a85204af",
@@ -13,6 +19,12 @@
 			"path": "github.com/gorilla/websocket",
 			"revision": "2d1e4548da234d9cb742cc3628556fef86aafbac",
 			"revisionTime": "2016-09-12T15:30:41Z"
+		},
+		{
+			"checksumSHA1": "yGgcQlZNpKhjZAbElPSECbSSNXE=",
+			"path": "github.com/kidoman/go-steam",
+			"revision": "2e40e0d508cbac591bab4ae18b231153295f3a0a",
+			"revisionTime": "2014-12-21T01:56:29Z"
 		},
 		{
 			"checksumSHA1": "PphQA6j/DEDbg3WIsdBDYALOOYs=",
@@ -37,6 +49,12 @@
 			"path": "golang.org/x/crypto/salsa20/salsa",
 			"revision": "5f31782cfb2b6373211f8f9fbf31283fa234b570",
 			"revisionTime": "2016-10-12T21:56:05Z"
+		},
+		{
+			"checksumSHA1": "Xz3hUrPvOYGWTuHrEryoYAj9zwg=",
+			"path": "golang.org/x/sys/unix",
+			"revision": "9bb9f0998d48b31547d975974935ae9b48c7a03c",
+			"revisionTime": "2016-10-11T23:07:22Z"
 		}
 	],
 	"rootPath": "alex-j-butler.com/tf2-booking"

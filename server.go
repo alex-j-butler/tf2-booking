@@ -25,6 +25,8 @@ type Server struct {
 
 	host string
 	port int
+
+	idleMinutes int
 }
 
 // Returns whether the server is currently available for booking.
@@ -42,6 +44,18 @@ func (s *Server) GetBooker() string {
 
 func (s *Server) GetBookerMention() string {
 	return s.bookerMention
+}
+
+func (s *Server) GetIdleMinutes() int {
+	return s.idleMinutes
+}
+
+func (s *Server) AddIdleMinute() {
+	s.idleMinutes++
+}
+
+func (s *Server) ResetIdleMinutes() {
+	s.idleMinutes = 0
 }
 
 // Setup the server with a randomised RCON password & server password from a bash script.
