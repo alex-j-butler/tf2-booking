@@ -18,7 +18,6 @@ var UserServers map[string]*Server
 
 func main() {
 	InitialiseConfiguration()
-	SetupServers()
 	SetupCron()
 
 	Users = make(map[string]bool)
@@ -172,21 +171,21 @@ func SetupCron() {
 
 func CheckServers() {
 	// Iterate through servers.
-	for i := 0; i < len(Servers); i++ {
-		since := time.Since(Servers[i].GetBookedTime())
-		if !Servers[i].IsAvailable() && since > (4*time.Hour) {
-			UserID := Servers[i].GetBooker()
-			UserMention := Servers[i].GetBookerMention()
+	for i := 0; i < len(Conf.Servers); i++ {
+		since := time.Since(Conf.Servers[i].GetBookedTime())
+		if !Conf.Servers[i].IsAvailable() && since > (4*time.Hour) {
+			UserID := Conf.Servers[i].GetBooker()
+			UserMention := Conf.Servers[i].GetBookerMention()
 
 			// Remove the user's booked state.
 			Users[UserID] = false
 			UserServers[UserID] = nil
 
 			// Unbook the server.
-			Servers[i].Unbook()
+			Conf.Servers[i].Unbook()
 
 			// Upload STV demos
-			STVMessage, err := Servers[i].UploadSTV()
+			STVMessage, err := Conf.Servers[i].UploadSTV()
 
 			// Send 'returned' message
 			Session.ChannelMessageSend(Conf.DefaultChannel, fmt.Sprintf("%s: Your server was automatically unbooked.", UserMention))
@@ -198,7 +197,7 @@ func CheckServers() {
 
 			UpdateGameString()
 
-			log.Println(fmt.Sprintf("Automatically unbooked server \"%s\" from \"%s\"", Servers[i].Name, UserID))
+			log.Println(fmt.Sprintf("Automatically unbooked server \"%s\" from \"%s\"", Conf.Servers[i].Name, UserID))
 		}
 	}
 }

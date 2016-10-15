@@ -7,10 +7,10 @@ import (
 )
 
 type Config struct {
-	DiscordToken       string         `json:"discord_token"`
-	DefaultChannel     string         `json:"default_channel"`
-	AcceptableChannels []string       `json:"acceptable_channels"`
-	Servers            []ServerConfig `json:"servers"`
+	DiscordToken       string   `json:"discord_token"`
+	DefaultChannel     string   `json:"default_channel"`
+	AcceptableChannels []string `json:"acceptable_channels"`
+	Servers            []Server `json:"servers"`
 }
 
 var Conf Config

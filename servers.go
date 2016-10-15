@@ -2,6 +2,7 @@ package main
 
 import ()
 
+/*
 type ServerConfig struct {
 	Name    string
 	Path    string
@@ -20,11 +21,12 @@ func SetupServers() {
 		})
 	}
 }
+*/
 
 func GetAvailableServer() *Server {
-	for i := 0; i < len(Servers); i++ {
-		if Servers[i].IsAvailable() {
-			return &Servers[i]
+	for i := 0; i < len(Conf.Servers); i++ {
+		if Conf.Servers[i].IsAvailable() {
+			return &Conf.Servers[i]
 		}
 	}
 
@@ -32,10 +34,10 @@ func GetAvailableServer() *Server {
 }
 
 func GetAvailableServers() []*Server {
-	servers := make([]*Server, 0, len(Servers))
-	for i := 0; i < len(Servers); i++ {
-		if Servers[i].IsAvailable() {
-			servers = append(servers, &Servers[i])
+	servers := make([]*Server, 0, len(Conf.Servers))
+	for i := 0; i < len(Conf.Servers); i++ {
+		if Conf.Servers[i].IsAvailable() {
+			servers = append(servers, &Conf.Servers[i])
 		}
 	}
 	return servers
