@@ -165,5 +165,6 @@ func MessageCreate(s *discordgo.Session, m *discordgo.MessageCreate) {
 func SetupCron() {
 	c = cron.New()
 	c.AddFunc("*/1 * * * *", CheckUnbookServers)
+	c.AddFunc("0 * * * *", CheckIdleMinutes)
 	c.Start()
 }

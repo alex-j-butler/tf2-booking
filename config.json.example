@@ -5,6 +5,8 @@
     [
         "channel id"
     ],
+    "max_idle_minutes": 2,
+    "min_players": 2,
     "servers":
     [
         {
