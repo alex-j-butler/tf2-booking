@@ -13,9 +13,12 @@ import (
 )
 
 type Server struct {
-	Name    string
-	Path    string
-	Address string
+	Name        string
+	Path        string
+	Address     string
+	SessionName string
+
+	SentWarning bool
 
 	booked     bool
 	bookedDate time.Time
@@ -87,6 +90,8 @@ func (s *Server) Setup() (string, string, error) {
 		return "", "", errors.New("Your server could not be setup")
 	}
 
+	s.SentWarning = false
+
 	// Trim passwords.
 	RCONPassword := strings.TrimSpace(string(stdoutBytes))
 	ServerPassword := strings.TrimSpace(string(stderrBytes))
@@ -148,6 +153,7 @@ func (s *Server) Book(user *discordgo.User) (string, string, error) {
 	s.bookedDate = time.Now()
 	s.booker = user.ID
 	s.bookerMention = fmt.Sprintf("<@%s>", user.ID)
+	s.SentWarning = false
 
 	var err error
 
@@ -174,6 +180,7 @@ func (s *Server) Unbook() error {
 	s.bookedDate = time.Time{}
 	s.booker = ""
 	s.bookerMention = ""
+	s.SentWarning = false
 
 	// Stop the server.
 	err := s.Stop()
@@ -214,4 +221,25 @@ func (s *Server) UploadSTV() (string, error) {
 	}
 
 	return Message, nil
+}
+
+func (s *Server) SendCommand(command string) error {
+	process := exec.Command("tmux", "send-keys", "-t", s.SessionName, "C-m", command, "C-m")
+
+	var err error
+	err = process.Start()
+
+	if err != nil {
+		log.Println("Failed to send command:", err)
+		return errors.New("Your server failed to respond to commands")
+	}
+
+	err = process.Wait()
+
+	if err != nil {
+		log.Println("Failed to send command:", err)
+		return errors.New("Your server failed to respond to commands")
+	}
+
+	return nil
 }

@@ -13,7 +13,18 @@ func CheckUnbookServers() {
 	// Iterate through servers.
 	for i := 0; i < len(Conf.Servers); i++ {
 		since := time.Since(Conf.Servers[i].GetBookedTime())
-		if !Conf.Servers[i].IsAvailable() && since > (4*time.Hour) {
+
+		unbookTime := 4 * time.Hour
+
+		if !Conf.Servers[i].IsAvailable() && !Conf.Servers[i].SentWarning && since > unbookTime-(10*time.Minute) {
+			// Only allow this message to be sent once.
+			Conf.Servers[i].SentWarning = true
+
+			// Send warning message.
+			Conf.Servers[i].SendCommand("say Your booking will expire in 10 minutes, type 'extend' into Discord to extend the booking")
+		}
+
+		if !Conf.Servers[i].IsAvailable() && since > unbookTime {
 			UserID := Conf.Servers[i].GetBooker()
 			UserMention := Conf.Servers[i].GetBookerMention()
 

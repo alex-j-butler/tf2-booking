@@ -161,8 +161,32 @@ func MessageCreate(s *discordgo.Session, m *discordgo.MessageCreate) {
 
 			return
 		}
+	case "extend", "extend a server", "extend my server", "extend booking", "extend my booking":
+		User := &PatchUser{m.Author}
 
-		log.Println("Unbooking a server for", m.Author.Username, "!")
+		// Check if the user has already booked a server out.
+		if value, ok := Users[m.Author.ID]; !ok || value == false {
+			// Send a message to let the user know they do not have a server booked.
+			s.ChannelMessageSend(m.ChannelID, fmt.Sprintf("%s: You haven't booked a server. Type `book` to book a server.", User.GetMention()))
+
+			return
+		}
+
+		if Serv, ok := UserServers[m.Author.ID]; ok && Serv != nil {
+			// Send server message.
+			Serv.SendCommand(fmt.Sprintf("say @%s: Your booking has been extended by 2 hours.", m.Author.Username))
+
+			// Send Discord message.
+			s.ChannelMessageSend(m.ChannelID, fmt.Sprintf("%s: Your booking has been extended by 2 hours.", User.GetMention()))
+		} else {
+			s.ChannelMessageSend(m.ChannelID, fmt.Sprintf("%s: You haven't booked a server. Type `book` to book a server.", User.GetMention()))
+
+			// We're in an invalid state, reset back to normal.
+			Users[m.Author.ID] = false
+			UserServers[m.Author.ID] = nil
+
+			return
+		}
 	}
 }
 

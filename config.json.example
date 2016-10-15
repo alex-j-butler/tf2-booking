@@ -12,7 +12,8 @@
         {
             "name": "Server name",
             "path": "/home/example/example_server",
-            "address": "127.0.0.1:27015"
+            "address": "127.0.0.1:27015",
+            "session_name": "server_session"
         }
     ]
 }
