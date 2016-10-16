@@ -19,6 +19,7 @@ type Server struct {
 	SessionName string
 
 	SentWarning bool
+	ReturnDate  time.Time
 
 	booked     bool
 	bookedDate time.Time
@@ -149,6 +150,7 @@ func (s *Server) Book(user *discordgo.User) (string, string, error) {
 	}
 
 	// Set the server variables.
+	s.ReturnDate = time.Now().Add(4 * time.Hour)
 	s.booked = true
 	s.bookedDate = time.Now()
 	s.booker = user.ID
@@ -176,6 +178,7 @@ func (s *Server) Unbook() error {
 	}
 
 	// Set the server variables.
+	s.ReturnDate = time.Time{}
 	s.booked = false
 	s.bookedDate = time.Time{}
 	s.booker = ""
@@ -186,6 +189,11 @@ func (s *Server) Unbook() error {
 	err := s.Stop()
 
 	return err
+}
+
+func (s *Server) ExtendBooking(amount time.Duration) {
+	// Add duration to the return date.
+	s.ReturnDate = s.ReturnDate.Add(amount)
 }
 
 func (s *Server) UploadSTV() (string, error) {

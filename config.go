@@ -12,7 +12,16 @@ type Config struct {
 	AcceptableChannels []string `json:"acceptable_channels"`
 	MaxIdleMinutes     int      `json:"max_idle_minutes"`
 	MinPlayers         int      `json:"min_players"`
-	Servers            []Server `json:"servers"`
+
+	BookingDuration        DurationUtil `json:"booking_duration"`
+	BookingExtendDuration  DurationUtil `json:"booking_extend_duration"`
+	BookingWarningDuration DurationUtil `json:"booking_warning_duration"`
+
+	BookingDurationText        string `json:"booking_duration_text"`
+	BookingExtendDurationText  string `json:"booking_extend_duration_text"`
+	BookingWarningDurationText string `json:"booking_warning_duration_text"`
+
+	Servers []Server `json:"servers"`
 }
 
 var Conf Config

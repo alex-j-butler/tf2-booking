@@ -173,6 +173,9 @@ func MessageCreate(s *discordgo.Session, m *discordgo.MessageCreate) {
 		}
 
 		if Serv, ok := UserServers[m.Author.ID]; ok && Serv != nil {
+			// Extend the booking.
+			Serv.ExtendBooking(Conf.BookingExtendDuration.Duration)
+
 			// Send server message.
 			Serv.SendCommand(fmt.Sprintf("say @%s: Your booking has been extended by 2 hours.", m.Author.Username))
 
