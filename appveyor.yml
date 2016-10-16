@@ -1,0 +1,36 @@
+version: 1.1.{build}
+
+clone_folder: C:\Gopath\src\alex-j-butler.com\tf2-booking
+
+environment:
+  GOPATH: C:\Gopath
+
+install:
+  - go get -u github.com/kardianos/govendor
+  - cd C:\Gopath\src\alex-j-butler.com\tf2-booking
+  - C:\Gopath\bin\govendor sync
+
+build_script:
+  - set GOOS=linux
+  - set GOARCH=amd64
+  - C:\Gopath\bin\govendor build -o tf2-booking-amd64 +local
+  - set GOOS=linux
+  - set GOARCH=386
+  - C:\Gopath\bin\govendor build -o tf2-booking-i386 +local
+
+artifacts:
+  - path: tf2-booking-amd64
+    name: amd64
+  - path: tf2-booking-i386
+    name: i386
+
+deploy:
+  - provider: GitHub
+    release: tf2-booking-v$(appveyor_build_version)
+    description: 'TF2 Booking Release'
+    auth_token:
+      secure: 8PJlwRCwPRHnmZW04oIQH/F4YnmNOpItOgrO2wh+ujGSstOsr+f+9iQ9Z/HtnxIN
+    artifact: amd64, i386
+    on:
+      branch: master
+      appveyor_repo_tag: true
