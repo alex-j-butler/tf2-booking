@@ -29,7 +29,7 @@ deploy:
     release: tf2-booking-v$(appveyor_build_version)
     description: 'TF2 Booking Release'
     auth_token:
-      secure: 8PJlwRCwPRHnmZW04oIQH/F4YnmNOpItOgrO2wh+ujGSstOsr+f+9iQ9Z/HtnxIN
+      secure: l1dGkFTQjFWX4tUrpGOkgDtXyk/+XBVkpafkQB5aA8f8gKPtGgQJN5PxOvntW4Ox
     artifact: amd64, i386
     on:
       branch: master
