@@ -30,7 +30,8 @@ type Server struct {
 	host string
 	port int
 
-	idleMinutes int
+	idleMinutes  int
+	errorMinutes int
 }
 
 // Returns whether the server is currently available for booking.
