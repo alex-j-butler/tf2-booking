@@ -5,14 +5,23 @@
     [
         "channel id"
     ],
+
     "max_idle_minutes": 2,
     "min_players": 2,
+
+    "error_threshold": 1,
+    "notification_users":
+    [
+        "user id"
+    ],
+
     "booking_duration": "4h",
     "booking_extend_duration": "2h",
     "booking_warning_duration": "10m",
     "booking_duration_text": "4 hours",
     "booking_extend_duration_text": "2 hours",
     "booking_warning_duration_text": "10 minutes",
+
     "servers":
     [
         {
