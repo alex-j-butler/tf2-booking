@@ -13,6 +13,9 @@ type Config struct {
 	MaxIdleMinutes     int      `json:"max_idle_minutes"`
 	MinPlayers         int      `json:"min_players"`
 
+	ErrorThreshold    int      `json:"error_threshold"`
+	NotificationUsers []string `json:"notification_users"`
+
 	BookingDuration        DurationUtil `json:"booking_duration"`
 	BookingExtendDuration  DurationUtil `json:"booking_extend_duration"`
 	BookingWarningDuration DurationUtil `json:"booking_warning_duration"`
