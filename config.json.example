@@ -5,8 +5,16 @@
     [
         "channel id"
     ],
+
     "max_idle_minutes": 2,
     "min_players": 2,
+
+    "error_threshold": 1,
+    "notification_users":
+    [
+        "user id"
+    ],
+
     "servers":
     [
         {
