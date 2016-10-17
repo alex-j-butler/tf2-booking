@@ -14,10 +14,10 @@ install:
 build_script:
   - set GOOS=linux
   - set GOARCH=amd64
-  - C:\Gopath\bin\govendor build -o tf2-booking-amd64 +local
+  - C:\Gopath\bin\govendor build -o tf2-booking-amd64
   - set GOOS=linux
   - set GOARCH=386
-  - C:\Gopath\bin\govendor build -o tf2-booking-i386 +local
+  - C:\Gopath\bin\govendor build -o tf2-booking-i386
 
 artifacts:
   - path: tf2-booking-amd64
