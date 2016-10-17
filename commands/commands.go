@@ -39,8 +39,7 @@ func (c *Command) Remove(commands ...string) {
 	}
 }
 
-// Handle
-// Handles the incoming commands and dispatches them to the appropriate
+// Handle the incoming commands and dispatches them to the appropriate
 // command handler, after parsing them.
 func (c *Command) Handle(m *discordgo.MessageCreate, command string) {
 	for str, handler := range c.Handlers {
