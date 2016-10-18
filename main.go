@@ -12,11 +12,20 @@ import (
 )
 
 var c *cron.Cron
+
+// Session is an instance of the Discord client.
 var Session *discordgo.Session
+
+// BotID represents the ID of the current user.
 var BotID string
+
+// Users maps user IDs to booking state (true = booked, false = unbooked)
 var Users map[string]bool
+
+// UserServers maps user IDs to server pointers.
 var UserServers map[string]*Server
 
+// Command system
 var Command *commands.Command
 
 func main() {
@@ -29,6 +38,7 @@ func main() {
 	Command.Add(UnbookServer, "return", "return a server", "unbook", "unbook a server")
 	Command.Add(ExtendServer, "extend", "extend a server", "extend my server", "extend booking", "extend my booking")
 
+	// Create maps.
 	Users = make(map[string]bool)
 	UserServers = make(map[string]*Server)
 
@@ -87,6 +97,7 @@ func BookServer(m *discordgo.MessageCreate, command string, args []string) {
 		return
 	}
 
+	// Get the next available server.
 	Serv := GetAvailableServer()
 
 	if Serv != nil {
@@ -182,7 +193,7 @@ func ExtendServer(m *discordgo.MessageCreate, command string, args []string) {
 
 	// Check if the user has already booked a server out.
 	if value, ok := Users[m.Author.ID]; !ok || value == false {
-		// Send a message to let the user know they do not have a server booked.
+		// Notify Discord channel to let the user know they do not have a server booked.
 		Session.ChannelMessageSend(m.ChannelID, fmt.Sprintf("%s: You haven't booked a server. Type `book` to book a server.", User.GetMention()))
 
 		return
@@ -192,15 +203,17 @@ func ExtendServer(m *discordgo.MessageCreate, command string, args []string) {
 		// Extend the booking.
 		Serv.ExtendBooking(Conf.BookingExtendDuration.Duration)
 
-		// Send server message.
+		// Notify server of successful operation.
 		Serv.SendCommand(fmt.Sprintf("say @%s: Your booking has been extended by 2 hours.", m.Author.Username))
 
-		// Send Discord message.
+		// Notify Discord channel of successful operation.
 		Session.ChannelMessageSend(m.ChannelID, fmt.Sprintf("%s: Your booking has been extended by 2 hours.", User.GetMention()))
 	} else {
+		// Notify Discord channel of failed operation.
 		Session.ChannelMessageSend(m.ChannelID, fmt.Sprintf("%s: You haven't booked a server. Type `book` to book a server.", User.GetMention()))
 
-		// We're in an invalid state, reset back to normal.
+		// If the program execution reaches here, the state of the users & user-servers map
+		// is invalid and should be reset to the 'unbooked' state.
 		Users[m.Author.ID] = false
 		UserServers[m.Author.ID] = nil
 
@@ -211,6 +224,7 @@ func ExtendServer(m *discordgo.MessageCreate, command string, args []string) {
 // MessageCreate handler for Discord.
 // Called when a message is received by the Discord client.
 func MessageCreate(s *discordgo.Session, m *discordgo.MessageCreate) {
+	// Do not process messages that were created by the current user.
 	if m.Author.ID == BotID {
 		return
 	}
@@ -221,7 +235,7 @@ func MessageCreate(s *discordgo.Session, m *discordgo.MessageCreate) {
 		return
 	}
 
-	// Handle command.
+	// Send the message content to the command handler to be dispatched appropriately.
 	Command.Handle(m, strings.ToLower(m.Content))
 }
 
