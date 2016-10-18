@@ -61,6 +61,9 @@ func CheckIdleMinutes() {
 				server, err := steam.Connect(Serv.Address)
 				if err != nil {
 					log.Println(fmt.Sprintf("Failed to connect to server \"%s\":", Serv.Name), err)
+
+					HandleQueryError(Serv, err)
+
 					return
 				}
 
@@ -69,6 +72,9 @@ func CheckIdleMinutes() {
 				info, err := server.Info()
 				if err != nil {
 					log.Println(fmt.Sprintf("Failed to query server \"%s\":", Serv.Name), err)
+
+					HandleQueryError(Serv, err)
+
 					return
 				}
 
