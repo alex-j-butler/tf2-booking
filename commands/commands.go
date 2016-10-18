@@ -46,7 +46,7 @@ func (c *Command) Handle(m *discordgo.MessageCreate, command string) {
 		if command == str {
 			var fixedCommand string
 			if strings.HasPrefix(command, c.Prefix) {
-				fixedCommand = command[len(c.Prefix)-1 : len(command)]
+				fixedCommand = command[len(c.Prefix):len(command)]
 			} else {
 				fixedCommand = command
 			}
