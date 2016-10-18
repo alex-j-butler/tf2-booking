@@ -125,6 +125,9 @@ func (s *Server) Start() error {
 }
 
 func (s *Server) Stop() error {
+	// Stop the STV recording and kick all players cleanly.
+	s.SendCommand("tv_stop; kickall \"Server has been unbooked! Thanks for using Qixalite's bookable servers!\"")
+
 	process := exec.Command("sh", "-c", fmt.Sprintf("cd %s; %s/run sp", s.Path, s.Path))
 
 	var err error
@@ -167,9 +170,6 @@ func (s *Server) Book(user *discordgo.User) (string, string, error) {
 		return "", "", err
 	}
 
-	// Start the server.
-	err = s.Start()
-
 	return RCONPassword, ServerPassword, err
 }
 
@@ -186,10 +186,7 @@ func (s *Server) Unbook() error {
 	s.bookerMention = ""
 	s.SentWarning = false
 
-	// Stop the server.
-	err := s.Stop()
-
-	return err
+	return nil
 }
 
 func (s *Server) ExtendBooking(amount time.Duration) {

@@ -107,6 +107,28 @@ func BookServer(m *discordgo.MessageCreate, command string, args []string) {
 		if err != nil {
 			Session.ChannelMessageSend(m.ChannelID, fmt.Sprintf("%s: Something went wrong while trying to book your server, please try again later.", User.GetMention()))
 		} else {
+			// Start the server.
+			go func() {
+				err := Serv.Start()
+
+				if err != nil {
+					UserChannel, _ := Session.UserChannelCreate(m.Author.ID)
+					Session.ChannelMessageSend(
+						UserChannel.ID,
+						fmt.Sprintf(
+							"Uh oh! The server failed to start, contact an admin for further information.",
+						),
+					)
+
+					Users[m.Author.ID] = false
+					UserServers[m.Author.ID] = nil
+
+					UpdateGameString()
+
+					log.Println(fmt.Sprintf("Failed to start server \"%s\" from \"%s\"", Serv.Name, m.Author.ID))
+				}
+			}()
+
 			// Send message to public channel, without server details.
 			Session.ChannelMessageSend(m.ChannelID, fmt.Sprintf("%s: Server details have been sent via private message.", User.GetMention()))
 
@@ -153,6 +175,21 @@ func UnbookServer(m *discordgo.MessageCreate, command string, args []string) {
 	}
 
 	if Serv, ok := UserServers[m.Author.ID]; ok && Serv != nil {
+		// Stop the server.
+		go func() {
+			err := Serv.Stop()
+
+			if err != nil {
+				UserChannel, _ := Session.UserChannelCreate(m.Author.ID)
+				Session.ChannelMessageSend(
+					UserChannel.ID,
+					fmt.Sprintf(
+						"Uh oh! The server failed to stop, contact an admin for further information, or leave us to handle it.",
+					),
+				)
+			}
+		}()
+
 		// Remove the user's booked state.
 		Users[m.Author.ID] = false
 		UserServers[m.Author.ID] = nil
