@@ -4,6 +4,8 @@ import (
 	"encoding/json"
 	"io/ioutil"
 	"log"
+
+	"alex-j-butler.com/tf2-booking/util"
 )
 
 type Config struct {
@@ -16,9 +18,9 @@ type Config struct {
 	ErrorThreshold    int      `json:"error_threshold"`
 	NotificationUsers []string `json:"notification_users"`
 
-	BookingDuration        DurationUtil `json:"booking_duration"`
-	BookingExtendDuration  DurationUtil `json:"booking_extend_duration"`
-	BookingWarningDuration DurationUtil `json:"booking_warning_duration"`
+	BookingDuration        util.DurationUtil `json:"booking_duration"`
+	BookingExtendDuration  util.DurationUtil `json:"booking_extend_duration"`
+	BookingWarningDuration util.DurationUtil `json:"booking_warning_duration"`
 
 	BookingDurationText        string `json:"booking_duration_text"`
 	BookingExtendDurationText  string `json:"booking_extend_duration_text"`

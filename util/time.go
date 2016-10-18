@@ -1,4 +1,4 @@
-package main
+package util
 
 import (
 	"bytes"
@@ -6,6 +6,8 @@ import (
 	"time"
 )
 
+// DurationUtil is a wrapper object around time.Duration
+// allowing it to be unmarshaled from JSON.
 type DurationUtil struct {
 	time.Duration
 }

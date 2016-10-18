@@ -6,6 +6,7 @@ import (
 	"strings"
 
 	"alex-j-butler.com/tf2-booking/commands"
+	"alex-j-butler.com/tf2-booking/util"
 
 	"github.com/bwmarrin/discordgo"
 	"github.com/robfig/cron"
@@ -231,7 +232,7 @@ func MessageCreate(s *discordgo.Session, m *discordgo.MessageCreate) {
 
 	// Configuration has a string slice containing channels the bot should operate in.
 	// If the channel of the newly received message is not in the slice, stop now.
-	if !Contains(Conf.AcceptableChannels, m.ChannelID) {
+	if !util.Contains(Conf.AcceptableChannels, m.ChannelID) {
 		return
 	}
 
