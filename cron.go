@@ -5,6 +5,8 @@ import (
 	"log"
 	"time"
 
+	"alex-j-butler.com/tf2-booking/util"
+
 	"github.com/kidoman/go-steam"
 )
 
@@ -109,6 +111,38 @@ func CheckIdleMinutes() {
 					UpdateGameString()
 
 					log.Println(fmt.Sprintf("Automatically unbooked server \"%s\" from \"%s\", Reason: Idle timeout from too little players", Serv.Name, UserID))
+				}
+			}(&Conf.Servers[i])
+		}
+	}
+}
+
+func CheckStats() {
+	// Iterate through servers.
+	for i := 0; i < len(Conf.Servers); i++ {
+		if !Conf.Servers[i].IsAvailable() {
+			go func(Serv *Server) {
+				stats, err := Serv.SendRCONCommand("stats")
+
+				if err != nil {
+					log.Println("Stats query error:", err)
+					return
+				}
+
+				// log.Println("Stats query: ", stats)
+				s, err := util.ParseStats(stats)
+				if err != nil {
+					log.Println("Stats parse error:", err)
+					return
+				}
+
+				// Calculate new average.
+				if Serv.TickRate == 0.0 {
+					Serv.TickRate = s.FPS
+					Serv.TickRateMeasurements = 1
+				} else {
+					Serv.TickRate = ((Serv.TickRate*float32(Serv.TickRateMeasurements) + s.FPS) / float32(Serv.TickRateMeasurements+1))
+					Serv.TickRateMeasurements++
 				}
 			}(&Conf.Servers[i])
 		}
