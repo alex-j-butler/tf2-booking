@@ -21,7 +21,7 @@ func CheckUnbookServers() {
 			Conf.Servers[i].SentWarning = true
 
 			// Send warning message.
-			Conf.Servers[i].SendCommand("say Your booking will expire in 10 minutes, type 'extend' into Discord to extend the booking.")
+			Conf.Servers[i].SendCommand(fmt.Sprintf("say Your booking will expire in %s, type 'extend' into Discord to extend the booking.", Conf.BookingWarningDurationText))
 		}
 
 		if !Conf.Servers[i].IsAvailable() && Conf.Servers[i].ReturnDate.Before(time.Now()) {
@@ -48,7 +48,7 @@ func CheckUnbookServers() {
 
 			UpdateGameString()
 
-			log.Println(fmt.Sprintf("Automatically unbooked server \"%s\" from \"%s\"", Conf.Servers[i].Name, UserID))
+			log.Println(fmt.Sprintf("Automatically unbooked server \"%s\" from \"%s\", Reason: Booking timelimit reached", Conf.Servers[i].Name, UserID))
 		}
 	}
 }

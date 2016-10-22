@@ -154,7 +154,7 @@ func (s *Server) Book(user *discordgo.User) (string, string, error) {
 	}
 
 	// Set the server variables.
-	s.ReturnDate = time.Now().Add(4 * time.Hour)
+	s.ReturnDate = time.Now().Add(Conf.BookingDuration.Duration)
 	s.booked = true
 	s.bookedDate = time.Now()
 	s.booker = user.ID

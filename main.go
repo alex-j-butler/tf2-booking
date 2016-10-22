@@ -242,10 +242,10 @@ func ExtendServer(m *discordgo.MessageCreate, command string, args []string) {
 		Serv.ExtendBooking(Conf.BookingExtendDuration.Duration)
 
 		// Notify server of successful operation.
-		Serv.SendCommand(fmt.Sprintf("say @%s: Your booking has been extended by 2 hours.", m.Author.Username))
+		Serv.SendCommand(fmt.Sprintf("say @%s: Your booking has been extended by %s.", m.Author.Username, Conf.BookingExtendDurationText))
 
 		// Notify Discord channel of successful operation.
-		Session.ChannelMessageSend(m.ChannelID, fmt.Sprintf("%s: Your booking has been extended by 2 hours.", User.GetMention()))
+		Session.ChannelMessageSend(m.ChannelID, fmt.Sprintf("%s: Your booking has been extended by %s.", User.GetMention(), Conf.BookingExtendDurationText))
 	} else {
 		// Notify Discord channel of failed operation.
 		Session.ChannelMessageSend(m.ChannelID, fmt.Sprintf("%s: You haven't booked a server. Type `book` to book a server.", User.GetMention()))
