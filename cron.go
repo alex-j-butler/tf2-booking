@@ -16,7 +16,7 @@ func CheckUnbookServers() {
 			return
 		}
 
-		if !Conf.Servers[i].IsAvailable() && !Conf.Servers[i].SentWarning && (Conf.Servers[i].ReturnDate.Add(-Conf.BookingWarningDuration.Duration)).Before(time.Now()) {
+		if !Conf.Servers[i].IsAvailable() && !Conf.Servers[i].SentWarning && (Conf.Servers[i].ReturnDate.Add(Conf.BookingWarningDuration.Duration)).Before(time.Now()) {
 			// Only allow this message to be sent once.
 			Conf.Servers[i].SentWarning = true
 
@@ -34,6 +34,7 @@ func CheckUnbookServers() {
 
 			// Unbook the server.
 			Conf.Servers[i].Unbook()
+			Conf.Servers[i].Stop()
 
 			// Upload STV demos
 			STVMessage, err := Conf.Servers[i].UploadSTV()
