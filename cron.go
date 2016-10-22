@@ -95,6 +95,7 @@ func CheckIdleMinutes() {
 
 					// Unbook the server.
 					Serv.Unbook()
+					Serv.Stop()
 
 					// Upload STV demos
 					STVMessage, err := Serv.UploadSTV()
