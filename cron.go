@@ -60,12 +60,12 @@ func CheckIdleMinutes() {
 	// Iterate through servers.
 	for _, Serv := range Conf.Servers {
 		if !Serv.IsAvailable() {
-			go func(Serv *Server) {
-				server, err := steam.Connect(Serv.Address)
+			go func(s *Server) {
+				server, err := steam.Connect(s.Address)
 				if err != nil {
-					log.Println(fmt.Sprintf("Failed to connect to server \"%s\":", Serv.Name), err)
+					log.Println(fmt.Sprintf("Failed to connect to server \"%s\":", s.Name), err)
 
-					HandleQueryError(Serv, err)
+					HandleQueryError(s, err)
 
 					return
 				}
@@ -74,33 +74,33 @@ func CheckIdleMinutes() {
 
 				info, err := server.Info()
 				if err != nil {
-					log.Println(fmt.Sprintf("Failed to query server \"%s\":", Serv.Name), err)
+					log.Println(fmt.Sprintf("Failed to query server \"%s\":", s.Name), err)
 
-					HandleQueryError(Serv, err)
+					HandleQueryError(s, err)
 
 					return
 				}
 
 				if info.Players < Conf.MinPlayers {
-					Serv.AddIdleMinute()
+					s.AddIdleMinute()
 				} else {
-					Serv.ResetIdleMinutes()
+					s.ResetIdleMinutes()
 				}
 
-				if Serv.GetIdleMinutes() >= Conf.MaxIdleMinutes {
-					UserID := Serv.GetBooker()
-					UserMention := Serv.GetBookerMention()
+				if s.GetIdleMinutes() >= Conf.MaxIdleMinutes {
+					UserID := s.GetBooker()
+					UserMention := s.GetBookerMention()
 
 					// Remove the user's booked state.
 					Users[UserID] = false
 					UserServers[UserID] = nil
 
 					// Unbook the server.
-					Serv.Unbook()
-					Serv.Stop()
+					s.Unbook()
+					s.Stop()
 
 					// Upload STV demos
-					STVMessage, err := Serv.UploadSTV()
+					STVMessage, err := s.UploadSTV()
 
 					// Send 'returned' message
 					Session.ChannelMessageSend(Conf.DefaultChannel, fmt.Sprintf("%s: Your server was automatically unbooked.", UserMention))
@@ -112,7 +112,7 @@ func CheckIdleMinutes() {
 
 					UpdateGameString()
 
-					log.Println(fmt.Sprintf("Automatically unbooked server \"%s\" from \"%s\", Reason: Idle timeout from too little players", Serv.Name, UserID))
+					log.Println(fmt.Sprintf("Automatically unbooked server \"%s\" from \"%s\", Reason: Idle timeout from too little players", s.Name, UserID))
 				}
 			}(&Serv)
 		}
