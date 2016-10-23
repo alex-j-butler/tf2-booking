@@ -279,7 +279,7 @@ func ExtendServer(m *discordgo.MessageCreate, command string, args []string) {
 func Save(m *discordgo.MessageCreate, command string, args []string) {
 	User := &PatchUser{m.Author}
 
-	SaveState(".state.json")
+	SaveState(".state.json", Conf.Servers, Users, UserServers)
 	Session.ChannelMessageSend(m.ChannelID, fmt.Sprintf("%s: Saved state.", User.GetMention()))
 }
 

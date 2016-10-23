@@ -45,9 +45,9 @@ func HasState(save string) bool {
 	return err == nil
 }
 
-func SaveState(save string, users map[string]bool, userServers StringServerMap) error {
+func SaveState(save string, servers []Server, users map[string]bool, userServers StringServerMap) error {
 	state := State{
-		Servers:     Conf.Servers,
+		Servers:     servers,
 		Users:       users,
 		UserStrings: userServers.ToStringMap(),
 	}
