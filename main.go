@@ -33,11 +33,16 @@ func main() {
 	InitialiseConfiguration()
 	SetupCron()
 
+	if HasState(".state.json") {
+		LoadState(".state.json")
+	}
+
 	// Register the commands and their command handlers.
 	Command = commands.New("")
 	Command.Add(BookServer, "book a server", "book")
 	Command.Add(UnbookServer, "return", "return a server", "unbook", "unbook a server")
 	Command.Add(ExtendServer, "extend", "extend a server", "extend my server", "extend booking", "extend my booking")
+	Command.Add(Save, "save", "save state")
 
 	// Create maps.
 	Users = make(map[string]bool)
@@ -257,6 +262,13 @@ func ExtendServer(m *discordgo.MessageCreate, command string, args []string) {
 
 		return
 	}
+}
+
+func Save(m *discordgo.MessageCreate, command string, args []string) {
+	User := &PatchUser{m.Author}
+
+	SaveState(".state.json")
+	Session.ChannelMessageSend(m.ChannelID, fmt.Sprintf("%s: Saved state.", User.GetMention()))
 }
 
 // MessageCreate handler for Discord.
