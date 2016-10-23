@@ -95,6 +95,9 @@ func CheckIdleMinutes() {
 					UserID := s.GetBooker()
 					UserMention := s.GetBookerMention()
 
+					// Reset the idle minutes.
+					s.ResetIdleMinutes()
+
 					// Remove the user's booked state.
 					Users[UserID] = false
 					UserServers[UserID] = nil
