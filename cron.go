@@ -63,14 +63,14 @@ func CheckIdleMinutes() {
 
 			log.Println(fmt.Sprintf("Querying server %s.", Serv.Name))
 
-			go func(s *Server) {
-				log.Println(fmt.Sprintf("Querying server %s in goroutine.", s.Name))
+			go func() {
+				log.Println(fmt.Sprintf("Querying server %s in goroutine.", Serv.Name))
 
-				server, err := steam.Connect(s.Address)
+				server, err := steam.Connect(Serv.Address)
 				if err != nil {
-					log.Println(fmt.Sprintf("Failed to connect to server \"%s\":", s.Name), err)
+					log.Println(fmt.Sprintf("Failed to connect to server \"%s\":", Serv.Name), err)
 
-					HandleQueryError(s, err)
+					HandleQueryError(&Serv, err)
 
 					return
 				}
@@ -79,39 +79,39 @@ func CheckIdleMinutes() {
 
 				info, err := server.Info()
 				if err != nil {
-					log.Println(fmt.Sprintf("Failed to query server \"%s\":", s.Name), err)
+					log.Println(fmt.Sprintf("Failed to query server \"%s\":", Serv.Name), err)
 
-					HandleQueryError(s, err)
+					HandleQueryError(&Serv, err)
 
 					return
 				}
 
 				if info.Players < Conf.MinPlayers {
-					s.AddIdleMinute()
-					log.Println(fmt.Sprintf("Added idle minute for server %s", s.Name))
+					Serv.AddIdleMinute()
+					log.Println(fmt.Sprintf("Added idle minute for server %s", Serv.Name))
 				} else {
-					s.ResetIdleMinutes()
-					log.Println(fmt.Sprintf("Reset idle minutes for server %s", s.Name))
+					Serv.ResetIdleMinutes()
+					log.Println(fmt.Sprintf("Reset idle minutes for server %s", Serv.Name))
 				}
 
-				log.Println(fmt.Sprintf("Current idle minutes for server %s: %d out of %d", s.Name, s.GetIdleMinutes(), Conf.MaxIdleMinutes))
+				log.Println(fmt.Sprintf("Current idle minutes for server %s: %d out of %d", Serv.Name, Serv.GetIdleMinutes(), Conf.MaxIdleMinutes))
 
-				if s.GetIdleMinutes() >= Conf.MaxIdleMinutes {
-					log.Println(fmt.Sprintf("Idle unbooked for server %s: %d out of %d", s.Name, s.GetIdleMinutes(), Conf.MaxIdleMinutes))
+				if Serv.GetIdleMinutes() >= Conf.MaxIdleMinutes {
+					log.Println(fmt.Sprintf("Idle unbooked for server %s: %d out of %d", Serv.Name, Serv.GetIdleMinutes(), Conf.MaxIdleMinutes))
 
-					UserID := s.GetBooker()
-					UserMention := s.GetBookerMention()
+					UserID := Serv.GetBooker()
+					UserMention := Serv.GetBookerMention()
 
 					// Remove the user's booked state.
 					Users[UserID] = false
 					UserServers[UserID] = nil
 
 					// Unbook the server.
-					s.Unbook()
-					s.Stop()
+					Serv.Unbook()
+					Serv.Stop()
 
 					// Upload STV demos
-					STVMessage, err := s.UploadSTV()
+					STVMessage, err := Serv.UploadSTV()
 
 					// Send 'returned' message
 					Session.ChannelMessageSend(Conf.DefaultChannel, fmt.Sprintf("%s: Your server was automatically unbooked.", UserMention))
@@ -123,9 +123,9 @@ func CheckIdleMinutes() {
 
 					UpdateGameString()
 
-					log.Println(fmt.Sprintf("Automatically unbooked server \"%s\" from \"%s\", Reason: Idle timeout from too little players", s.Name, UserID))
+					log.Println(fmt.Sprintf("Automatically unbooked server \"%s\" from \"%s\", Reason: Idle timeout from too little players", Serv.Name, UserID))
 				}
-			}(&Serv)
+			}()
 		}
 	}
 }
