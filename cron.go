@@ -13,7 +13,9 @@ import (
 // Check if any servers are ready to be unbooked by the automatic timeout after 4 hours.
 func CheckUnbookServers() {
 	// Iterate through servers.
-	for _, Serv := range Conf.Servers {
+	for i := 0; i < len(Conf.Servers); i++ {
+		Serv := Conf.Servers[i]
+
 		if Serv.IsAvailable() {
 			return
 		}
@@ -58,7 +60,9 @@ func CheckUnbookServers() {
 
 func CheckIdleMinutes() {
 	// Iterate through servers.
-	for _, Serv := range Conf.Servers {
+	for i := 0; i < len(Conf.Servers); i++ {
+		Serv := Conf.Servers[i]
+
 		if !Serv.IsAvailable() {
 
 			log.Println(fmt.Sprintf("Querying server %s.", Serv.Name))
@@ -133,8 +137,10 @@ func CheckIdleMinutes() {
 func CheckStats() {
 	// Iterate through servers.
 	for i := 0; i < len(Conf.Servers); i++ {
-		if !Conf.Servers[i].IsAvailable() {
-			go func(Serv *Server) {
+		Serv := Conf.Servers[i]
+
+		if !Serv.IsAvailable() {
+			go func(s *Server) {
 				stats, err := Serv.SendRCONCommand("stats")
 
 				if err != nil {
@@ -143,7 +149,7 @@ func CheckStats() {
 				}
 
 				// log.Println("Stats query: ", stats)
-				s, err := util.ParseStats(stats)
+				st, err := util.ParseStats(stats)
 				if err != nil {
 					log.Println("Stats parse error:", err)
 					return
@@ -151,13 +157,13 @@ func CheckStats() {
 
 				// Calculate new average.
 				if Serv.TickRate == 0.0 {
-					Serv.TickRate = s.FPS
-					Serv.TickRateMeasurements = 1
+					s.TickRate = st.FPS
+					s.TickRateMeasurements = 1
 				} else {
-					Serv.TickRate = ((Serv.TickRate*float32(Serv.TickRateMeasurements) + s.FPS) / float32(Serv.TickRateMeasurements+1))
-					Serv.TickRateMeasurements++
+					s.TickRate = ((s.TickRate*float32(s.TickRateMeasurements) + st.FPS) / float32(s.TickRateMeasurements+1))
+					s.TickRateMeasurements++
 				}
-			}(&Conf.Servers[i])
+			}(&Serv)
 		}
 	}
 }
