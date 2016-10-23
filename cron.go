@@ -63,7 +63,69 @@ func CheckIdleMinutes() {
 
 			log.Println(fmt.Sprintf("Querying server %s.", Serv.Name))
 
-			go QueryServer(&Serv)
+			go func(s *Server) {
+				log.Println(fmt.Sprintf("Querying server %s in goroutine.", s.Name))
+
+				server, err := steam.Connect(s.Address)
+				if err != nil {
+					log.Println(fmt.Sprintf("Failed to connect to server \"%s\":", s.Name), err)
+
+					HandleQueryError(s, err)
+
+					return
+				}
+
+				defer server.Close()
+
+				info, err := server.Info()
+				if err != nil {
+					log.Println(fmt.Sprintf("Failed to query server \"%s\":", s.Name), err)
+
+					HandleQueryError(s, err)
+
+					return
+				}
+
+				if info.Players < Conf.MinPlayers {
+					s.AddIdleMinute()
+					log.Println(fmt.Sprintf("Added idle minute for server %s", s.Name))
+				} else {
+					s.ResetIdleMinutes()
+					log.Println(fmt.Sprintf("Reset idle minutes for server %s", s.Name))
+				}
+
+				log.Println(fmt.Sprintf("Current idle minutes for server %s: %d out of %d", s.Name, s.GetIdleMinutes(), Conf.MaxIdleMinutes))
+
+				if s.GetIdleMinutes() >= Conf.MaxIdleMinutes {
+					log.Println(fmt.Sprintf("Idle unbooked for server %s: %d out of %d", s.Name, s.GetIdleMinutes(), Conf.MaxIdleMinutes))
+
+					UserID := s.GetBooker()
+					UserMention := s.GetBookerMention()
+
+					// Remove the user's booked state.
+					Users[UserID] = false
+					UserServers[UserID] = nil
+
+					// Unbook the server.
+					s.Unbook()
+					s.Stop()
+
+					// Upload STV demos
+					STVMessage, err := s.UploadSTV()
+
+					// Send 'returned' message
+					Session.ChannelMessageSend(Conf.DefaultChannel, fmt.Sprintf("%s: Your server was automatically unbooked.", UserMention))
+
+					// Send 'stv' message, if it uploaded successfully.
+					if err == nil {
+						Session.ChannelMessageSend(Conf.DefaultChannel, fmt.Sprintf("%s: %s", UserMention, STVMessage))
+					}
+
+					UpdateGameString()
+
+					log.Println(fmt.Sprintf("Automatically unbooked server \"%s\" from \"%s\", Reason: Idle timeout from too little players", s.Name, UserID))
+				}
+			}(&Serv)
 		}
 	}
 }
@@ -97,69 +159,5 @@ func CheckStats() {
 				}
 			}(&Conf.Servers[i])
 		}
-	}
-}
-
-func QueryServer(s *Server) {
-	log.Println(fmt.Sprintf("Querying server %s in goroutine.", s.Name))
-
-	server, err := steam.Connect(s.Address)
-	if err != nil {
-		log.Println(fmt.Sprintf("Failed to connect to server \"%s\":", s.Name), err)
-
-		HandleQueryError(s, err)
-
-		return
-	}
-
-	defer server.Close()
-
-	info, err := server.Info()
-	if err != nil {
-		log.Println(fmt.Sprintf("Failed to query server \"%s\":", s.Name), err)
-
-		HandleQueryError(s, err)
-
-		return
-	}
-
-	if info.Players < Conf.MinPlayers {
-		s.AddIdleMinute()
-		log.Println(fmt.Sprintf("Added idle minute for server %s", s.Name))
-	} else {
-		s.ResetIdleMinutes()
-		log.Println(fmt.Sprintf("Reset idle minutes for server %s", s.Name))
-	}
-
-	log.Println(fmt.Sprintf("Current idle minutes for server %s: %d out of %d", s.Name, s.GetIdleMinutes(), Conf.MaxIdleMinutes))
-
-	if s.GetIdleMinutes() >= Conf.MaxIdleMinutes {
-		log.Println(fmt.Sprintf("Idle unbooked for server %s: %d out of %d", s.Name, s.GetIdleMinutes(), Conf.MaxIdleMinutes))
-
-		UserID := s.GetBooker()
-		UserMention := s.GetBookerMention()
-
-		// Remove the user's booked state.
-		Users[UserID] = false
-		UserServers[UserID] = nil
-
-		// Unbook the server.
-		s.Unbook()
-		s.Stop()
-
-		// Upload STV demos
-		STVMessage, err := s.UploadSTV()
-
-		// Send 'returned' message
-		Session.ChannelMessageSend(Conf.DefaultChannel, fmt.Sprintf("%s: Your server was automatically unbooked.", UserMention))
-
-		// Send 'stv' message, if it uploaded successfully.
-		if err == nil {
-			Session.ChannelMessageSend(Conf.DefaultChannel, fmt.Sprintf("%s: %s", UserMention, STVMessage))
-		}
-
-		UpdateGameString()
-
-		log.Println(fmt.Sprintf("Automatically unbooked server \"%s\" from \"%s\", Reason: Idle timeout from too little players", s.Name, UserID))
 	}
 }
