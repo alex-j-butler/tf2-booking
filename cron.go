@@ -61,7 +61,7 @@ func CheckUnbookServers() {
 func CheckIdleMinutes() {
 	// Iterate through servers.
 	for i := 0; i < len(Conf.Servers); i++ {
-		Serv := Conf.Servers[i]
+		Serv := &Conf.Servers[i]
 
 		if !Serv.IsAvailable() {
 
@@ -129,7 +129,7 @@ func CheckIdleMinutes() {
 
 					log.Println(fmt.Sprintf("Automatically unbooked server \"%s\" from \"%s\", Reason: Idle timeout from too little players", s.Name, UserID))
 				}
-			}(&Serv)
+			}(Serv)
 		}
 	}
 }
