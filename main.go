@@ -34,7 +34,19 @@ func main() {
 	SetupCron()
 
 	if HasState(".state.json") {
-		LoadState(".state.json")
+		err, servers, users, userServers := LoadState(".state.json")
+
+		if err != nil {
+			log.Println("Found state file, failed to restore:", err)
+		} else {
+			log.Println("Found state file, restoring from previous state.")
+
+			Conf.Servers = servers
+			Users = users
+			UserServers = userServers
+		}
+	} else {
+		log.Println("No state file found.")
 	}
 
 	// Register the commands and their command handlers.
