@@ -61,7 +61,7 @@ func CheckIdleMinutes() {
 	for _, Serv := range Conf.Servers {
 		if !Serv.IsAvailable() {
 
-			log.Println(fmt.Sprintf("Querying server %s.", s.Name))
+			log.Println(fmt.Sprintf("Querying server %s.", Serv.Name))
 
 			go func(s *Server) {
 				log.Println(fmt.Sprintf("Querying server %s in goroutine.", s.Name))
