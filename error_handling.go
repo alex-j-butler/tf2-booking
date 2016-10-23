@@ -9,9 +9,6 @@ func HandleQueryError(s *Server, err error) {
 
 	// Too many notifications. Send a message.
 	if s.errorMinutes >= Conf.ErrorThreshold {
-		// Reset the error minutes.
-		s.errorMinutes = 0
-
 		var message string
 		bookerName := "Unknown"
 		if !s.IsAvailable() {
@@ -25,16 +22,17 @@ func HandleQueryError(s *Server, err error) {
 				s.Name,
 				s.errorMinutes,
 				bookerName,
-				err,
 			)
 		} else {
 			message = fmt.Sprintf(
 				"The server `%s` failed to be contacted after %d retries while unbooked. Check to ensure the server is correctly working.",
 				s.Name,
 				s.errorMinutes,
-				err,
 			)
 		}
+
+		// Reset the error minutes.
+		s.errorMinutes = 0
 
 		for _, notificationUser := range Conf.NotificationUsers {
 			UserChannel, _ := Session.UserChannelCreate(notificationUser)
