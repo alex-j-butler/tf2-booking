@@ -55,6 +55,7 @@ func main() {
 	Command.Add(UnbookServer, "return", "return a server", "unbook", "unbook a server")
 	Command.Add(ExtendServer, "extend", "extend a server", "extend my server", "extend booking", "extend my booking")
 	Command.Add(Save, "save", "save state")
+	Command.Add(Print, "print", "print state")
 
 	// Create maps.
 	Users = make(map[string]bool)
@@ -281,6 +282,14 @@ func Save(m *discordgo.MessageCreate, command string, args []string) {
 
 	SaveState(".state.json", Conf.Servers, Users, UserServers)
 	Session.ChannelMessageSend(m.ChannelID, fmt.Sprintf("%s: Saved state.", User.GetMention()))
+}
+
+func Print(m *discordgo.MessageCreate, command string, args []string) {
+	User := &PatchUser{m.Author}
+
+	Session.ChannelMessageSend(m.ChannelID, fmt.Sprintf("%s: Servers state: %v", User.GetMention(), Conf.Servers))
+	Session.ChannelMessageSend(m.ChannelID, fmt.Sprintf("%s: Users state: %v", User.GetMention(), Users))
+	Session.ChannelMessageSend(m.ChannelID, fmt.Sprintf("%s: UserServers state: %v", User.GetMention(), UserServers))
 }
 
 // MessageCreate handler for Discord.
