@@ -64,12 +64,7 @@ func CheckIdleMinutes() {
 		Serv := &Conf.Servers[i]
 
 		if !Serv.IsAvailable() {
-
-			log.Println(fmt.Sprintf("Querying server %s.", Serv.Name))
-
 			go func(s *Server) {
-				log.Println(fmt.Sprintf("Querying server %s in goroutine.", s.Name))
-
 				server, err := steam.Connect(s.Address)
 				if err != nil {
 					log.Println(fmt.Sprintf("Failed to connect to server \"%s\":", s.Name), err)
@@ -92,17 +87,11 @@ func CheckIdleMinutes() {
 
 				if info.Players < Conf.MinPlayers {
 					s.AddIdleMinute()
-					log.Println(fmt.Sprintf("Added idle minute for server %s", s.Name))
 				} else {
 					s.ResetIdleMinutes()
-					log.Println(fmt.Sprintf("Reset idle minutes for server %s", s.Name))
 				}
 
-				log.Println(fmt.Sprintf("Current idle minutes for server %s: %d out of %d", s.Name, s.GetIdleMinutes(), Conf.MaxIdleMinutes))
-
 				if s.GetIdleMinutes() >= Conf.MaxIdleMinutes {
-					log.Println(fmt.Sprintf("Idle unbooked for server %s: %d out of %d", s.Name, s.GetIdleMinutes(), Conf.MaxIdleMinutes))
-
 					UserID := s.GetBooker()
 					UserMention := s.GetBookerMention()
 
