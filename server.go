@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"github.com/bwmarrin/discordgo"
+	"github.com/james4k/rcon"
 )
 
 type Server struct {
@@ -20,6 +21,16 @@ type Server struct {
 
 	SentWarning bool
 	ReturnDate  time.Time
+
+	// Last known RCON password.
+	// If this RCON password is invalid, the server can send a tmux command to reset it.
+	RCONPassword string
+
+	// Average tick rate reported by the server.
+	TickRate float32
+
+	// Number of tick rate measurements (used internally for calculating a new average).
+	TickRateMeasurements int
 
 	booked     bool
 	bookedDate time.Time
@@ -97,6 +108,9 @@ func (s *Server) Setup() (string, string, error) {
 	// Trim passwords.
 	RCONPassword := strings.TrimSpace(string(stdoutBytes))
 	ServerPassword := strings.TrimSpace(string(stderrBytes))
+
+	s.RCONPassword = RCONPassword
+
 	return RCONPassword, ServerPassword, nil
 }
 
@@ -248,4 +262,35 @@ func (s *Server) SendCommand(command string) error {
 	}
 
 	return nil
+}
+
+func (s *Server) SendRCONCommand(command string) (string, error) {
+	rc, err := rcon.Dial(s.Address, s.RCONPassword)
+
+	if err == rcon.ErrAuthFailed {
+		// Attempt to reset RCON password.
+		s.SendCommand(fmt.Sprintf("rcon_password %s", s.RCONPassword))
+
+		rc, err = rcon.Dial(s.Address, s.RCONPassword)
+	}
+
+	if err != nil {
+		return "", err
+	}
+
+	// Run the command.
+	_, err = rc.Write(command)
+
+	if err != nil {
+		return "", err
+	}
+
+	// Grab the output.
+	output, _, err := rc.Read()
+
+	if err != nil {
+		return "", err
+	}
+
+	return output, nil
 }

@@ -1,15 +1,24 @@
 package main
 
-import ()
+import "math"
 
 func GetAvailableServer() *Server {
-	for i := 0; i < len(Conf.Servers); i++ {
-		if Conf.Servers[i].IsAvailable() {
-			return &Conf.Servers[i]
+	var bestServer *Server
+	var bestDiff float64
+	servers := GetAvailableServers()
+
+	// Higher than the maximum a TF2 tickrate can differ.
+	bestDiff = 4096.0
+	for i := 0; i < len(servers); i++ {
+		server := servers[i]
+
+		if diff := math.Abs(float64(server.TickRate - 66.6666)); diff < bestDiff {
+			bestServer = server
+			bestDiff = diff
 		}
 	}
 
-	return nil
+	return bestServer
 }
 
 func GetAvailableServers() []*Server {
