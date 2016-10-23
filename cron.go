@@ -11,33 +11,33 @@ import (
 // Check if any servers are ready to be unbooked by the automatic timeout after 4 hours.
 func CheckUnbookServers() {
 	// Iterate through servers.
-	for i := 0; i < len(Conf.Servers); i++ {
-		if Conf.Servers[i].IsAvailable() {
+	for _, Serv := range Conf.Servers {
+		if Serv.IsAvailable() {
 			return
 		}
 
-		if !Conf.Servers[i].IsAvailable() && !Conf.Servers[i].SentWarning && (Conf.Servers[i].ReturnDate.Add(Conf.BookingWarningDuration.Duration)).Before(time.Now()) {
+		if !Serv.IsAvailable() && !Serv.SentWarning && (Serv.ReturnDate.Add(Conf.BookingWarningDuration.Duration)).Before(time.Now()) {
 			// Only allow this message to be sent once.
-			Conf.Servers[i].SentWarning = true
+			Serv.SentWarning = true
 
 			// Send warning message.
-			Conf.Servers[i].SendCommand(fmt.Sprintf("say Your booking will expire in %s, type 'extend' into Discord to extend the booking.", Conf.BookingWarningDurationText))
+			Serv.SendCommand(fmt.Sprintf("say Your booking will expire in %s, type 'extend' into Discord to extend the booking.", Conf.BookingWarningDurationText))
 		}
 
-		if !Conf.Servers[i].IsAvailable() && Conf.Servers[i].ReturnDate.Before(time.Now()) {
-			UserID := Conf.Servers[i].GetBooker()
-			UserMention := Conf.Servers[i].GetBookerMention()
+		if !Serv.IsAvailable() && Serv.ReturnDate.Before(time.Now()) {
+			UserID := Serv.GetBooker()
+			UserMention := Serv.GetBookerMention()
 
 			// Remove the user's booked state.
 			Users[UserID] = false
 			UserServers[UserID] = nil
 
 			// Unbook the server.
-			Conf.Servers[i].Unbook()
-			Conf.Servers[i].Stop()
+			Serv.Unbook()
+			Serv.Stop()
 
 			// Upload STV demos
-			STVMessage, err := Conf.Servers[i].UploadSTV()
+			STVMessage, err := Serv.UploadSTV()
 
 			// Send 'returned' message
 			Session.ChannelMessageSend(Conf.DefaultChannel, fmt.Sprintf("%s: Your server was automatically unbooked.", UserMention))
@@ -49,15 +49,15 @@ func CheckUnbookServers() {
 
 			UpdateGameString()
 
-			log.Println(fmt.Sprintf("Automatically unbooked server \"%s\" from \"%s\", Reason: Booking timelimit reached", Conf.Servers[i].Name, UserID))
+			log.Println(fmt.Sprintf("Automatically unbooked server \"%s\" from \"%s\", Reason: Booking timelimit reached", Serv.Name, UserID))
 		}
 	}
 }
 
 func CheckIdleMinutes() {
 	// Iterate through servers.
-	for i := 0; i < len(Conf.Servers); i++ {
-		if !Conf.Servers[i].IsAvailable() {
+	for _, Serv := range Conf.Servers {
+		if !Serv.IsAvailable() {
 			go func(Serv *Server) {
 				server, err := steam.Connect(Serv.Address)
 				if err != nil {
@@ -112,7 +112,7 @@ func CheckIdleMinutes() {
 
 					log.Println(fmt.Sprintf("Automatically unbooked server \"%s\" from \"%s\", Reason: Idle timeout from too little players", Serv.Name, UserID))
 				}
-			}(&Conf.Servers[i])
+			}(&Serv)
 		}
 	}
 }
