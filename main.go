@@ -3,6 +3,7 @@ package main
 import (
 	"fmt"
 	"log"
+	"os"
 	"strings"
 
 	"alex-j-butler.com/tf2-booking/commands"
@@ -33,6 +34,19 @@ func main() {
 	InitialiseConfiguration()
 	SetupCron()
 
+	// Register the commands and their command handlers.
+	Command = commands.New("")
+	Command.Add(BookServer, "book a server", "book")
+	Command.Add(UnbookServer, "return", "return a server", "unbook", "unbook a server")
+	Command.Add(ExtendServer, "extend", "extend a server", "extend my server", "extend booking", "extend my booking")
+	Command.Add(Update, "update")
+	Command.Add(Print, "print", "print state")
+
+	// Create maps.
+	Users = make(map[string]bool)
+	UserServers = make(map[string]*Server)
+
+	// Restore state.
 	if HasState(".state.json") {
 		err, servers, users, userServers := LoadState(".state.json")
 
@@ -41,25 +55,15 @@ func main() {
 		} else {
 			log.Println("Found state file, restoring from previous state.")
 
+			if err = DeleteState(".state.json"); err != nil {
+				log.Println("Failed to delete state file:", err)
+			}
+
 			Conf.Servers = servers
 			Users = users
 			UserServers = userServers
 		}
-	} else {
-		log.Println("No state file found.")
 	}
-
-	// Register the commands and their command handlers.
-	Command = commands.New("")
-	Command.Add(BookServer, "book a server", "book")
-	Command.Add(UnbookServer, "return", "return a server", "unbook", "unbook a server")
-	Command.Add(ExtendServer, "extend", "extend a server", "extend my server", "extend booking", "extend my booking")
-	Command.Add(Save, "save", "save state")
-	Command.Add(Print, "print", "print state")
-
-	// Create maps.
-	Users = make(map[string]bool)
-	UserServers = make(map[string]*Server)
 
 	// Create the Discord client from the bot token in the configuration.
 	dg, err := discordgo.New(fmt.Sprintf("Bot %s", Conf.DiscordToken))
@@ -277,16 +281,21 @@ func ExtendServer(m *discordgo.MessageCreate, command string, args []string) {
 	}
 }
 
-func Save(m *discordgo.MessageCreate, command string, args []string) {
+func Update(m *discordgo.MessageCreate, command string, args []string) {
 	User := &PatchUser{m.Author}
 
 	SaveState(".state.json", Conf.Servers, Users, UserServers)
-	Session.ChannelMessageSend(m.ChannelID, fmt.Sprintf("%s: Saved state.", User.GetMention()))
+	UpdateExecutable("http://localhost/tf2-booking/latest")
+
+	Session.ChannelMessageSend(m.ChannelID, fmt.Sprintf("%s: Updated `tf2-booking` & restarting now.", User.GetMention()))
+
+	os.Exit(0)
 }
 
 func Print(m *discordgo.MessageCreate, command string, args []string) {
 	User := &PatchUser{m.Author}
 
+	Session.ChannelMessageSend(m.ChannelID, fmt.Sprintf("%s: Update v2", User.GetMention()))
 	Session.ChannelMessageSend(m.ChannelID, fmt.Sprintf("%s: Servers state: %v", User.GetMention(), Conf.Servers))
 	Session.ChannelMessageSend(m.ChannelID, fmt.Sprintf("%s: Users state: %v", User.GetMention(), Users))
 	Session.ChannelMessageSend(m.ChannelID, fmt.Sprintf("%s: UserServers state: %v", User.GetMention(), UserServers))

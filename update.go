@@ -3,7 +3,10 @@ package main
 import (
 	"encoding/json"
 	"io/ioutil"
+	"net/http"
 	"os"
+
+	update "github.com/inconshreveable/go-update"
 )
 
 type StringServerMap map[string]*Server
@@ -45,6 +48,10 @@ func HasState(save string) bool {
 	return err == nil
 }
 
+func DeleteState(save string) error {
+	return os.Remove(save)
+}
+
 func SaveState(save string, servers []Server, users map[string]bool, userServers StringServerMap) error {
 	state := State{
 		Servers:     servers,
@@ -80,4 +87,22 @@ func LoadState(save string) (error, []Server, map[string]bool, map[string]*Serve
 	userServers := state.UserStrings.ToServerMap(servers)
 
 	return err, state.Servers, state.Users, userServers
+}
+
+func UpdateExecutable(address string) error {
+	resp, err := http.Get(address)
+	if err != nil {
+		return err
+	}
+
+	defer resp.Body.Close()
+
+	err = update.Apply(resp.Body, update.Options{
+		Patcher: update.NewBSDiffPatcher(),
+	})
+	if err != nil {
+		return err
+	}
+
+	return nil
 }
