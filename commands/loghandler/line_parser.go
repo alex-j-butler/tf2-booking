@@ -7,7 +7,7 @@ import (
 )
 
 func ParseLine(data string) (string, error) {
-	regex, err := regexp.CompilePOSIX("\"(.+)<(\\d+)><(.+)><(Blue|Red|Unassigned|Spectator)>\" say \"(.+)\"")
+	regex, err := regexp.Compile("\"(.+)<(\\d+)><(.+)><(Blue|Red|Unassigned|Spectator)>\" say \"(.+)\"")
 
 	if err != nil {
 		return "", err
