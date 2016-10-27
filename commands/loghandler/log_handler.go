@@ -44,5 +44,13 @@ func (lh LogHandler) handle() {
 		if err != nil {
 			log.Println("LogHandler error:", err)
 		}
+
+		data := string(buf[:n])
+
+		err = ParseLine(data)
+
+		if err != nil {
+			log.Println("ParseLine error:", err)
+		}
 	}
 }
