@@ -7,7 +7,7 @@ import (
 )
 
 func ParseLine(data string) (string, error) {
-	regex, err := regexp.Compile("\"(.+)<(\\d+)><(.+)><(Blue|Red|Unassigned|Spectator)>\" say \"(.+)\"")
+	regex, err := regexp.CompilePOSIX("\"(.+)<(\\d+)><(.+)><(Blue|Red|Unassigned|Spectator)>\" say \"(.+)\"")
 
 	if err != nil {
 		return "", err
@@ -16,7 +16,9 @@ func ParseLine(data string) (string, error) {
 	matches := regex.FindAllString(data, -1)
 
 	if len(matches) > 0 {
-		log.Println(matches)
+		for _, match := range matches {
+			log.Println(match)
+		}
 		// log.Println(fmt.Sprintf("User %s (%s): %s", matches[0], matches[2], matches[4]))
 
 		return "", nil
