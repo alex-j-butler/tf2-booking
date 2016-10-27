@@ -13,7 +13,7 @@ func ParseLine(data string) (string, error) {
 		return "", err
 	}
 
-	matches := regex.FindAllString(data, -1)
+	matches := regex.FindStringSubmatch(data)
 
 	if len(matches) > 0 {
 		for _, match := range matches {
