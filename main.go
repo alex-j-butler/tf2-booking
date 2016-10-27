@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"alex-j-butler.com/tf2-booking/commands"
+	"alex-j-butler.com/tf2-booking/commands/loghandler"
 	"alex-j-butler.com/tf2-booking/util"
 	"alex-j-butler.com/tf2-booking/wait"
 
@@ -34,6 +35,13 @@ var Command *commands.Command
 func main() {
 	InitialiseConfiguration()
 	SetupCron()
+
+	logHandler, err := loghandler.Dial("", 3001)
+	if err != nil {
+		log.Println("LogHandler failed to connect:", err)
+	} else {
+		log.Println(fmt.Sprintf("LogHandler listening on %s:%d", logHandler.Address, logHandler.Port))
+	}
 
 	// Register the commands and their command handlers.
 	Command = commands.New("")
