@@ -55,6 +55,12 @@ func main() {
 			RespondToDM(true),
 		"update",
 	)
+	Command.Add(
+		commands.NewCommand(Exit).
+			Permissions(discordgo.PermissionManageServer).
+			RespondToDM(true),
+		"exit",
+	)
 
 	// Create maps.
 	Users = make(map[string]bool)
@@ -316,6 +322,15 @@ func Update(m *discordgo.MessageCreate, command string, args []string) {
 
 		os.Exit(0)
 	}(url)
+}
+
+func Exit(m *discordgo.MessageCreate, command string, args []string) {
+	User := &util.PatchUser{m.Author}
+
+	Session.ChannelMessageSend(m.ChannelID, fmt.Sprintf("%s: Shutting down `tf2-booking`.", User.GetMention()))
+
+	SaveState(".state.json", Conf.Servers, Users, UserServers)
+	os.Exit(0)
 }
 
 // MessageCreate handler for Discord.
