@@ -144,7 +144,7 @@ func BookServer(m *discordgo.MessageCreate, command string, args []string) {
 			Session.ChannelMessageSend(m.ChannelID, fmt.Sprintf("%s: Something went wrong while trying to book your server, please try again later.", User.GetMention()))
 		} else {
 			// Start the server.
-			go func() {
+			go func(Serv *Server, m *discordgo.MessageCreate) {
 				err := Serv.Start()
 
 				if err != nil {
@@ -163,7 +163,7 @@ func BookServer(m *discordgo.MessageCreate, command string, args []string) {
 
 					log.Println(fmt.Sprintf("Failed to start server \"%s\" from \"%s\"", Serv.Name, m.Author.ID))
 				}
-			}()
+			}(Serv, m)
 
 			// Send message to public channel, without server details.
 			Session.ChannelMessageSend(m.ChannelID, fmt.Sprintf("%s: Server details have been sent via private message.", User.GetMention()))
@@ -212,7 +212,7 @@ func UnbookServer(m *discordgo.MessageCreate, command string, args []string) {
 
 	if Serv, ok := UserServers[m.Author.ID]; ok && Serv != nil {
 		// Stop the server.
-		go func() {
+		go func(Serv *Server, m *discordgo.MessageCreate) {
 			err := Serv.Stop()
 
 			if err != nil {
@@ -224,7 +224,7 @@ func UnbookServer(m *discordgo.MessageCreate, command string, args []string) {
 					),
 				)
 			}
-		}()
+		}(Serv, m)
 
 		// Remove the user's booked state.
 		Users[m.Author.ID] = false
