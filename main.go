@@ -3,6 +3,7 @@ package main
 import (
 	"fmt"
 	"log"
+	"os"
 	"strings"
 
 	"alex-j-butler.com/tf2-booking/commands"
@@ -35,13 +36,48 @@ func main() {
 
 	// Register the commands and their command handlers.
 	Command = commands.New("")
-	Command.Add(BookServer, "book a server", "book")
-	Command.Add(UnbookServer, "return", "return a server", "unbook", "unbook a server")
-	Command.Add(ExtendServer, "extend", "extend a server", "extend my server", "extend booking", "extend my booking")
+	Command.Add(
+		commands.NewCommand(BookServer),
+		"book",
+	)
+	Command.Add(
+		commands.NewCommand(UnbookServer),
+		"return",
+		"unbook",
+	)
+	Command.Add(
+		commands.NewCommand(ExtendServer),
+		"extend",
+	)
+	Command.Add(
+		commands.NewCommand(Update).
+			Permissions(discordgo.PermissionManageServer).
+			RespondToDM(true),
+		"update",
+	)
 
 	// Create maps.
 	Users = make(map[string]bool)
 	UserServers = make(map[string]*Server)
+
+	// Restore state from the state file, if it exists.
+	if HasState(".state.json") {
+		err, servers, users, userServers := LoadState(".state.json")
+
+		if err != nil {
+			log.Println("Found state file, failed to restore:", err)
+		} else {
+			log.Println("Found state file, restoring from previous state.")
+
+			if err = DeleteState(".state.json"); err != nil {
+				log.Println("Failed to delete state file:", err)
+			}
+
+			Conf.Servers = servers
+			Users = users
+			UserServers = userServers
+		}
+	}
 
 	// Create the Discord client from the bot token in the configuration.
 	dg, err := discordgo.New(fmt.Sprintf("Bot %s", Conf.DiscordToken))
@@ -89,7 +125,7 @@ func main() {
 // it books a new server, preventing it from being used by another user,
 // sets up the RCON password & Server Password and finally starts the TF2 server.
 func BookServer(m *discordgo.MessageCreate, command string, args []string) {
-	User := &PatchUser{m.Author}
+	User := &util.PatchUser{m.Author}
 
 	// Check if the user has already booked a server out.
 	if value, _ := Users[m.Author.ID]; value == true {
@@ -164,7 +200,7 @@ func BookServer(m *discordgo.MessageCreate, command string, args []string) {
 // it unbooks it, allowing it for use by another user, and shutting down
 // the TF2 server.
 func UnbookServer(m *discordgo.MessageCreate, command string, args []string) {
-	User := &PatchUser{m.Author}
+	User := &util.PatchUser{m.Author}
 
 	// Check if the user has already booked a server out.
 	if value, ok := Users[m.Author.ID]; !ok || value == false {
@@ -227,7 +263,7 @@ func UnbookServer(m *discordgo.MessageCreate, command string, args []string) {
 // This function checks whether the user has a server booked out, if so,
 // it will extend the booking by adding time onto the servers return time.
 func ExtendServer(m *discordgo.MessageCreate, command string, args []string) {
-	User := &PatchUser{m.Author}
+	User := &util.PatchUser{m.Author}
 
 	// Check if the user has already booked a server out.
 	if value, ok := Users[m.Author.ID]; !ok || value == false {
@@ -259,6 +295,29 @@ func ExtendServer(m *discordgo.MessageCreate, command string, args []string) {
 	}
 }
 
+func Update(m *discordgo.MessageCreate, command string, args []string) {
+	User := &util.PatchUser{m.Author}
+
+	if len(args) <= 0 {
+		// Send error.
+		Session.ChannelMessageSend(m.ChannelID, fmt.Sprintf("%s: Invalid arguments: `update <url>`", User.GetMention()))
+		return
+	}
+
+	url := strings.Join(args, " ")
+
+	Session.ChannelMessageSend(m.ChannelID, fmt.Sprintf("%s: Starting update...", User.GetMention()))
+
+	go func(url string) {
+		SaveState(".state.json", Conf.Servers, Users, UserServers)
+		UpdateExecutable(url)
+
+		Session.ChannelMessageSend(m.ChannelID, fmt.Sprintf("%s: Updated `tf2-booking` & restarting now from URL: %s", User.GetMention(), url))
+
+		os.Exit(0)
+	}(url)
+}
+
 // MessageCreate handler for Discord.
 // Called when a message is received by the Discord client.
 func MessageCreate(s *discordgo.Session, m *discordgo.MessageCreate) {
@@ -267,14 +326,31 @@ func MessageCreate(s *discordgo.Session, m *discordgo.MessageCreate) {
 		return
 	}
 
+	permissionsChannelID := m.ChannelID
+
+	// Lookup Discord channel.
+	channel, err := s.State.Channel(m.ChannelID)
+	if err != nil {
+		log.Println("Failed to lookup channels.", err)
+	}
+
+	if channel.IsPrivate {
+		permissionsChannelID = Conf.DefaultChannel
+	}
+
 	// Configuration has a string slice containing channels the bot should operate in.
 	// If the channel of the newly received message is not in the slice, stop now.
-	if !util.Contains(Conf.AcceptableChannels, m.ChannelID) {
+	if !util.Contains(Conf.AcceptableChannels, m.ChannelID) && !channel.IsPrivate {
 		return
 	}
 
+	Permissions, err := Session.State.UserChannelPermissions(m.Author.ID, permissionsChannelID)
+	if err != nil {
+		log.Println("Failed to lookup permissions.", err)
+	}
+
 	// Send the message content to the command handler to be dispatched appropriately.
-	Command.Handle(m, strings.ToLower(m.Content))
+	Command.Handle(Session, m, strings.ToLower(m.Content), Permissions)
 }
 
 // SetupCron creates the cron scheduler and adds the functions and their respective schedules.
