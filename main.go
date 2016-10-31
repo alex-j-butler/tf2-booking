@@ -60,7 +60,7 @@ func main() {
 	Users = make(map[string]bool)
 	UserServers = make(map[string]*Server)
 
-	// Restore state.
+	// Restore state from the state file, if it exists.
 	if HasState(".state.json") {
 		err, servers, users, userServers := LoadState(".state.json")
 
