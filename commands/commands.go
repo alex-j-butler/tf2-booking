@@ -96,7 +96,7 @@ func (c *Command) Handle(session *discordgo.Session, m *discordgo.MessageCreate,
 		if reflect.DeepEqual(handlerSplit, commandSplit[:len(handlerSplit)]) {
 			log.Println(fmt.Sprintf("Permissions test: %d & %d = %d", permissions, handler.permissions, permissions&handler.permissions))
 
-			if permissions&handler.permissions != 0 {
+			if permissions&handler.permissions != 0 || handler.permissions == -1 {
 				handler.function(m, strings.Join(handlerSplit, " "), commandSplit[len(handlerSplit):])
 			} else {
 				User := &util.PatchUser{m.Author}
