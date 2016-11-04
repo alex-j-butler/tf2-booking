@@ -320,6 +320,7 @@ func Update(m *discordgo.MessageCreate, command string, args []string) {
 
 		Session.ChannelMessageSend(m.ChannelID, fmt.Sprintf("%s: Updated `tf2-booking` & restarting now from URL: %s", User.GetMention(), url))
 
+		Session.Close()
 		os.Exit(0)
 	}(url)
 }
@@ -330,6 +331,7 @@ func Exit(m *discordgo.MessageCreate, command string, args []string) {
 	Session.ChannelMessageSend(m.ChannelID, fmt.Sprintf("%s: Shutting down `tf2-booking`.", User.GetMention()))
 
 	SaveState(".state.json", Conf.Servers, Users, UserServers)
+	Session.Close()
 	os.Exit(0)
 }
 
