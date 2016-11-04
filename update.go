@@ -15,7 +15,9 @@ type StringStringMap map[string]string
 func (m StringServerMap) ToStringMap() StringStringMap {
 	newMap := make(StringStringMap)
 	for k, v := range m {
-		newMap[k] = v.SessionName
+		if v != nil {
+			newMap[k] = v.SessionName
+		}
 	}
 
 	return newMap
