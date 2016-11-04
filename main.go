@@ -66,7 +66,7 @@ func main() {
 		commands.NewCommand(PrintState).
 			Permissions(discordgo.PermissionManageServer).
 			RespondToDM(true),
-		"print state",
+		"print_state",
 	)
 
 	// Create maps.
