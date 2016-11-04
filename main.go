@@ -374,6 +374,8 @@ func MessageCreate(s *discordgo.Session, m *discordgo.MessageCreate) {
 		return
 	}
 
+	log.Println("Author ID:", m.Author.ID)
+
 	Permissions, err := Session.State.UserChannelPermissions(m.Author.ID, permissionsChannelID)
 	if err != nil {
 		log.Println("Failed to lookup permissions.", err)
