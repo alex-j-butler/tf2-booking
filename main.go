@@ -66,25 +66,6 @@ func main() {
 	Users = make(map[string]bool)
 	UserServers = make(map[string]*Server)
 
-	// Restore state from the state file, if it exists.
-	if HasState(".state.json") {
-		err, servers, users, userServers := LoadState(".state.json")
-
-		if err != nil {
-			log.Println("Found state file, failed to restore:", err)
-		} else {
-			log.Println("Found state file, restoring from previous state.")
-
-			if err = DeleteState(".state.json"); err != nil {
-				log.Println("Failed to delete state file:", err)
-			}
-
-			Conf.Servers = servers
-			Users = users
-			UserServers = userServers
-		}
-	}
-
 	// Create the Discord client from the bot token in the configuration.
 	dg, err := discordgo.New(fmt.Sprintf("Bot %s", Conf.DiscordToken))
 	if err != nil {
@@ -111,6 +92,25 @@ func main() {
 	if err != nil {
 		log.Println("Failed to open Discord websocket:", err)
 		return
+	}
+
+	// Restore state from the state file, if it exists.
+	if HasState(".state.json") {
+		err, servers, users, userServers := LoadState(".state.json")
+
+		if err != nil {
+			log.Println("Found state file, failed to restore:", err)
+		} else {
+			log.Println("Found state file, restoring from previous state.")
+
+			if err = DeleteState(".state.json"); err != nil {
+				log.Println("Failed to delete state file:", err)
+			}
+
+			Conf.Servers = servers
+			Users = users
+			UserServers = userServers
+		}
 	}
 
 	log.Println("Updated game string.")
