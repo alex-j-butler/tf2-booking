@@ -97,9 +97,7 @@ func UpdateExecutable(address string) error {
 
 	defer resp.Body.Close()
 
-	err = update.Apply(resp.Body, update.Options{
-		Patcher: update.NewBSDiffPatcher(),
-	})
+	err = update.Apply(resp.Body, update.Options{})
 	if err != nil {
 		return err
 	}
