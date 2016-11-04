@@ -62,6 +62,13 @@ func main() {
 		"exit",
 	)
 
+	Command.Add(
+		commands.NewCommand(PrintState).
+			Permissions(discordgo.PermissionManageServer).
+			RespondToDM(true),
+		"print state",
+	)
+
 	// Create maps.
 	Users = make(map[string]bool)
 	UserServers = make(map[string]*Server)
@@ -331,6 +338,14 @@ func Exit(m *discordgo.MessageCreate, command string, args []string) {
 
 	SaveState(".state.json", Conf.Servers, Users, UserServers)
 	os.Exit(0)
+}
+
+func PrintState(m *discordgo.MessageCreate, command string, args []string) {
+	User := &util.PatchUser{m.Author}
+
+	Session.ChannelMessageSend(m.ChannelID, fmt.Sprintf("%s: %v", User.GetMention(), Conf.Servers))
+	Session.ChannelMessageSend(m.ChannelID, fmt.Sprintf("%s: %v", User.GetMention(), Users))
+	Session.ChannelMessageSend(m.ChannelID, fmt.Sprintf("%s: %v", User.GetMention(), UserServers))
 }
 
 // MessageCreate handler for Discord.
