@@ -6,6 +6,7 @@ var setup bool
 func Exit() {
 	if !setup {
 		wait = make(chan struct{})
+		setup = true
 	}
 
 	wait <- struct{}{}
@@ -14,6 +15,7 @@ func Exit() {
 func Wait() {
 	if !setup {
 		wait = make(chan struct{})
+		setup = true
 	}
 
 	<-wait
