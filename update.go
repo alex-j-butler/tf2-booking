@@ -2,7 +2,9 @@ package main
 
 import (
 	"encoding/json"
+	"fmt"
 	"io/ioutil"
+	"log"
 	"net/http"
 	"os"
 
@@ -27,12 +29,17 @@ func (m StringStringMap) ToServerMap(servers []*Server) StringServerMap {
 	newMap := make(StringServerMap)
 	for k, v := range m {
 		var serv *Server
+
+		log.Println(fmt.Sprintf("Searching for server matching '%s'", v))
 		for _, s := range servers {
+			log.Println(fmt.Sprintf("Trying server: %v", s))
 			if s.SessionName == v {
 				serv = s
+				log.Println(fmt.Sprintf("Found server matching '%s': %v", v, s))
 			}
 		}
 
+		log.Println(fmt.Sprintf("Setting map key '%s': %v", k, serv))
 		newMap[k] = serv
 	}
 
@@ -86,6 +93,7 @@ func LoadState(save string) (error, []Server, map[string]bool, map[string]*Serve
 	for i, j := range state.Servers {
 		servers[i] = &j
 	}
+	log.Println("Loaded servers:", servers)
 	userServers := state.UserStrings.ToServerMap(servers)
 
 	return err, state.Servers, state.Users, userServers
