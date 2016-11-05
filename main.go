@@ -84,8 +84,8 @@ func main() {
 	Session = dg
 	BotID = u.ID
 
-	// Register a message create handler.
-	dg.AddHandler(MessageCreate)
+	// Register the OnReady handler.
+	dg.AddHandler(OnReady)
 
 	// Open the Discord websocket.
 	err = dg.Open()
@@ -93,30 +93,6 @@ func main() {
 		log.Println("Failed to open Discord websocket:", err)
 		return
 	}
-
-	// Restore state from the state file, if it exists.
-	if HasState(".state.json") {
-		err, servers, users, userServers := LoadState(".state.json")
-
-		if err != nil {
-			log.Println("Found state file, failed to restore:", err)
-		} else {
-			log.Println("Found state file, restoring from previous state.")
-
-			if err = DeleteState(".state.json"); err != nil {
-				log.Println("Failed to delete state file:", err)
-			}
-
-			Conf.Servers = servers
-			Users = users
-			UserServers = userServers
-		}
-	}
-
-	log.Println("Updated game string.")
-	UpdateGameString()
-
-	log.Println("Discord bot successfully started.")
 
 	// Keep running until Control-C pressed.
 	<-make(chan struct{})
@@ -333,6 +309,39 @@ func Exit(m *discordgo.MessageCreate, command string, args []string) {
 	SaveState(".state.json", Conf.Servers, Users, UserServers)
 	Session.Close()
 	os.Exit(0)
+}
+
+// OnReady handler for Discord.
+// Called when the connection has been completely setup.
+func OnReady(s *discordgo.Session, r *discordgo.Ready) {
+	// Register a message create handler.
+	// This must be done in the OnReady event, otherwise guild lookups would fail because of
+	// it not having the list of guilds yet.
+	s.AddHandler(MessageCreate)
+
+	// Restore state from the state file, if it exists.
+	if HasState(".state.json") {
+		err, servers, users, userServers := LoadState(".state.json")
+
+		if err != nil {
+			log.Println("Found state file, failed to restore:", err)
+		} else {
+			log.Println("Found state file, restoring from previous state.")
+
+			if err = DeleteState(".state.json"); err != nil {
+				log.Println("Failed to delete state file:", err)
+			}
+
+			Conf.Servers = servers
+			Users = users
+			UserServers = userServers
+		}
+	}
+
+	log.Println("Updated game string.")
+	UpdateGameString()
+
+	log.Println("Discord bot successfully started.")
 }
 
 // MessageCreate handler for Discord.
