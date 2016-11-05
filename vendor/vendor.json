@@ -3,58 +3,58 @@
 	"ignore": "test",
 	"package": [
 		{
-			"checksumSHA1": "2avCvSn0XonfApKKuTMyiQmk7s0=",
+			"checksumSHA1": "JiTaaqMJ0WfwRKycs3y6rDKZgAk=",
 			"path": "github.com/Sirupsen/logrus",
 			"revision": "3ec0642a7fb6488f65b06f9040adc67e3990296a",
 			"revisionTime": "2016-08-29T20:23:21Z"
 		},
 		{
-			"checksumSHA1": "KbHCWFGwyUx0H+abYcXUw89zLc4=",
+			"checksumSHA1": "ypJk1qpmp7cDujzgZgj5C6JnUlg=",
 			"origin": "github.com/alex-j-butler/discordgo",
 			"path": "github.com/bwmarrin/discordgo",
-			"revision": "6de2474dafd00ab2ff2ac0fc60abab78292dbdb0",
+			"revision": "509fac38ff873b6433dd209bdfb8e805767fd726",
 			"revisionTime": "2016-11-05T05:25:42Z",
 			"version": "guild-lazy-loading",
 			"versionExact": "guild-lazy-loading"
 		},
 		{
-			"checksumSHA1": "klfNfdEPsrWYLps2qBkLgfJsNYI=",
+			"checksumSHA1": "mMHT+mzAgdReYgu8zCqQxI1BnLk=",
 			"path": "github.com/gorilla/websocket",
 			"revision": "2d1e4548da234d9cb742cc3628556fef86aafbac",
 			"revisionTime": "2016-09-12T15:30:41Z"
 		},
 		{
-			"checksumSHA1": "YjZiQ5N552dJ7GpJ2P4TTRu4PKI=",
+			"checksumSHA1": "LQ8XmigplJxC/MZEMccYEpEe9Fo=",
 			"path": "github.com/inconshreveable/go-update",
 			"revision": "8152e7eb6ccf8679a64582a66b78519688d156ad",
 			"revisionTime": "2016-01-12T19:33:35Z"
 		},
 		{
-			"checksumSHA1": "LeFW+ad/zlj30+Z0O4wwnXrVUSQ=",
+			"checksumSHA1": "QB/SKvDCdRsTYwBWJCOp7AgC8rw=",
 			"path": "github.com/inconshreveable/go-update/internal/binarydist",
 			"revision": "8152e7eb6ccf8679a64582a66b78519688d156ad",
 			"revisionTime": "2016-01-12T19:33:35Z"
 		},
 		{
-			"checksumSHA1": "H63+DW/S2nASpHk59G1wEUZD1qk=",
+			"checksumSHA1": "4jvb8tO8CyH8u+fnHh4hw86U2Es=",
 			"path": "github.com/inconshreveable/go-update/internal/osext",
 			"revision": "8152e7eb6ccf8679a64582a66b78519688d156ad",
 			"revisionTime": "2016-01-12T19:33:35Z"
 		},
 		{
-			"checksumSHA1": "+cYSZ/ZSKHuhIFeqmD35t6W76ME=",
+			"checksumSHA1": "i1S15r2eD3/9bl8RPFzteReau0I=",
 			"path": "github.com/james4k/rcon",
 			"revision": "8fbb8268b60ac3303900326e126be05d504ab63d",
 			"revisionTime": "2012-09-23T21:54:19Z"
 		},
 		{
-			"checksumSHA1": "yGgcQlZNpKhjZAbElPSECbSSNXE=",
+			"checksumSHA1": "gMFFpQolN0DUUZw9A3RUTcQmHVU=",
 			"path": "github.com/kidoman/go-steam",
 			"revision": "2e40e0d508cbac591bab4ae18b231153295f3a0a",
 			"revisionTime": "2014-12-21T01:56:29Z"
 		},
 		{
-			"checksumSHA1": "PphQA6j/DEDbg3WIsdBDYALOOYs=",
+			"checksumSHA1": "lEzkjwyqZ1e8Zv/k1t8OW0e+YVQ=",
 			"path": "github.com/robfig/cron",
 			"revision": "9585fd555638e77bba25f25db5c44b41f264aeb7",
 			"revisionTime": "2016-09-27T16:42:31Z"
