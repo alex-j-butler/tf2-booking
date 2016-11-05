@@ -3,11 +3,11 @@ package main
 import (
 	"fmt"
 	"log"
-	"os"
 	"strings"
 
 	"alex-j-butler.com/tf2-booking/commands"
 	"alex-j-butler.com/tf2-booking/util"
+	"alex-j-butler.com/tf2-booking/wait"
 
 	"github.com/bwmarrin/discordgo"
 	"github.com/robfig/cron"
@@ -102,7 +102,8 @@ func main() {
 	}
 
 	// Keep running until Control-C pressed.
-	<-make(chan struct{})
+	// <-make(chan struct{})
+	wait.Wait()
 
 	// Stop cron.
 	c.Stop()
@@ -303,8 +304,7 @@ func Update(m *discordgo.MessageCreate, command string, args []string) {
 
 		Session.ChannelMessageSend(m.ChannelID, fmt.Sprintf("%s: Updated `tf2-booking` & restarting now from URL: %s", User.GetMention(), url))
 
-		Session.Close()
-		os.Exit(0)
+		wait.Exit()
 	}(url)
 }
 
@@ -314,8 +314,7 @@ func Exit(m *discordgo.MessageCreate, command string, args []string) {
 	Session.ChannelMessageSend(m.ChannelID, fmt.Sprintf("%s: Shutting down `tf2-booking`.", User.GetMention()))
 
 	SaveState(".state.json", Conf.Servers, Users, UserServers)
-	Session.Close()
-	os.Exit(0)
+	wait.Exit()
 }
 
 func PrintState(m *discordgo.MessageCreate, command string, args []string) {
