@@ -12,7 +12,7 @@
 			"checksumSHA1": "ypJk1qpmp7cDujzgZgj5C6JnUlg=",
 			"origin": "github.com/alex-j-butler/discordgo",
 			"path": "github.com/bwmarrin/discordgo",
-			"revision": "509fac38ff873b6433dd209bdfb8e805767fd726",
+			"revision": "ed65f2d18674a3d9fc4ec7afafbf3bd638cb03c5",
 			"revisionTime": "2016-11-05T05:25:42Z",
 			"version": "guild-lazy-loading",
 			"versionExact": "guild-lazy-loading"
