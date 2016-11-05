@@ -124,6 +124,7 @@ func main() {
 	UpdateGameString()
 
 	log.Println("Discord bot successfully started.")
+	log.Println(fmt.Sprintf("Discord state enabled: %t", Session.StateEnabled))
 
 	// Keep running until Control-C pressed.
 	<-make(chan struct{})
