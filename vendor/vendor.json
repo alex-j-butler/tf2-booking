@@ -9,10 +9,13 @@
 			"revisionTime": "2016-08-29T20:23:21Z"
 		},
 		{
-			"checksumSHA1": "Vzxe0C8yKCQwMZglGqmztF+HD9w=",
+			"checksumSHA1": "KbHCWFGwyUx0H+abYcXUw89zLc4=",
+			"origin": "github.com/alex-j-butler/discordgo",
 			"path": "github.com/bwmarrin/discordgo",
-			"revision": "f878362d73b01a051091faaa012deeb7a85204af",
-			"revisionTime": "2016-10-14T02:14:03Z"
+			"revision": "6de2474dafd00ab2ff2ac0fc60abab78292dbdb0",
+			"revisionTime": "2016-11-05T05:25:42Z",
+			"version": "guild-lazy-loading",
+			"versionExact": "guild-lazy-loading"
 		},
 		{
 			"checksumSHA1": "klfNfdEPsrWYLps2qBkLgfJsNYI=",
