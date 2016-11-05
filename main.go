@@ -86,6 +86,7 @@ func main() {
 
 	// Register the OnReady handler.
 	dg.AddHandler(OnReady)
+	dg.AddHandler(OnGuildReady)
 
 	// Open the Discord websocket.
 	err = dg.Open()
@@ -313,11 +314,6 @@ func Exit(m *discordgo.MessageCreate, command string, args []string) {
 // OnReady handler for Discord.
 // Called when the connection has been completely setup.
 func OnReady(s *discordgo.Session, r *discordgo.Ready) {
-	// Register a message create handler.
-	// This must be done in the OnReady event, otherwise guild lookups would fail because of
-	// it not having the list of guilds yet.
-	s.AddHandler(MessageCreate)
-
 	// Restore state from the state file, if it exists.
 	if HasState(".state.json") {
 		err, servers, users, userServers := LoadState(".state.json")
@@ -341,6 +337,17 @@ func OnReady(s *discordgo.Session, r *discordgo.Ready) {
 	UpdateGameString()
 
 	log.Println("Discord bot successfully started.")
+}
+
+// OnGuildReady handler for Discord.
+// Called when all the guilds have been lazy loaded.
+func OnGuildReady(s *discordgo.Session, r *discordgo.GuildReady) {
+	// Register a message create handler.
+	// This must be done in the OnGuildReady event, otherwise guild lookups would fail because of
+	// it not having the list of guilds yet.
+	s.AddHandler(MessageCreate)
+
+	log.Println("Discord guilds successfully loaded.")
 }
 
 // MessageCreate handler for Discord.
