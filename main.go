@@ -106,6 +106,8 @@ func main() {
 	// <-make(chan struct{})
 	wait.Wait()
 
+	Session.Close()
+
 	// Stop cron.
 	c.Stop()
 }
