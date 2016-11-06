@@ -83,8 +83,9 @@ func LoadState(save string) (error, []Server, map[string]bool, map[string]*Serve
 	err = json.Unmarshal(j, &state)
 
 	servers := make([]*Server, len(Conf.Servers))
-	for i, j := range state.Servers {
-		servers[i] = &j
+	for i := 0; i < len(Conf.Servers); i++ {
+		serv := Conf.Servers[i]
+		servers[i] = &serv
 	}
 	userServers := state.UserStrings.ToServerMap(servers)
 
