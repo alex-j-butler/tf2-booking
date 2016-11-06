@@ -15,6 +15,8 @@ type Config struct {
 	MaxIdleMinutes     int      `json:"max_idle_minutes"`
 	MinPlayers         int      `json:"min_players"`
 
+	DiscordDebug bool `json:"discord_debug"`
+
 	ErrorThreshold    int      `json:"error_threshold"`
 	NotificationUsers []string `json:"notification_users"`
 

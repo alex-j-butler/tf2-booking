@@ -73,6 +73,10 @@ func main() {
 		return
 	}
 
+	if Conf.DiscordDebug {
+		dg.LogLevel = discordgo.LogDebug
+	}
+
 	// Get user information of the Discord user that is currently logged in (the bot).
 	u, err := dg.User("@me")
 	if err != nil {

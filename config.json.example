@@ -9,6 +9,8 @@
     "max_idle_minutes": 2,
     "min_players": 2,
 
+    "discord_debug": false,
+
     "error_threshold": 1,
     "notification_users":
     [
