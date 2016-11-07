@@ -7,7 +7,7 @@ import (
 	"time"
 
 	"alex-j-butler.com/tf2-booking/commands"
-	"alex-j-butler.com/tf2-booking/commands/loghandler"
+	"alex-j-butler.com/tf2-booking/commands/ingame/loghandler"
 	"alex-j-butler.com/tf2-booking/util"
 	"alex-j-butler.com/tf2-booking/wait"
 
@@ -36,12 +36,14 @@ func main() {
 	InitialiseConfiguration()
 	SetupCron()
 
-	logHandler, err := loghandler.Dial("", 3001)
+	logs, err := loghandler.Dial("", 3001)
 	if err != nil {
 		log.Println("LogHandler failed to connect:", err)
 	} else {
-		log.Println(fmt.Sprintf("LogHandler listening on %s:%d", logHandler.Address, logHandler.Port))
+		log.Println(fmt.Sprintf("LogHandler listening on %s:%d", logs.Address, logs.Port))
 	}
+
+	logs.Callback = IngameMessageCreate
 
 	// Register the commands and their command handlers.
 	Command = commands.New("")
@@ -76,6 +78,13 @@ func main() {
 			RespondToDM(true),
 		"exit",
 	)
+
+	// Register the ingame commands and their command handlers.
+	// IngameCommand := ingame.New("")
+	// IngameCommand.Add(
+	// 	ingame.NewCommand(ReportServer),
+	// 	"report",
+	// )
 
 	// Create maps.
 	Users = make(map[string]bool)
@@ -432,6 +441,10 @@ func MessageCreate(s *discordgo.Session, m *discordgo.MessageCreate) {
 
 	// Send the message content to the command handler to be dispatched appropriately.
 	Command.Handle(Session, m, strings.ToLower(m.Content), Permissions)
+}
+
+func IngameMessageCreate(matches []string) {
+	log.Println(matches)
 }
 
 // SetupCron creates the cron scheduler and adds the functions and their respective schedules.
