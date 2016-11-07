@@ -148,7 +148,7 @@ func CheckStats() {
 				}
 
 				// Calculate new average.
-				if Serv.TickRate == 0.0 {
+				if s.TickRate == 0.0 {
 					s.TickRate = st.FPS
 					s.TickRateMeasurements = 1
 				} else {
