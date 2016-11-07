@@ -30,3 +30,13 @@ func GetAvailableServers() []*Server {
 	}
 	return servers
 }
+
+func GetBookedServers() []*Server {
+	servers := make([]*Server, 0, len(Conf.Servers))
+	for i := 0; i < len(Conf.Servers); i++ {
+		if !Conf.Servers[i].IsAvailable() {
+			servers = append(servers, &Conf.Servers[i])
+		}
+	}
+	return servers
+}

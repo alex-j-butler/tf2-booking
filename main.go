@@ -50,6 +50,12 @@ func main() {
 		"extend",
 	)
 	Command.Add(
+		commands.NewCommand(PrintStats).
+			Permissions(discordgo.PermissionManageServer).
+			RespondToDM(true),
+		"stats",
+	)
+	Command.Add(
 		commands.NewCommand(Update).
 			Permissions(discordgo.PermissionManageServer).
 			RespondToDM(true),
@@ -283,6 +289,28 @@ func ExtendServer(m *discordgo.MessageCreate, command string, args []string) {
 
 		return
 	}
+}
+
+func PrintStats(m *discordgo.MessageCreate, command string, args []string) {
+	User := &util.PatchUser{m.Author}
+
+	servers := GetBookedServers()
+	message := "Server stats:"
+	count := 0
+
+	for i := 0; i < len(servers); i++ {
+		server := servers[i]
+		if server != nil {
+			message = fmt.Sprintf("%s\n\t%s: %f", message, server.Name, server.TickRate)
+			count++
+		}
+	}
+
+	if count == 0 {
+		message = "No servers are currently booked."
+	}
+
+	Session.ChannelMessageSend(m.ChannelID, fmt.Sprintf("%s: %s", User.GetMention(), message))
 }
 
 func Update(m *discordgo.MessageCreate, command string, args []string) {
