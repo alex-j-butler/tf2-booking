@@ -148,7 +148,7 @@ func CheckStats() {
 				}
 
 				// Calculate new average.
-				if s.TickRateMeasurements == 0 {
+				if s.TickRateMeasurements == 0 || s.TickRateMeasurements > 20 {
 					s.TickRate = st.FPS
 					s.TickRateMeasurements = 1
 				} else {
