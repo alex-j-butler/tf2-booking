@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"log"
 	"strings"
+	"time"
 
 	"alex-j-butler.com/tf2-booking/commands"
 	"alex-j-butler.com/tf2-booking/util"
@@ -316,6 +317,9 @@ func PrintStats(m *discordgo.MessageCreate, command string, args []string) {
 func Update(m *discordgo.MessageCreate, command string, args []string) {
 	User := &util.PatchUser{m.Author}
 
+	// Delete the sent message in 10 seconds.
+	go DeleteMessage(m.ChannelID, m.ID, time.Second*10)
+
 	if len(args) <= 0 {
 		// Send error.
 		Session.ChannelMessageSend(m.ChannelID, fmt.Sprintf("%s: Invalid arguments: `update <url>`", User.GetMention()))
@@ -330,7 +334,10 @@ func Update(m *discordgo.MessageCreate, command string, args []string) {
 		SaveState(".state.json", Conf.Servers, Users, UserServers)
 		UpdateExecutable(url)
 
-		Session.ChannelMessageSend(m.ChannelID, fmt.Sprintf("%s: Updated `tf2-booking` & restarting now from URL: %s", User.GetMention(), url))
+		m, _ := Session.ChannelMessageSend(m.ChannelID, fmt.Sprintf("%s: Updated `tf2-booking` & restarting now from URL: %s", User.GetMention(), url))
+
+		// Delete the sent message in 10 seconds.
+		go DeleteMessage(m.ChannelID, m.ID, time.Second*10)
 
 		wait.Exit()
 	}(url)
@@ -427,4 +434,9 @@ func SetupCron() {
 	c.AddFunc("0 * * * *", CheckIdleMinutes)
 	c.AddFunc("*/10 * * * *", CheckStats)
 	c.Start()
+}
+
+func DeleteMessage(channelID string, messageID string, duration time.Duration) error {
+	time.Sleep(duration)
+	return Session.ChannelMessageDelete(channelID, messageID)
 }
