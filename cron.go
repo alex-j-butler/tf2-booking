@@ -147,23 +147,13 @@ func CheckStats() {
 					return
 				}
 
-				log.Println(fmt.Sprintf("Current tickrate for '%s': %f with %d measurements", s.Name, s.TickRate, s.TickRateMeasurements))
-
 				// Calculate new average.
 				if s.TickRateMeasurements == 0 {
-					log.Println(fmt.Sprintf("Calculating new average for '%s': %f with %d measurements", s.Name, s.TickRate, s.TickRateMeasurements))
-
 					s.TickRate = st.FPS
 					s.TickRateMeasurements = 1
-
-					log.Println(fmt.Sprintf("Calculated new average for '%s': %f with %d measurements", s.Name, s.TickRate, s.TickRateMeasurements))
 				} else {
-					log.Println(fmt.Sprintf("Calculating average for '%s': %f with %d measurements", s.Name, s.TickRate, s.TickRateMeasurements))
-
 					s.TickRate = ((s.TickRate*float32(s.TickRateMeasurements) + st.FPS) / float32(s.TickRateMeasurements+1))
 					s.TickRateMeasurements++
-
-					log.Println(fmt.Sprintf("Calculated average for '%s': %f with %d measurements", s.Name, s.TickRate, s.TickRateMeasurements))
 				}
 			}(Serv)
 		}
