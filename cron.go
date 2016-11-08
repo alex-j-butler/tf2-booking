@@ -129,7 +129,7 @@ func CheckIdleMinutes() {
 func CheckStats() {
 	// Iterate through servers.
 	for i := 0; i < len(Conf.Servers); i++ {
-		Serv := Conf.Servers[i]
+		Serv := &Conf.Servers[i]
 
 		if !Serv.IsAvailable() {
 			go func(s *Server) {
@@ -150,7 +150,7 @@ func CheckStats() {
 				log.Println(fmt.Sprintf("Current tickrate for '%s': %f with %d measurements", s.Name, s.TickRate, s.TickRateMeasurements))
 
 				// Calculate new average.
-				if s.TickRate == 0.0 {
+				if s.TickRateMeasurements == 0 {
 					log.Println(fmt.Sprintf("Calculating new average for '%s': %f with %d measurements", s.Name, s.TickRate, s.TickRateMeasurements))
 
 					s.TickRate = st.FPS
@@ -165,7 +165,7 @@ func CheckStats() {
 
 					log.Println(fmt.Sprintf("Calculated average for '%s': %f with %d measurements", s.Name, s.TickRate, s.TickRateMeasurements))
 				}
-			}(&Serv)
+			}(Serv)
 		}
 	}
 }
