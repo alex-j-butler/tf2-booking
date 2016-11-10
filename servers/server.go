@@ -1,4 +1,4 @@
-package main
+package servers
 
 import (
 	"errors"
@@ -41,8 +41,8 @@ type Server struct {
 	host string
 	port int
 
-	idleMinutes  int
-	errorMinutes int
+	IdleMinutes  int
+	ErrorMinutes int
 }
 
 // Returns whether the server is currently available for booking.
@@ -63,15 +63,15 @@ func (s *Server) GetBookerMention() string {
 }
 
 func (s *Server) GetIdleMinutes() int {
-	return s.idleMinutes
+	return s.IdleMinutes
 }
 
 func (s *Server) AddIdleMinute() {
-	s.idleMinutes++
+	s.IdleMinutes++
 }
 
 func (s *Server) ResetIdleMinutes() {
-	s.idleMinutes = 0
+	s.IdleMinutes = 0
 }
 
 // Setup the server with a randomised RCON password & server password from a bash script.
@@ -162,13 +162,13 @@ func (s *Server) Stop() error {
 	return nil
 }
 
-func (s *Server) Book(user *discordgo.User) (string, string, error) {
+func (s *Server) Book(user *discordgo.User, duration time.Duration) (string, string, error) {
 	if s.booked == true {
 		return "", "", errors.New("Server is already booked")
 	}
 
 	// Set the server variables.
-	s.ReturnDate = time.Now().Add(Conf.BookingDuration.Duration)
+	s.ReturnDate = time.Now().Add(duration)
 	s.booked = true
 	s.bookedDate = time.Now()
 	s.booker = user.ID

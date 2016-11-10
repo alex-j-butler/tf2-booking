@@ -1,14 +1,19 @@
 package main
 
-import "fmt"
+import (
+	"fmt"
+
+	"alex-j-butler.com/tf2-booking/config"
+	"alex-j-butler.com/tf2-booking/servers"
+)
 
 // HandleQueryError handles incrementing the errorMinute value on the server, and
 // notifying an admin via Discord if too many errors occur in a short space of time.
-func HandleQueryError(s *Server, err error) {
-	s.errorMinutes++
+func HandleQueryError(s *servers.Server, err error) {
+	s.ErrorMinutes++
 
 	// Too many notifications. Send a message.
-	if s.errorMinutes >= Conf.ErrorThreshold {
+	if s.ErrorMinutes >= config.Conf.ErrorThreshold {
 		var message string
 		bookerName := "Unknown"
 		if !s.IsAvailable() {
@@ -20,21 +25,21 @@ func HandleQueryError(s *Server, err error) {
 			message = fmt.Sprintf(
 				"The server `%s` failed to be contacted after %d retries after being booked by `%s`. Check to ensure the server is correctly working.",
 				s.Name,
-				s.errorMinutes,
+				s.ErrorMinutes,
 				bookerName,
 			)
 		} else {
 			message = fmt.Sprintf(
 				"The server `%s` failed to be contacted after %d retries while unbooked. Check to ensure the server is correctly working.",
 				s.Name,
-				s.errorMinutes,
+				s.ErrorMinutes,
 			)
 		}
 
 		// Reset the error minutes.
-		s.errorMinutes = 0
+		s.ErrorMinutes = 0
 
-		for _, notificationUser := range Conf.NotificationUsers {
+		for _, notificationUser := range config.Conf.NotificationUsers {
 			UserChannel, _ := Session.UserChannelCreate(notificationUser)
 			Session.ChannelMessageSend(UserChannel.ID, message)
 		}

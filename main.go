@@ -8,6 +8,8 @@ import (
 
 	"alex-j-butler.com/tf2-booking/commands"
 	"alex-j-butler.com/tf2-booking/commands/ingame/loghandler"
+	"alex-j-butler.com/tf2-booking/config"
+	"alex-j-butler.com/tf2-booking/servers"
 	"alex-j-butler.com/tf2-booking/util"
 	"alex-j-butler.com/tf2-booking/wait"
 
@@ -27,13 +29,13 @@ var BotID string
 var Users map[string]bool
 
 // UserServers maps user IDs to server pointers.
-var UserServers map[string]*Server
+var UserServers map[string]*servers.Server
 
 // Command system
 var Command *commands.Command
 
 func main() {
-	InitialiseConfiguration()
+	config.InitialiseConfiguration()
 	SetupCron()
 
 	logs, err := loghandler.Dial("", 3001)
@@ -88,16 +90,16 @@ func main() {
 
 	// Create maps.
 	Users = make(map[string]bool)
-	UserServers = make(map[string]*Server)
+	UserServers = make(map[string]*servers.Server)
 
 	// Create the Discord client from the bot token in the configuration.
-	dg, err := discordgo.New(fmt.Sprintf("Bot %s", Conf.DiscordToken))
+	dg, err := discordgo.New(fmt.Sprintf("Bot %s", config.Conf.DiscordToken))
 	if err != nil {
 		log.Println("Failed to create Discord session:", err)
 		return
 	}
 
-	if Conf.DiscordDebug {
+	if config.Conf.DiscordDebug {
 		dg.LogLevel = discordgo.LogDebug
 	}
 
@@ -149,16 +151,16 @@ func BookServer(m *discordgo.MessageCreate, command string, args []string) {
 	}
 
 	// Get the next available server.
-	Serv := GetAvailableServer()
+	Serv := servers.GetAvailableServer(config.Conf.Servers)
 
 	if Serv != nil {
 		// Book the server.
-		RCONPassword, ServerPassword, err := Serv.Book(m.Author)
+		RCONPassword, ServerPassword, err := Serv.Book(m.Author, config.Conf.BookingDuration.Duration)
 		if err != nil {
 			Session.ChannelMessageSend(m.ChannelID, fmt.Sprintf("%s: Something went wrong while trying to book your server, please try again later.", User.GetMention()))
 		} else {
 			// Start the server.
-			go func(Serv *Server, m *discordgo.MessageCreate) {
+			go func(Serv *servers.Server, m *discordgo.MessageCreate) {
 				err := Serv.Start()
 
 				if err != nil {
@@ -226,7 +228,7 @@ func UnbookServer(m *discordgo.MessageCreate, command string, args []string) {
 
 	if Serv, ok := UserServers[m.Author.ID]; ok && Serv != nil {
 		// Stop the server.
-		go func(Serv *Server, m *discordgo.MessageCreate) {
+		go func(Serv *servers.Server, m *discordgo.MessageCreate) {
 			err := Serv.Stop()
 
 			if err != nil {
@@ -289,13 +291,13 @@ func ExtendServer(m *discordgo.MessageCreate, command string, args []string) {
 
 	if Serv, ok := UserServers[m.Author.ID]; ok && Serv != nil {
 		// Extend the booking.
-		Serv.ExtendBooking(Conf.BookingExtendDuration.Duration)
+		Serv.ExtendBooking(config.Conf.BookingExtendDuration.Duration)
 
 		// Notify server of successful operation.
-		Serv.SendCommand(fmt.Sprintf("say @%s: Your booking has been extended by %s.", m.Author.Username, Conf.BookingExtendDurationText))
+		Serv.SendCommand(fmt.Sprintf("say @%s: Your booking has been extended by %s.", m.Author.Username, config.Conf.BookingExtendDurationText))
 
 		// Notify Discord channel of successful operation.
-		Session.ChannelMessageSend(m.ChannelID, fmt.Sprintf("%s: Your booking has been extended by %s.", User.GetMention(), Conf.BookingExtendDurationText))
+		Session.ChannelMessageSend(m.ChannelID, fmt.Sprintf("%s: Your booking has been extended by %s.", User.GetMention(), config.Conf.BookingExtendDurationText))
 	} else {
 		// Notify Discord channel of failed operation.
 		Session.ChannelMessageSend(m.ChannelID, fmt.Sprintf("%s: You haven't booked a server. Type `book` to book a server.", User.GetMention()))
@@ -312,7 +314,7 @@ func ExtendServer(m *discordgo.MessageCreate, command string, args []string) {
 func PrintStats(m *discordgo.MessageCreate, command string, args []string) {
 	User := &util.PatchUser{m.Author}
 
-	servers := GetBookedServers()
+	servers := servers.GetBookedServers(config.Conf.Servers)
 	message := "Server stats:"
 	count := 0
 
@@ -348,7 +350,7 @@ func Update(m *discordgo.MessageCreate, command string, args []string) {
 	Session.ChannelMessageSend(m.ChannelID, fmt.Sprintf("%s: Starting update...", User.GetMention()))
 
 	go func(url string) {
-		SaveState(".state.json", Conf.Servers, Users, UserServers)
+		SaveState(".state.json", config.Conf.Servers, Users, UserServers)
 		UpdateExecutable(url)
 
 		m, _ := Session.ChannelMessageSend(m.ChannelID, fmt.Sprintf("%s: Updated `tf2-booking` & restarting now from URL: %s", User.GetMention(), url))
@@ -365,7 +367,7 @@ func Exit(m *discordgo.MessageCreate, command string, args []string) {
 
 	Session.ChannelMessageSend(m.ChannelID, fmt.Sprintf("%s: Shutting down `tf2-booking`.", User.GetMention()))
 
-	SaveState(".state.json", Conf.Servers, Users, UserServers)
+	SaveState(".state.json", config.Conf.Servers, Users, UserServers)
 	wait.Exit()
 }
 
@@ -385,7 +387,7 @@ func OnReady(s *discordgo.Session, r *discordgo.Ready) {
 				log.Println("Failed to delete state file:", err)
 			}
 
-			Conf.Servers = servers
+			config.Conf.Servers = servers
 			Users = users
 			UserServers = userServers
 		}
@@ -425,12 +427,12 @@ func MessageCreate(s *discordgo.Session, m *discordgo.MessageCreate) {
 	}
 
 	if channel.IsPrivate {
-		permissionsChannelID = Conf.DefaultChannel
+		permissionsChannelID = config.Conf.DefaultChannel
 	}
 
 	// Configuration has a string slice containing channels the bot should operate in.
 	// If the channel of the newly received message is not in the slice, stop now.
-	if !util.Contains(Conf.AcceptableChannels, m.ChannelID) && !channel.IsPrivate {
+	if !util.Contains(config.Conf.AcceptableChannels, m.ChannelID) && !channel.IsPrivate {
 		return
 	}
 
@@ -443,8 +445,8 @@ func MessageCreate(s *discordgo.Session, m *discordgo.MessageCreate) {
 	Command.Handle(Session, m, strings.ToLower(m.Content), Permissions)
 }
 
-func IngameMessageCreate(matches []string) {
-	log.Println(matches)
+func IngameMessageCreate(server *servers.Server, userid string, username string, steamid string, team string, message string) {
+	log.Println(fmt.Sprintf("Received command from '%s' on server '%s': %s", username, server.Name, message))
 }
 
 // SetupCron creates the cron scheduler and adds the functions and their respective schedules.

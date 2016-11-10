@@ -6,9 +6,14 @@ import (
 	"log"
 	"net"
 	"regexp"
+
+	"alex-j-butler.com/tf2-booking/config"
+	"alex-j-butler.com/tf2-booking/servers"
 )
 
-type CommandCallback func(matches []string)
+// type CommandCallback func(matches []string)
+// Server, UserID, Username, SteamID, Team, Message
+type CommandCallback func(*servers.Server, string, string, string, string, string)
 
 type LogHandler struct {
 	Address  string
@@ -58,7 +63,22 @@ func (lh LogHandler) handle() {
 			continue
 		}
 		if lh.Callback != nil {
-			lh.Callback(matches)
+			// Find a server with the same IP and Port.
+			server, err := servers.GetServerByAddress(config.Conf.Servers, addr.String())
+			if err != nil {
+				// Ignore this log line, we don't recognise the server.
+				log.Println("Unrecognised server:", err)
+				continue
+			}
+
+			// Notify the callback with the appropriate parameters.
+			// matches[0] = Username
+			// matches[1] = UserID
+			// matches[2] = SteamID
+			// matches[3] = Team
+			// matches[4] = Message
+
+			lh.Callback(server, matches[1], matches[0], matches[2], matches[3], matches[4])
 		}
 	}
 }
