@@ -55,7 +55,7 @@ func (lh LogHandler) handle() {
 		matches, err := lh.ParseLine(data)
 		if err != nil {
 			log.Println("ParseLine error:", err)
-			return
+			continue
 		}
 		if lh.Callback != nil {
 			lh.Callback(matches)
