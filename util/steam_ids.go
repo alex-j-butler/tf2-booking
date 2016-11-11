@@ -85,3 +85,7 @@ func FromCommunityID(communityid string) SteamID {
 		CommunityID: communityid,
 	}
 }
+
+func (sid SteamID) GetCommunityURL() string {
+	return fmt.Sprintf("http://steamcommunity.com/profiles/%s", sid.CommunityID)
+}
