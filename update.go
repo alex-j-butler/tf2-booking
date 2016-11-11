@@ -6,10 +6,13 @@ import (
 	"net/http"
 	"os"
 
+	"alex-j-butler.com/tf2-booking/config"
+	"alex-j-butler.com/tf2-booking/servers"
+
 	update "github.com/inconshreveable/go-update"
 )
 
-type StringServerMap map[string]*Server
+type StringServerMap map[string]*servers.Server
 type StringStringMap map[string]string
 
 func (m StringServerMap) ToStringMap() StringStringMap {
@@ -23,11 +26,11 @@ func (m StringServerMap) ToStringMap() StringStringMap {
 	return newMap
 }
 
-func (m StringStringMap) ToServerMap(servers []*Server) StringServerMap {
+func (m StringStringMap) ToServerMap(serverMap []*servers.Server) StringServerMap {
 	newMap := make(StringServerMap)
 	for k, v := range m {
-		var serv *Server
-		for _, s := range servers {
+		var serv *servers.Server
+		for _, s := range serverMap {
 			if s.SessionName == v {
 				serv = s
 			}
@@ -40,7 +43,7 @@ func (m StringStringMap) ToServerMap(servers []*Server) StringServerMap {
 }
 
 type State struct {
-	Servers     []Server
+	Servers     []servers.Server
 	Users       map[string]bool
 	UserStrings StringStringMap
 }
@@ -54,7 +57,7 @@ func DeleteState(save string) error {
 	return os.Remove(save)
 }
 
-func SaveState(save string, servers []Server, users map[string]bool, userServers StringServerMap) error {
+func SaveState(save string, servers []servers.Server, users map[string]bool, userServers StringServerMap) error {
 	state := State{
 		Servers:     servers,
 		Users:       users,
@@ -72,7 +75,7 @@ func SaveState(save string, servers []Server, users map[string]bool, userServers
 	return err
 }
 
-func LoadState(save string) (error, []Server, map[string]bool, map[string]*Server) {
+func LoadState(save string) (error, []servers.Server, map[string]bool, map[string]*servers.Server) {
 	j, err := ioutil.ReadFile(save)
 
 	if err != nil {
@@ -82,9 +85,9 @@ func LoadState(save string) (error, []Server, map[string]bool, map[string]*Serve
 	state := State{}
 	err = json.Unmarshal(j, &state)
 
-	servers := make([]*Server, len(Conf.Servers))
-	for i := 0; i < len(Conf.Servers); i++ {
-		serv := Conf.Servers[i]
+	servers := make([]*servers.Server, len(config.Conf.Servers))
+	for i := 0; i < len(config.Conf.Servers); i++ {
+		serv := config.Conf.Servers[i]
 		servers[i] = &serv
 	}
 	userServers := state.UserStrings.ToServerMap(servers)

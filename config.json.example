@@ -11,6 +11,8 @@
 
     "discord_debug": false,
 
+    "report_duration": "2m",
+
     "error_threshold": 1,
     "notification_users":
     [

@@ -7,6 +7,10 @@ import (
 	"time"
 
 	"alex-j-butler.com/tf2-booking/commands"
+	"alex-j-butler.com/tf2-booking/commands/ingame"
+	"alex-j-butler.com/tf2-booking/commands/ingame/loghandler"
+	"alex-j-butler.com/tf2-booking/config"
+	"alex-j-butler.com/tf2-booking/servers"
 	"alex-j-butler.com/tf2-booking/util"
 	"alex-j-butler.com/tf2-booking/wait"
 
@@ -26,14 +30,27 @@ var BotID string
 var Users map[string]bool
 
 // UserServers maps user IDs to server pointers.
-var UserServers map[string]*Server
+var UserServers map[string]*servers.Server
+
+// UserReportTimeouts maps user's steamids to the time after which they can report again.
+var UserReportTimeouts map[string]time.Time
 
 // Command system
 var Command *commands.Command
+var IngameCommand *ingame.Command
 
 func main() {
-	InitialiseConfiguration()
+	config.InitialiseConfiguration()
 	SetupCron()
+
+	logs, err := loghandler.Dial("", 3001)
+	if err != nil {
+		log.Println("LogHandler failed to connect:", err)
+	} else {
+		log.Println(fmt.Sprintf("LogHandler listening on %s:%d", logs.Address, logs.Port))
+	}
+
+	logs.AddHandler(IngameMessageCreate)
 
 	// Register the commands and their command handlers.
 	Command = commands.New("")
@@ -69,18 +86,30 @@ func main() {
 		"exit",
 	)
 
+	// Register the ingame commands and their command handlers.
+	IngameCommand = ingame.New("!")
+	IngameCommand.Add(
+		ingame.NewCommand(ReportServer),
+		"report",
+	)
+	IngameCommand.Add(
+		ingame.NewCommand(TimeLeft),
+		"time",
+	)
+
 	// Create maps.
 	Users = make(map[string]bool)
-	UserServers = make(map[string]*Server)
+	UserServers = make(map[string]*servers.Server)
+	UserReportTimeouts = make(map[string]time.Time)
 
 	// Create the Discord client from the bot token in the configuration.
-	dg, err := discordgo.New(fmt.Sprintf("Bot %s", Conf.DiscordToken))
+	dg, err := discordgo.New(fmt.Sprintf("Bot %s", config.Conf.DiscordToken))
 	if err != nil {
 		log.Println("Failed to create Discord session:", err)
 		return
 	}
 
-	if Conf.DiscordDebug {
+	if config.Conf.DiscordDebug {
 		dg.LogLevel = discordgo.LogDebug
 	}
 
@@ -132,16 +161,16 @@ func BookServer(m *discordgo.MessageCreate, command string, args []string) {
 	}
 
 	// Get the next available server.
-	Serv := GetAvailableServer()
+	Serv := servers.GetAvailableServer(config.Conf.Servers)
 
 	if Serv != nil {
 		// Book the server.
-		RCONPassword, ServerPassword, err := Serv.Book(m.Author)
+		RCONPassword, ServerPassword, err := Serv.Book(m.Author, config.Conf.BookingDuration.Duration)
 		if err != nil {
 			Session.ChannelMessageSend(m.ChannelID, fmt.Sprintf("%s: Something went wrong while trying to book your server, please try again later.", User.GetMention()))
 		} else {
 			// Start the server.
-			go func(Serv *Server, m *discordgo.MessageCreate) {
+			go func(Serv *servers.Server, m *discordgo.MessageCreate) {
 				err := Serv.Start()
 
 				if err != nil {
@@ -209,7 +238,7 @@ func UnbookServer(m *discordgo.MessageCreate, command string, args []string) {
 
 	if Serv, ok := UserServers[m.Author.ID]; ok && Serv != nil {
 		// Stop the server.
-		go func(Serv *Server, m *discordgo.MessageCreate) {
+		go func(Serv *servers.Server, m *discordgo.MessageCreate) {
 			err := Serv.Stop()
 
 			if err != nil {
@@ -272,13 +301,13 @@ func ExtendServer(m *discordgo.MessageCreate, command string, args []string) {
 
 	if Serv, ok := UserServers[m.Author.ID]; ok && Serv != nil {
 		// Extend the booking.
-		Serv.ExtendBooking(Conf.BookingExtendDuration.Duration)
+		Serv.ExtendBooking(config.Conf.BookingExtendDuration.Duration)
 
 		// Notify server of successful operation.
-		Serv.SendCommand(fmt.Sprintf("say @%s: Your booking has been extended by %s.", m.Author.Username, Conf.BookingExtendDurationText))
+		Serv.SendCommand(fmt.Sprintf("say @%s: Your booking has been extended by %s.", m.Author.Username, config.Conf.BookingExtendDurationText))
 
 		// Notify Discord channel of successful operation.
-		Session.ChannelMessageSend(m.ChannelID, fmt.Sprintf("%s: Your booking has been extended by %s.", User.GetMention(), Conf.BookingExtendDurationText))
+		Session.ChannelMessageSend(m.ChannelID, fmt.Sprintf("%s: Your booking has been extended by %s.", User.GetMention(), config.Conf.BookingExtendDurationText))
 	} else {
 		// Notify Discord channel of failed operation.
 		Session.ChannelMessageSend(m.ChannelID, fmt.Sprintf("%s: You haven't booked a server. Type `book` to book a server.", User.GetMention()))
@@ -295,7 +324,7 @@ func ExtendServer(m *discordgo.MessageCreate, command string, args []string) {
 func PrintStats(m *discordgo.MessageCreate, command string, args []string) {
 	User := &util.PatchUser{m.Author}
 
-	servers := GetBookedServers()
+	servers := servers.GetBookedServers(config.Conf.Servers)
 	message := "Server stats:"
 	count := 0
 
@@ -331,7 +360,7 @@ func Update(m *discordgo.MessageCreate, command string, args []string) {
 	Session.ChannelMessageSend(m.ChannelID, fmt.Sprintf("%s: Starting update...", User.GetMention()))
 
 	go func(url string) {
-		SaveState(".state.json", Conf.Servers, Users, UserServers)
+		SaveState(".state.json", config.Conf.Servers, Users, UserServers)
 		UpdateExecutable(url)
 
 		m, _ := Session.ChannelMessageSend(m.ChannelID, fmt.Sprintf("%s: Updated `tf2-booking` & restarting now from URL: %s", User.GetMention(), url))
@@ -348,7 +377,7 @@ func Exit(m *discordgo.MessageCreate, command string, args []string) {
 
 	Session.ChannelMessageSend(m.ChannelID, fmt.Sprintf("%s: Shutting down `tf2-booking`.", User.GetMention()))
 
-	SaveState(".state.json", Conf.Servers, Users, UserServers)
+	SaveState(".state.json", config.Conf.Servers, Users, UserServers)
 	wait.Exit()
 }
 
@@ -368,7 +397,7 @@ func OnReady(s *discordgo.Session, r *discordgo.Ready) {
 				log.Println("Failed to delete state file:", err)
 			}
 
-			Conf.Servers = servers
+			config.Conf.Servers = servers
 			Users = users
 			UserServers = userServers
 		}
@@ -408,12 +437,12 @@ func MessageCreate(s *discordgo.Session, m *discordgo.MessageCreate) {
 	}
 
 	if channel.IsPrivate {
-		permissionsChannelID = Conf.DefaultChannel
+		permissionsChannelID = config.Conf.DefaultChannel
 	}
 
 	// Configuration has a string slice containing channels the bot should operate in.
 	// If the channel of the newly received message is not in the slice, stop now.
-	if !util.Contains(Conf.AcceptableChannels, m.ChannelID) && !channel.IsPrivate {
+	if !util.Contains(config.Conf.AcceptableChannels, m.ChannelID) && !channel.IsPrivate {
 		return
 	}
 
@@ -424,6 +453,57 @@ func MessageCreate(s *discordgo.Session, m *discordgo.MessageCreate) {
 
 	// Send the message content to the command handler to be dispatched appropriately.
 	Command.Handle(Session, m, strings.ToLower(m.Content), Permissions)
+}
+
+func ReportServer(commandInfo ingame.CommandInfo, command string, args []string) {
+	if len(args) < 1 {
+		// No reason given, send error message to server.
+		commandInfo.Server.SendCommand(fmt.Sprintf("say Please give a reason: !report <reason>"))
+		return
+	}
+
+	if timeout, ok := UserReportTimeouts[commandInfo.SteamID]; ok && time.Since(timeout).Nanoseconds() < 0 {
+		// User can't report right now.
+		commandInfo.Server.SendCommand(fmt.Sprintf("say You can't report that quickly! Try again in a few minutes."))
+		return
+	}
+
+	reason := strings.Join(args, " ")
+
+	// Convert the steam id provided by the log handler.
+	steamID := util.FromSteamID3(commandInfo.SteamID)
+
+	// Construct the message.
+	message := fmt.Sprintf(
+		"Server '%s' (%s) has been reported by '%s' (%s) with reason: '%s'",
+		commandInfo.Server.Name,
+		commandInfo.Server.SessionName,
+		commandInfo.Username,
+		steamID.GetCommunityURL(),
+		reason,
+	)
+
+	// Send the message to the notification users.
+	for _, notificationUser := range config.Conf.NotificationUsers {
+		UserChannel, _ := Session.UserChannelCreate(notificationUser)
+		Session.ChannelMessageSend(UserChannel.ID, message)
+	}
+
+	// Set the report timeout for this user.
+	UserReportTimeouts[commandInfo.SteamID] = time.Now().Add(config.Conf.ReportDuration.Duration)
+
+	// Reply to the command.
+	commandInfo.Server.SendCommand(fmt.Sprintf("say Server reported! Thank you for your input."))
+}
+
+func TimeLeft(commandInfo ingame.CommandInfo, command string, args []string) {
+	duration := -time.Since(commandInfo.Server.ReturnDate)
+	commandInfo.Server.SendCommand(fmt.Sprintf("say %s remaining in booking.", util.ToHuman(&duration)))
+}
+
+func IngameMessageCreate(lh *loghandler.LogHandler, server *servers.Server, event *loghandler.SayEvent) {
+	log.Println(fmt.Sprintf("Received command from '%s' on server '%s': %s", event.Username, server.Name, event.Message))
+	IngameCommand.Handle(ingame.CommandInfo{SayEvent: *event, Server: server}, event.Message, 0)
 }
 
 // SetupCron creates the cron scheduler and adds the functions and their respective schedules.

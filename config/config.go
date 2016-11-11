@@ -1,10 +1,11 @@
-package main
+package config
 
 import (
 	"encoding/json"
 	"io/ioutil"
 	"log"
 
+	"alex-j-butler.com/tf2-booking/servers"
 	"alex-j-butler.com/tf2-booking/util"
 )
 
@@ -17,6 +18,8 @@ type Config struct {
 
 	DiscordDebug bool `json:"discord_debug"`
 
+	ReportDuration util.DurationUtil `json:"report_duration"`
+
 	ErrorThreshold    int      `json:"error_threshold"`
 	NotificationUsers []string `json:"notification_users"`
 
@@ -28,7 +31,7 @@ type Config struct {
 	BookingExtendDurationText  string `json:"booking_extend_duration_text"`
 	BookingWarningDurationText string `json:"booking_warning_duration_text"`
 
-	Servers []Server `json:"servers"`
+	Servers []servers.Server `json:"servers"`
 }
 
 var Conf Config
