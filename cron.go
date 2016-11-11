@@ -16,7 +16,7 @@ import (
 func CheckUnbookServers() {
 	// Iterate through servers.
 	for i := 0; i < len(config.Conf.Servers); i++ {
-		Serv := config.Conf.Servers[i]
+		Serv := &config.Conf.Servers[i]
 
 		if Serv.IsAvailable() {
 			return
