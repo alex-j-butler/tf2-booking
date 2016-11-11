@@ -91,7 +91,7 @@ func main() {
 	)
 	IngameCommand.Add(
 		ingame.NewCommand(TimeLeft),
-		"timeleft",
+		"time",
 	)
 
 	// Create maps.
@@ -453,16 +453,17 @@ func MessageCreate(s *discordgo.Session, m *discordgo.MessageCreate) {
 
 func ReportServer(commandInfo ingame.CommandInfo, command string, args []string) {
 	log.Println("Report ingame function called.")
+	commandInfo.Server.SendCommand(fmt.Sprintf("say Server reported! Thank you for your input."))
 }
 
 func TimeLeft(commandInfo ingame.CommandInfo, command string, args []string) {
-	log.Println("TimeLeft ingame function called.")
+	duration := -time.Since(commandInfo.Server.ReturnDate)
+	commandInfo.Server.SendCommand(fmt.Sprintf("say %s remaining in booking.", util.ToHuman(&duration)))
 }
 
 func IngameMessageCreate(lh *loghandler.LogHandler, server *servers.Server, event *loghandler.SayEvent) {
-	// log.Println(fmt.Sprintf("Received command from '%s' on server '%s': %s", event.Username, server.Name, event.Message))
-	log.Println(fmt.Sprintf("Event: %+v", event))
-	IngameCommand.Handle(ingame.CommandInfo{SayEvent: *event}, event.Message, 0)
+	log.Println(fmt.Sprintf("Received command from '%s' on server '%s': %s", event.Username, server.Name, event.Message))
+	IngameCommand.Handle(ingame.CommandInfo{SayEvent: *event, Server: server}, event.Message, 0)
 }
 
 // SetupCron creates the cron scheduler and adds the functions and their respective schedules.

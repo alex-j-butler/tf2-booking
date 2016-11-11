@@ -5,10 +5,12 @@ import (
 	"strings"
 
 	"alex-j-butler.com/tf2-booking/commands/ingame/loghandler"
+	"alex-j-butler.com/tf2-booking/servers"
 )
 
 type CommandInfo struct {
 	loghandler.SayEvent
+	Server *servers.Server
 }
 
 type CommandFunction func(CommandInfo, string, []string)
