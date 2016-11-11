@@ -45,7 +45,7 @@ func main() {
 		log.Println(fmt.Sprintf("LogHandler listening on %s:%d", logs.Address, logs.Port))
 	}
 
-	logs.Callback = IngameMessageCreate
+	logs.AddHandler(IngameMessageCreate)
 
 	// Register the commands and their command handlers.
 	Command = commands.New("")
@@ -445,8 +445,8 @@ func MessageCreate(s *discordgo.Session, m *discordgo.MessageCreate) {
 	Command.Handle(Session, m, strings.ToLower(m.Content), Permissions)
 }
 
-func IngameMessageCreate(server *servers.Server, userid string, username string, steamid string, team string, message string) {
-	log.Println(fmt.Sprintf("Received command from '%s' on server '%s': %s", username, server.Name, message))
+func IngameMessageCreate(lh loghandler.LogHandler, server *servers.Server, event loghandler.SayEvent) {
+	log.Println(fmt.Sprintf("Received command from '%s' on server '%s': %s", event.Username, server.Name, event.Message))
 }
 
 // SetupCron creates the cron scheduler and adds the functions and their respective schedules.
