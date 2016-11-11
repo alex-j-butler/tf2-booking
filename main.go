@@ -445,7 +445,7 @@ func MessageCreate(s *discordgo.Session, m *discordgo.MessageCreate) {
 	Command.Handle(Session, m, strings.ToLower(m.Content), Permissions)
 }
 
-func IngameMessageCreate(lh loghandler.LogHandler, server *servers.Server, event loghandler.SayEvent) {
+func IngameMessageCreate(lh *loghandler.LogHandler, server *servers.Server, event loghandler.SayEvent) {
 	log.Println(fmt.Sprintf("Received command from '%s' on server '%s': %s", event.Username, server.Name, event.Message))
 }
 
