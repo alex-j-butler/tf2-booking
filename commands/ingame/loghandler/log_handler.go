@@ -59,7 +59,6 @@ func (lh LogHandler) handle() {
 
 		matches, err := lh.ParseLine(data)
 		if err != nil {
-			log.Println("ParseLine error:", err)
 			continue
 		}
 		if lh.Callback != nil {
@@ -77,7 +76,6 @@ func (lh LogHandler) handle() {
 			// matches[2] = SteamID
 			// matches[3] = Team
 			// matches[4] = Message
-
 			lh.Callback(server, matches[1], matches[0], matches[2], matches[3], matches[4])
 		}
 	}
@@ -93,11 +91,6 @@ func (lh LogHandler) ParseLine(data string) ([]string, error) {
 	matches := regex.FindStringSubmatch(data)
 
 	if len(matches) > 0 {
-		for _, match := range matches {
-			log.Println(match)
-		}
-		// log.Println(fmt.Sprintf("User %s (%s): %s", matches[0], matches[2], matches[4]))
-
 		return matches, nil
 	}
 
