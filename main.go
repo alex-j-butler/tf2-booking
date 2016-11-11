@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"alex-j-butler.com/tf2-booking/commands"
+	"alex-j-butler.com/tf2-booking/commands/ingame"
 	"alex-j-butler.com/tf2-booking/commands/ingame/loghandler"
 	"alex-j-butler.com/tf2-booking/config"
 	"alex-j-butler.com/tf2-booking/servers"
@@ -33,6 +34,7 @@ var UserServers map[string]*servers.Server
 
 // Command system
 var Command *commands.Command
+var IngameCommand *ingame.Command
 
 func main() {
 	config.InitialiseConfiguration()
@@ -82,11 +84,15 @@ func main() {
 	)
 
 	// Register the ingame commands and their command handlers.
-	// IngameCommand := ingame.New("")
-	// IngameCommand.Add(
-	// 	ingame.NewCommand(ReportServer),
-	// 	"report",
-	// )
+	IngameCommand = ingame.New("!")
+	IngameCommand.Add(
+		ingame.NewCommand(ReportServer),
+		"report",
+	)
+	IngameCommand.Add(
+		ingame.NewCommand(TimeLeft),
+		"timeleft",
+	)
 
 	// Create maps.
 	Users = make(map[string]bool)
@@ -445,9 +451,18 @@ func MessageCreate(s *discordgo.Session, m *discordgo.MessageCreate) {
 	Command.Handle(Session, m, strings.ToLower(m.Content), Permissions)
 }
 
+func ReportServer(commandInfo ingame.CommandInfo, command string, args []string) {
+	log.Println("Report ingame function called.")
+}
+
+func TimeLeft(commandInfo ingame.CommandInfo, command string, args []string) {
+	log.Println("TimeLeft ingame function called.")
+}
+
 func IngameMessageCreate(lh *loghandler.LogHandler, server *servers.Server, event *loghandler.SayEvent) {
 	// log.Println(fmt.Sprintf("Received command from '%s' on server '%s': %s", event.Username, server.Name, event.Message))
 	log.Println(fmt.Sprintf("Event: %+v", event))
+	IngameCommand.Handle(ingame.CommandInfo{SayEvent: *event}, event.Message, 0)
 }
 
 // SetupCron creates the cron scheduler and adds the functions and their respective schedules.

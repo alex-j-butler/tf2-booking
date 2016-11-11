@@ -3,9 +3,12 @@ package ingame
 import (
 	"reflect"
 	"strings"
+
+	"alex-j-butler.com/tf2-booking/commands/ingame/loghandler"
 )
 
 type CommandInfo struct {
+	loghandler.SayEvent
 }
 
 type CommandFunction func(CommandInfo, string, []string)
