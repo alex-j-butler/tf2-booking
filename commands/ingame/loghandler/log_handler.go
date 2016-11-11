@@ -54,13 +54,11 @@ func Dial(address string, port int) (*LogHandler, error) {
 	return lh, nil
 }
 
-func (lh LogHandler) handleConn() {
+func (lh *LogHandler) handleConn() {
 	buf := make([]byte, 1024)
 
 	for {
 		n, addr, err := lh.conn.ReadFromUDP(buf)
-		log.Println(fmt.Sprintf("Received %d bytes from %s", n, addr))
-		log.Println(fmt.Sprintf("String: %s", string(buf[:n])))
 
 		if err != nil {
 			log.Println("LogHandler error:", err)
@@ -89,12 +87,12 @@ func (lh LogHandler) handleConn() {
 		// matches[4] = Message
 		lh.handle(server, &SayEvent{
 			UserEvent: UserEvent{
-				Username: matches[0],
-				UserID:   matches[1],
-				SteamID:  matches[2],
-				Team:     matches[3],
+				Username: matches[1],
+				UserID:   matches[2],
+				SteamID:  matches[3],
+				Team:     matches[4],
 			},
-			Message: matches[4],
+			Message: matches[5],
 		})
 	}
 }
@@ -148,7 +146,7 @@ func (lh *LogHandler) initialise() {
 		return
 	}
 
-	lh.handlers = map[interface{}][]reflect.Value{}
+	lh.handlers = make(map[interface{}][]reflect.Value)
 	lh.handlersMu.Unlock()
 }
 
