@@ -18,6 +18,8 @@ type Config struct {
 
 	DiscordDebug bool `json:"discord_debug"`
 
+	ReportDuration util.DurationUtil `json:"report_duration"`
+
 	ErrorThreshold    int      `json:"error_threshold"`
 	NotificationUsers []string `json:"notification_users"`
 

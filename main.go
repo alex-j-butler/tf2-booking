@@ -32,6 +32,9 @@ var Users map[string]bool
 // UserServers maps user IDs to server pointers.
 var UserServers map[string]*servers.Server
 
+// UserReportTimeouts maps user's steamids to the time after which they can report again.
+var UserReportTimeouts map[string]time.Time
+
 // Command system
 var Command *commands.Command
 var IngameCommand *ingame.Command
@@ -97,6 +100,7 @@ func main() {
 	// Create maps.
 	Users = make(map[string]bool)
 	UserServers = make(map[string]*servers.Server)
+	UserReportTimeouts = make(map[string]time.Time)
 
 	// Create the Discord client from the bot token in the configuration.
 	dg, err := discordgo.New(fmt.Sprintf("Bot %s", config.Conf.DiscordToken))
@@ -452,7 +456,43 @@ func MessageCreate(s *discordgo.Session, m *discordgo.MessageCreate) {
 }
 
 func ReportServer(commandInfo ingame.CommandInfo, command string, args []string) {
-	log.Println("Report ingame function called.")
+	if len(args) < 1 {
+		// No reason given, send error message to server.
+		commandInfo.Server.SendCommand(fmt.Sprintf("say Please give a reason: !report <reason>"))
+		return
+	}
+
+	if timeout, ok := UserReportTimeouts[commandInfo.SteamID]; ok && time.Since(timeout).Nanoseconds() < 0 {
+		// User can't report right now.
+		commandInfo.Server.SendCommand(fmt.Sprintf("say You can't report that quickly! Try again in a few minutes."))
+		return
+	}
+
+	reason := strings.Join(args, " ")
+
+	// Convert the steam id provided by the log handler.
+	steamID := util.FromSteamID3(commandInfo.SteamID)
+
+	// Construct the message.
+	message := fmt.Sprintf(
+		"Server '%s' (%s) has been reported by '%s' (%s) with reason: '%s'",
+		commandInfo.Server.Name,
+		commandInfo.Server.SessionName,
+		commandInfo.Username,
+		steamID.GetCommunityURL(),
+		reason,
+	)
+
+	// Send the message to the notification users.
+	for _, notificationUser := range config.Conf.NotificationUsers {
+		UserChannel, _ := Session.UserChannelCreate(notificationUser)
+		Session.ChannelMessageSend(UserChannel.ID, message)
+	}
+
+	// Set the report timeout for this user.
+	UserReportTimeouts[commandInfo.SteamID] = time.Now().Add(config.Conf.ReportDuration.Duration)
+
+	// Reply to the command.
 	commandInfo.Server.SendCommand(fmt.Sprintf("say Server reported! Thank you for your input."))
 }
 
