@@ -9,6 +9,10 @@ import (
 	"strings"
 	"time"
 
+	"alex-j-butler.com/tf2-booking/demos"
+
+	"regexp"
+
 	"github.com/bwmarrin/discordgo"
 	"github.com/james4k/rcon"
 )
@@ -206,6 +210,75 @@ func (s *Server) Unbook() error {
 func (s *Server) ExtendBooking(amount time.Duration) {
 	// Add duration to the return date.
 	s.ReturnDate = s.ReturnDate.Add(amount)
+}
+
+func (s *Server) GetBooking() (*demos.Booking, error) {
+	var demoArr []demos.Demo
+	demoFiles, err := s.uploadSTV()
+
+	if err != nil {
+		return nil, err
+	}
+
+	// Regexp
+	r, _ := regexp.Compile("^\\w+:\\/\\/.+\\/(\\d{4})-(\\d{2})-(\\d{2})-(\\d{2})-(\\d{2})-(.+)_vs_(.+)-(.+)\\.dem$")
+
+	demoArr = make([]demos.Demo, len(demoFiles))
+	for i := 0; i < len(demoArr); i++ {
+
+		matches := r.FindStringSubmatch(demoFiles[i])
+
+		demoArr[i] = demos.Demo{
+			Name: fmt.Sprintf("%s - %s vs %s", matches[8], matches[6], matches[7]),
+			Map:  matches[8],
+			URL:  demoFiles[i],
+			Teams: demos.TeamNames{
+				RedTeam: matches[7],
+				BluTeam: matches[6],
+			},
+		}
+
+		log.Println(fmt.Sprintf("Demo: %+v", demoArr[i]))
+
+	}
+
+	return nil, nil
+}
+
+func (s *Server) uploadSTV() ([]string, error) {
+	// Run upload STV demo script.
+	process := exec.Command("sh", "-c", fmt.Sprintf("cd %s; %s/stv.sh", s.Path, s.Path))
+	stdout, _ := process.StdoutPipe()
+
+	var err error
+	err = process.Start()
+
+	if err != nil {
+		log.Println("Failed to upload STV:", err)
+		return "", errors.New("Failed to upload STV")
+	}
+
+	stdoutBytes, _ := ioutil.ReadAll(stdout)
+
+	err = process.Wait()
+
+	if err != nil {
+		log.Println("Failed to upload STV:", err)
+		return "", errors.New("Failed to upload STV")
+	}
+
+	Files := strings.Split(string(stdoutBytes), "\n")
+	for i := 0; i < len(Files); i++ {
+		Files[i] = strings.TrimSpace(Files[i])
+	}
+
+	stvDemos := make([]demos.Demo, len(Files))
+
+	for i := 0; i < len(Files); i++ {
+		stvDemos[i] = Files[i]
+	}
+
+	return stvDemos, nil
 }
 
 func (s *Server) UploadSTV() (string, error) {
