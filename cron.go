@@ -43,7 +43,15 @@ func CheckUnbookServers() {
 			Serv.Stop()
 
 			// Upload STV demos
-			STVMessage, err := Serv.UploadSTV()
+			booking, err := Serv.GetBooking()
+
+			STVMessage := "STV Demo(s) uploaded:"
+			for i := 0; i < len(booking.Demos); i++ {
+				demo := booking.Demos[i]
+				STVMessage = fmt.Sprintf("%s\n\t%s", STVMessage, demo.URL)
+			}
+
+			Session.ChannelMessageSend(config.Conf.DefaultChannel, fmt.Sprintf("%s: Players: %+v", UserMention, booking.Players))
 
 			// Send 'returned' message
 			Session.ChannelMessageSend(config.Conf.DefaultChannel, fmt.Sprintf("%s: Your server was automatically unbooked.", UserMention))
@@ -56,6 +64,31 @@ func CheckUnbookServers() {
 			UpdateGameString()
 
 			log.Println(fmt.Sprintf("Automatically unbooked server \"%s\" from \"%s\", Reason: Booking timelimit reached", Serv.Name, UserID))
+		}
+	}
+}
+
+func CheckPlayers() {
+	// Iterate through servers.
+	for i := 0; i < len(config.Conf.Servers); i++ {
+		Serv := &config.Conf.Servers[i]
+
+		if !Serv.IsAvailable() {
+			go func(s *servers.Server) {
+				statusLine, err := s.SendRCONCommand("status")
+				if err != nil {
+					log.Println(fmt.Sprintf("Failed to send RCON status to server \"%s\"", s.Name), err)
+					return
+				}
+
+				status, _ := util.ParseStatus(statusLine)
+
+				for _, user := range status.Users {
+					if Serv.Players != nil {
+						Serv.Players[user.ID.CommunityID] = true
+					}
+				}
+			}(Serv)
 		}
 	}
 }
@@ -109,7 +142,15 @@ func CheckIdleMinutes() {
 					s.Stop()
 
 					// Upload STV demos
-					STVMessage, err := s.UploadSTV()
+					booking, err := Serv.GetBooking()
+
+					STVMessage := "STV Demo(s) uploaded:"
+					for i := 0; i < len(booking.Demos); i++ {
+						demo := booking.Demos[i]
+						STVMessage = fmt.Sprintf("%s\n\t%s", STVMessage, demo.URL)
+					}
+
+					Session.ChannelMessageSend(m.ChannelID, fmt.Sprintf("%s: Players: %+v", User.GetMention(), booking.Players))
 
 					// Send 'returned' message
 					Session.ChannelMessageSend(config.Conf.DefaultChannel, fmt.Sprintf("%s: Your server was automatically unbooked.", UserMention))

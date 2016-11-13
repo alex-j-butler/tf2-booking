@@ -128,7 +128,15 @@ func UnbookServer(m *discordgo.MessageCreate, command string, args []string) {
 		Serv.Unbook()
 
 		// Upload STV demos
-		STVMessage, err := Serv.UploadSTV()
+		booking, err := Serv.GetBooking()
+
+		STVMessage := "STV Demo(s) uploaded:"
+		for i := 0; i < len(booking.Demos); i++ {
+			demo := booking.Demos[i]
+			STVMessage = fmt.Sprintf("%s\n\t%s", STVMessage, demo.URL)
+		}
+
+		Session.ChannelMessageSend(m.ChannelID, fmt.Sprintf("%s: Players: %+v", User.GetMention(), booking.Players))
 
 		// Send 'returned' message.
 		Session.ChannelMessageSend(m.ChannelID, fmt.Sprintf("%s: Server returned.", User.GetMention()))

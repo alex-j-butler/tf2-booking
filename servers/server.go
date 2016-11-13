@@ -36,6 +36,9 @@ type Server struct {
 	// Number of tick rate measurements (used internally for calculating a new average).
 	TickRateMeasurements int
 
+	// Map of players who played on the server in the current booking.
+	Players map[string]bool
+
 	booked     bool
 	bookedDate time.Time
 
@@ -172,6 +175,7 @@ func (s *Server) Book(user *discordgo.User, duration time.Duration) (string, str
 	}
 
 	// Set the server variables.
+	s.Players = make(map[string]bool)
 	s.ReturnDate = time.Now().Add(duration)
 	s.booked = true
 	s.bookedDate = time.Now()
@@ -223,12 +227,16 @@ func (s *Server) GetBooking() (*demos.Booking, error) {
 	// Regexp
 	r, _ := regexp.Compile("^\\w+:\\/\\/.+\\/(\\d{4})-(\\d{2})-(\\d{2})-(\\d{2})-(\\d{2})-(.+)_vs_(.+)-(.+)\\.dem$")
 
-	demoArr = make([]demos.Demo, len(demoFiles))
-	for i := 0; i < len(demoArr); i++ {
+	demoArr = make([]demos.Demo, 0, len(demoFiles))
+	for i := 0; i < len(demoFiles); i++ {
 
 		matches := r.FindStringSubmatch(demoFiles[i])
 
-		demoArr[i] = demos.Demo{
+		if len(matches) == 0 {
+			continue
+		}
+
+		demoArr = append(demoArr, demos.Demo{
 			Name: fmt.Sprintf("%s - %s vs %s", matches[8], matches[6], matches[7]),
 			Map:  matches[8],
 			URL:  demoFiles[i],
@@ -236,13 +244,18 @@ func (s *Server) GetBooking() (*demos.Booking, error) {
 				RedTeam: matches[7],
 				BluTeam: matches[6],
 			},
-		}
+		})
 
 		log.Println(fmt.Sprintf("Demo: %+v", demoArr[i]))
 
 	}
 
-	return nil, nil
+	users := make([]string, 0, len(s.Players))
+	for id := range s.Players {
+		users = append(users, id)
+	}
+
+	return &demos.Booking{Players: users, Demos: demoArr}, nil
 }
 
 func (s *Server) uploadSTV() ([]string, error) {
@@ -255,7 +268,7 @@ func (s *Server) uploadSTV() ([]string, error) {
 
 	if err != nil {
 		log.Println("Failed to upload STV:", err)
-		return "", errors.New("Failed to upload STV")
+		return []string{}, errors.New("Failed to upload STV")
 	}
 
 	stdoutBytes, _ := ioutil.ReadAll(stdout)
@@ -264,7 +277,7 @@ func (s *Server) uploadSTV() ([]string, error) {
 
 	if err != nil {
 		log.Println("Failed to upload STV:", err)
-		return "", errors.New("Failed to upload STV")
+		return []string{}, errors.New("Failed to upload STV")
 	}
 
 	Files := strings.Split(string(stdoutBytes), "\n")
@@ -272,7 +285,7 @@ func (s *Server) uploadSTV() ([]string, error) {
 		Files[i] = strings.TrimSpace(Files[i])
 	}
 
-	stvDemos := make([]demos.Demo, len(Files))
+	stvDemos := make([]string, len(Files))
 
 	for i := 0; i < len(Files); i++ {
 		stvDemos[i] = Files[i]
