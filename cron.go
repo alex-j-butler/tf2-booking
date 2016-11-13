@@ -42,22 +42,21 @@ func CheckUnbookServers() {
 			Serv.Unbook()
 			Serv.Stop()
 
-			// Upload STV demos
-			booking, err := Serv.GetBooking()
-
-			STVMessage := "STV Demo(s) uploaded:"
-			for i := 0; i < len(booking.Demos); i++ {
-				demo := booking.Demos[i]
-				STVMessage = fmt.Sprintf("%s\n\t%s", STVMessage, demo.URL)
-			}
-
-			Session.ChannelMessageSend(config.Conf.DefaultChannel, fmt.Sprintf("%s: Players: %+v", UserMention, booking.Players))
-
 			// Send 'returned' message
 			Session.ChannelMessageSend(config.Conf.DefaultChannel, fmt.Sprintf("%s: Your server was automatically unbooked.", UserMention))
 
+			// Upload STV demos
+			booking, err := Serv.GetBooking()
+
 			// Send 'stv' message, if it uploaded successfully.
 			if err == nil {
+				STVMessage := "STV Demo(s) uploaded:"
+				for i := 0; i < len(booking.Demos); i++ {
+					demo := booking.Demos[i]
+					STVMessage = fmt.Sprintf("%s\n\t%s", STVMessage, demo.URL)
+				}
+
+				Session.ChannelMessageSend(config.Conf.DefaultChannel, fmt.Sprintf("%s: Players: %+v", UserMention, booking.Players))
 				Session.ChannelMessageSend(config.Conf.DefaultChannel, fmt.Sprintf("%s: %s", UserMention, STVMessage))
 			}
 
@@ -141,22 +140,21 @@ func CheckIdleMinutes() {
 					s.Unbook()
 					s.Stop()
 
-					// Upload STV demos
-					booking, err := Serv.GetBooking()
-
-					STVMessage := "STV Demo(s) uploaded:"
-					for i := 0; i < len(booking.Demos); i++ {
-						demo := booking.Demos[i]
-						STVMessage = fmt.Sprintf("%s\n\t%s", STVMessage, demo.URL)
-					}
-
-					Session.ChannelMessageSend(config.Conf.DefaultChannel, fmt.Sprintf("%s: Players: %+v", UserMention, booking.Players))
-
 					// Send 'returned' message
 					Session.ChannelMessageSend(config.Conf.DefaultChannel, fmt.Sprintf("%s: Your server was automatically unbooked.", UserMention))
 
+					// Upload STV demos
+					booking, err := Serv.GetBooking()
+
 					// Send 'stv' message, if it uploaded successfully.
 					if err == nil {
+						STVMessage := "STV Demo(s) uploaded:"
+						for i := 0; i < len(booking.Demos); i++ {
+							demo := booking.Demos[i]
+							STVMessage = fmt.Sprintf("%s\n\t%s", STVMessage, demo.URL)
+						}
+
+						Session.ChannelMessageSend(config.Conf.DefaultChannel, fmt.Sprintf("%s: Players: %+v", UserMention, booking.Players))
 						Session.ChannelMessageSend(config.Conf.DefaultChannel, fmt.Sprintf("%s: %s", UserMention, STVMessage))
 					}
 
