@@ -174,6 +174,8 @@ func (s *Server) Book(user *discordgo.User, duration time.Duration) (string, str
 	s.booker = user.ID
 	s.bookerMention = fmt.Sprintf("<@%s>", user.ID)
 	s.SentWarning = false
+	s.IdleMinutes = 0
+	s.ErrorMinutes = 0
 
 	var err error
 
@@ -199,6 +201,8 @@ func (s *Server) Unbook() error {
 	s.booker = ""
 	s.bookerMention = ""
 	s.SentWarning = false
+	s.IdleMinutes = 0
+	s.ErrorMinutes = 0
 
 	return nil
 }
