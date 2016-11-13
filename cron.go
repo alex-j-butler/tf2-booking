@@ -150,7 +150,7 @@ func CheckIdleMinutes() {
 						STVMessage = fmt.Sprintf("%s\n\t%s", STVMessage, demo.URL)
 					}
 
-					Session.ChannelMessageSend(m.ChannelID, fmt.Sprintf("%s: Players: %+v", User.GetMention(), booking.Players))
+					Session.ChannelMessageSend(config.Conf.DefaultChannel, fmt.Sprintf("%s: Players: %+v", UserMention, booking.Players))
 
 					// Send 'returned' message
 					Session.ChannelMessageSend(config.Conf.DefaultChannel, fmt.Sprintf("%s: Your server was automatically unbooked.", UserMention))
