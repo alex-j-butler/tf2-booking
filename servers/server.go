@@ -9,6 +9,7 @@ import (
 	"strings"
 	"time"
 
+	"alex-j-butler.com/tf2-booking/config"
 	"github.com/bwmarrin/discordgo"
 	"github.com/james4k/rcon"
 )
@@ -81,7 +82,16 @@ func (s *Server) ResetIdleMinutes() {
 //  error - Error of a failed setup, or nil if none
 func (s *Server) Setup() (string, string, error) {
 	// Retrieve the RCON password & server password.
-	process := exec.Command("sh", "-c", fmt.Sprintf("cd %s; %s/book_server.sh", s.Path, s.Path))
+	process := exec.Command(
+		"sh",
+		"-c",
+		fmt.Sprintf(
+			"cd %s; %s/%s",
+			s.Path,
+			s.Path,
+			config.Conf.Booking.SetupCommand,
+		),
+	)
 	stdout, _ := process.StdoutPipe()
 	stderr, _ := process.StderrPipe()
 
@@ -118,7 +128,16 @@ func (s *Server) Setup() (string, string, error) {
 // Returns:
 //  error - Error of a failed start, or nil if none
 func (s *Server) Start() error {
-	process := exec.Command("sh", "-c", fmt.Sprintf("cd %s; %s/run r", s.Path, s.Path))
+	process := exec.Command(
+		"sh",
+		"-c",
+		fmt.Sprintf(
+			"cd %s; %s/%s",
+			s.Path,
+			s.Path,
+			config.Conf.Booking.StartCommand,
+		),
+	)
 
 	var err error
 	err = process.Start()
@@ -140,9 +159,19 @@ func (s *Server) Start() error {
 
 func (s *Server) Stop() error {
 	// Stop the STV recording and kick all players cleanly.
-	s.SendCommand("tv_stop; kickall \"Server has been unbooked! Thanks for using Qixalite's bookable servers!\"")
+	KickCommand := fmt.Sprintf("tv_stop; kickall \"%s\"", config.Conf.Booking.KickMessage)
+	s.SendCommand(KickCommand)
 
-	process := exec.Command("sh", "-c", fmt.Sprintf("cd %s; %s/run sp", s.Path, s.Path))
+	process := exec.Command(
+		"sh",
+		"-c",
+		fmt.Sprintf(
+			"cd %s; %s/%s",
+			s.Path,
+			s.Path,
+			config.Conf.Booking.StopCommand,
+		),
+	)
 
 	var err error
 	err = process.Start()
@@ -214,7 +243,16 @@ func (s *Server) ExtendBooking(amount time.Duration) {
 
 func (s *Server) UploadSTV() (string, error) {
 	// Run upload STV demo script.
-	process := exec.Command("sh", "-c", fmt.Sprintf("cd %s; %s/stv.sh", s.Path, s.Path))
+	process := exec.Command(
+		"sh",
+		"-c",
+		fmt.Sprintf(
+			"cd %s; %s/%s",
+			s.Path,
+			s.Path,
+			config.Conf.Booking.UploadSTVCommand,
+		),
+	)
 	stdout, _ := process.StdoutPipe()
 
 	var err error
