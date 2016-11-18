@@ -1,0 +1,56 @@
+# Discord section
+discord:
+  # Discord token of the bot account to connect with.
+  token: "token"
+  # ID of the default Discord channel to send unbooking messages to.
+  default_channel: "channel id"
+  # Whether to print debug messages from the client.
+  debug: false
+  # Channels to allow booking commands from.
+  acceptable_channels:
+    - channel id
+  # Discord IDs to send notifications to.
+  notification_users:
+    - user id
+
+# Booking section
+booking:
+  # Duration of server booking.
+  duration: "4h"
+  # Duration of server booking extension.
+  extend_duration: "2h"
+  # Duration before the booking end to send warning message.
+  warning_duration: "-10m"
+
+  # Message to send to clients while kicking them.
+  kick_message: "Server has been unbooked!"
+  # Bash command to setup the server for booking.
+  setup_command: "book_server.sh"
+  # Bash command to start the server.
+  start_command: "run r"
+  # Bash command to stop the server.
+  stop_command: "run sp"
+  # Bash command to upload STV demos.
+  upload_stv_command: "stv.sh"
+
+  # Number of minutes that a server is allowed to be idle before unbooking.
+  max_idle_minutes: 15
+  # Number of players on the server for the server to be considered 'not idle'.
+  min_players: 2
+
+  # Amount of query errors before a notification is sent.
+  error_threshold: 5
+
+commands:
+  # Delay between the !report command can be used.
+  report_duration: "4m"
+
+servers:
+  - name: Server Name 1
+    path: /home/example/server1
+    address: 127.0.0.1:27015
+    session_name: server_name1
+  - name: Server Name 2
+    path: /home/example/server2
+    address: 127.0.0.1:27016
+    session_name: server_name2

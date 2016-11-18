@@ -1,44 +1,54 @@
 package config
 
 import (
-	"encoding/json"
 	"io/ioutil"
 	"log"
 
 	"alex-j-butler.com/tf2-booking/servers"
 	"alex-j-butler.com/tf2-booking/util"
+
+	yaml "gopkg.in/yaml.v2"
 )
 
 type Config struct {
-	DiscordToken       string   `json:"discord_token"`
-	DefaultChannel     string   `json:"default_channel"`
-	AcceptableChannels []string `json:"acceptable_channels"`
-	MaxIdleMinutes     int      `json:"max_idle_minutes"`
-	MinPlayers         int      `json:"min_players"`
+	Discord struct {
+		Token          string `yaml:"token"`
+		DefaultChannel string `yaml:"default_channel"`
+		Debug          bool   `yaml:"debug"`
 
-	DiscordDebug bool `json:"discord_debug"`
+		AcceptableChannels []string `yaml:"acceptable_channels"`
+		NotificationUsers  []string `yaml:"notification_users"`
+	} `yaml:"discord"`
 
-	ReportDuration util.DurationUtil `json:"report_duration"`
+	Booking struct {
+		Duration        util.DurationUtil `yaml:"duration"`
+		ExtendDuration  util.DurationUtil `yaml:"extend_duration"`
+		WarningDuration util.DurationUtil `yaml:"warning_duration"`
 
-	ErrorThreshold    int      `json:"error_threshold"`
-	NotificationUsers []string `json:"notification_users"`
+		KickMessage      string `yaml:"kick_message"`
+		SetupCommand     string `yaml:"setup_command"`
+		StartCommand     string `yaml:"start_command"`
+		StopCommand      string `yaml:"stop_command"`
+		UploadSTVCommand string `yaml:"upload_stv_command"`
 
-	BookingDuration        util.DurationUtil `json:"booking_duration"`
-	BookingExtendDuration  util.DurationUtil `json:"booking_extend_duration"`
-	BookingWarningDuration util.DurationUtil `json:"booking_warning_duration"`
+		MaxIdleMinutes int `yaml:"max_idle_minutes"`
+		MinPlayers     int `yaml:"min_players"`
 
-	BookingDurationText        string `json:"booking_duration_text"`
-	BookingExtendDurationText  string `json:"booking_extend_duration_text"`
-	BookingWarningDurationText string `json:"booking_warning_duration_text"`
+		ErrorThreshold int `yaml:"error_threshold"`
+	} `yaml:"booking"`
 
-	Servers []servers.Server `json:"servers"`
+	Commands struct {
+		ReportDuration util.DurationUtil `yaml:"report_duration"`
+	}
+
+	Servers []servers.Server `yaml:"servers"`
 }
 
 var Conf Config
 
 func InitialiseConfiguration() {
-	configuration, _ := ioutil.ReadFile("./config.json")
-	err := json.Unmarshal(configuration, &Conf)
+	configuration, _ := ioutil.ReadFile("./config.yml")
+	err := yaml.Unmarshal(configuration, &Conf)
 
 	if err != nil {
 		log.Println("Failed to initialise configuration:", err)

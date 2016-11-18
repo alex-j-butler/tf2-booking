@@ -39,13 +39,13 @@ func ReportServer(commandInfo ingame.CommandInfo, command string, args []string)
 	)
 
 	// Send the message to the notification users.
-	for _, notificationUser := range config.Conf.NotificationUsers {
+	for _, notificationUser := range config.Conf.Discord.NotificationUsers {
 		UserChannel, _ := Session.UserChannelCreate(notificationUser)
 		Session.ChannelMessageSend(UserChannel.ID, message)
 	}
 
 	// Set the report timeout for this user.
-	UserReportTimeouts[commandInfo.SteamID] = time.Now().Add(config.Conf.ReportDuration.Duration)
+	UserReportTimeouts[commandInfo.SteamID] = time.Now().Add(config.Conf.Commands.ReportDuration.Duration)
 
 	// Reply to the command.
 	commandInfo.Server.SendCommand(fmt.Sprintf("say Server reported! Thank you for your input."))

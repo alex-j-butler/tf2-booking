@@ -33,7 +33,7 @@ func BookServer(m *discordgo.MessageCreate, command string, args []string) {
 
 	if Serv != nil {
 		// Book the server.
-		RCONPassword, ServerPassword, err := Serv.Book(m.Author, config.Conf.BookingDuration.Duration)
+		RCONPassword, ServerPassword, err := Serv.Book(m.Author, config.Conf.Booking.Duration.Duration)
 		if err != nil {
 			Session.ChannelMessageSend(m.ChannelID, fmt.Sprintf("%s: Something went wrong while trying to book your server, please try again later.", User.GetMention()))
 		} else {
@@ -169,13 +169,27 @@ func ExtendServer(m *discordgo.MessageCreate, command string, args []string) {
 
 	if Serv, ok := UserServers[m.Author.ID]; ok && Serv != nil {
 		// Extend the booking.
-		Serv.ExtendBooking(config.Conf.BookingExtendDuration.Duration)
+		// Serv.ExtendBooking(config.Conf.BookingExtendDuration.Duration)
+		Serv.ExtendBooking(config.Conf.Booking.ExtendDuration.Duration)
 
 		// Notify server of successful operation.
-		Serv.SendCommand(fmt.Sprintf("say @%s: Your booking has been extended by %s.", m.Author.Username, config.Conf.BookingExtendDurationText))
+		Serv.SendCommand(
+			fmt.Sprintf(
+				"say @%s: Your booking has been extended by %s.",
+				m.Author.Username,
+				util.ToHuman(&config.Conf.Booking.ExtendDuration.Duration),
+			),
+		)
 
 		// Notify Discord channel of successful operation.
-		Session.ChannelMessageSend(m.ChannelID, fmt.Sprintf("%s: Your booking has been extended by %s.", User.GetMention(), config.Conf.BookingExtendDurationText))
+		Session.ChannelMessageSend(
+			m.ChannelID,
+			fmt.Sprintf(
+				"%s: Your booking has been extended by %s.",
+				User.GetMention(),
+				util.ToHuman(&config.Conf.Booking.ExtendDuration.Duration),
+			),
+		)
 	} else {
 		// Notify Discord channel of failed operation.
 		Session.ChannelMessageSend(m.ChannelID, fmt.Sprintf("%s: You haven't booked a server. Type `book` to book a server.", User.GetMention()))

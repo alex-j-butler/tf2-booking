@@ -28,6 +28,16 @@ func (du *DurationUtil) UnmarshalJSON(buf []byte) error {
 	return err
 }
 
+func (du *DurationUtil) UnmarshalYAML(unmarshal func(interface{}) error) error {
+	var str string
+	unmarshal(&str)
+
+	duration, err := time.ParseDuration(str)
+	du.Duration = duration
+
+	return err
+}
+
 // ToHuman converts a duration into a human-readable string with support for only hours and minutes.
 // Prints in the format '1 hour 45 minutes'
 func ToHuman(duration *time.Duration) string {

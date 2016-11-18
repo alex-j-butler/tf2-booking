@@ -13,7 +13,7 @@ func HandleQueryError(s *servers.Server, err error) {
 	s.ErrorMinutes++
 
 	// Too many notifications. Send a message.
-	if s.ErrorMinutes >= config.Conf.ErrorThreshold {
+	if s.ErrorMinutes >= config.Conf.Booking.ErrorThreshold {
 		var message string
 		bookerName := "Unknown"
 		if !s.IsAvailable() {
@@ -39,7 +39,7 @@ func HandleQueryError(s *servers.Server, err error) {
 		// Reset the error minutes.
 		s.ErrorMinutes = 0
 
-		for _, notificationUser := range config.Conf.NotificationUsers {
+		for _, notificationUser := range config.Conf.Discord.NotificationUsers {
 			UserChannel, _ := Session.UserChannelCreate(notificationUser)
 			Session.ChannelMessageSend(UserChannel.ID, message)
 		}

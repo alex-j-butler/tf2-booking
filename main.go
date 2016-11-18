@@ -103,13 +103,13 @@ func main() {
 	UserReportTimeouts = make(map[string]time.Time)
 
 	// Create the Discord client from the bot token in the configuration.
-	dg, err := discordgo.New(fmt.Sprintf("Bot %s", config.Conf.DiscordToken))
+	dg, err := discordgo.New(fmt.Sprintf("Bot %s", config.Conf.Discord.Token))
 	if err != nil {
 		log.Println("Failed to create Discord session:", err)
 		return
 	}
 
-	if config.Conf.DiscordDebug {
+	if config.Conf.Discord.Debug {
 		dg.LogLevel = discordgo.LogDebug
 	}
 
@@ -201,12 +201,12 @@ func MessageCreate(s *discordgo.Session, m *discordgo.MessageCreate) {
 	}
 
 	if channel.IsPrivate {
-		permissionsChannelID = config.Conf.DefaultChannel
+		permissionsChannelID = config.Conf.Discord.DefaultChannel
 	}
 
 	// Configuration has a string slice containing channels the bot should operate in.
 	// If the channel of the newly received message is not in the slice, stop now.
-	if !util.Contains(config.Conf.AcceptableChannels, m.ChannelID) && !channel.IsPrivate {
+	if !util.Contains(config.Conf.Discord.AcceptableChannels, m.ChannelID) && !channel.IsPrivate {
 		return
 	}
 

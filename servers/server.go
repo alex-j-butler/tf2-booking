@@ -14,10 +14,10 @@ import (
 )
 
 type Server struct {
-	Name        string `json:"name"`
-	Path        string `json:"path"`
-	Address     string `json:"address"`
-	SessionName string `json:"session_name"`
+	Name        string `json:"name" yaml:"name"`
+	Path        string `json:"path" yaml:"path"`
+	Address     string `json:"address" yaml:"address"`
+	SessionName string `json:"session_name" yaml:"session_name"`
 
 	SentWarning bool
 	ReturnDate  time.Time

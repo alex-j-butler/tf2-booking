@@ -22,12 +22,17 @@ func CheckUnbookServers() {
 			return
 		}
 
-		if !Serv.IsAvailable() && !Serv.SentWarning && (Serv.ReturnDate.Add(config.Conf.BookingWarningDuration.Duration)).Before(time.Now()) {
+		if !Serv.IsAvailable() && !Serv.SentWarning && (Serv.ReturnDate.Add(config.Conf.Booking.WarningDuration.Duration)).Before(time.Now()) {
 			// Only allow this message to be sent once.
 			Serv.SentWarning = true
 
 			// Send warning message.
-			Serv.SendCommand(fmt.Sprintf("say Your booking will expire in %s, type 'extend' into Discord to extend the booking.", config.Conf.BookingWarningDurationText))
+			Serv.SendCommand(
+				fmt.Sprintf(
+					"say Your booking will expire in %s, type 'extend' into Discord to extend the booking.",
+					util.ToHuman(&config.Conf.Booking.WarningDuration.Duration),
+				),
+			)
 		}
 
 		if !Serv.IsAvailable() && Serv.ReturnDate.Before(time.Now()) {
@@ -46,11 +51,11 @@ func CheckUnbookServers() {
 			STVMessage, err := Serv.UploadSTV()
 
 			// Send 'returned' message
-			Session.ChannelMessageSend(config.Conf.DefaultChannel, fmt.Sprintf("%s: Your server was automatically unbooked.", UserMention))
+			Session.ChannelMessageSend(config.Conf.Discord.DefaultChannel, fmt.Sprintf("%s: Your server was automatically unbooked.", UserMention))
 
 			// Send 'stv' message, if it uploaded successfully.
 			if err == nil {
-				Session.ChannelMessageSend(config.Conf.DefaultChannel, fmt.Sprintf("%s: %s", UserMention, STVMessage))
+				Session.ChannelMessageSend(config.Conf.Discord.DefaultChannel, fmt.Sprintf("%s: %s", UserMention, STVMessage))
 			}
 
 			UpdateGameString()
@@ -87,13 +92,13 @@ func CheckIdleMinutes() {
 					return
 				}
 
-				if info.Players < config.Conf.MinPlayers {
+				if info.Players < config.Conf.Booking.MinPlayers {
 					s.AddIdleMinute()
 				} else {
 					s.ResetIdleMinutes()
 				}
 
-				if s.GetIdleMinutes() >= config.Conf.MaxIdleMinutes {
+				if s.GetIdleMinutes() >= config.Conf.Booking.MaxIdleMinutes {
 					UserID := s.GetBooker()
 					UserMention := s.GetBookerMention()
 
@@ -112,11 +117,11 @@ func CheckIdleMinutes() {
 					STVMessage, err := s.UploadSTV()
 
 					// Send 'returned' message
-					Session.ChannelMessageSend(config.Conf.DefaultChannel, fmt.Sprintf("%s: Your server was automatically unbooked.", UserMention))
+					Session.ChannelMessageSend(config.Conf.Discord.DefaultChannel, fmt.Sprintf("%s: Your server was automatically unbooked.", UserMention))
 
 					// Send 'stv' message, if it uploaded successfully.
 					if err == nil {
-						Session.ChannelMessageSend(config.Conf.DefaultChannel, fmt.Sprintf("%s: %s", UserMention, STVMessage))
+						Session.ChannelMessageSend(config.Conf.Discord.DefaultChannel, fmt.Sprintf("%s: %s", UserMention, STVMessage))
 					}
 
 					UpdateGameString()
