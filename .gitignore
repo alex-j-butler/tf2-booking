@@ -4,6 +4,7 @@
 ### Custom ###
 config.json
 config.yml
+servers.yml
 .state.json
 tf2-booking
 .vscode
