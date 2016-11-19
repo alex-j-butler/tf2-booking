@@ -6,7 +6,6 @@ import (
 	"net/http"
 	"os"
 
-	"alex-j-butler.com/tf2-booking/config"
 	"alex-j-butler.com/tf2-booking/servers"
 
 	update "github.com/inconshreveable/go-update"
@@ -85,12 +84,12 @@ func LoadState(save string) (error, []servers.Server, map[string]bool, map[strin
 	state := State{}
 	err = json.Unmarshal(j, &state)
 
-	servers := make([]*servers.Server, len(config.Conf.Servers))
-	for i := 0; i < len(config.Conf.Servers); i++ {
-		serv := config.Conf.Servers[i]
-		servers[i] = &serv
+	servers_ := make([]*servers.Server, len(servers.Servers))
+	for i := 0; i < len(servers.Servers); i++ {
+		serv := servers.Servers[i]
+		servers_[i] = &serv
 	}
-	userServers := state.UserStrings.ToServerMap(servers)
+	userServers := state.UserStrings.ToServerMap(servers_)
 
 	return err, state.Servers, state.Users, userServers
 }

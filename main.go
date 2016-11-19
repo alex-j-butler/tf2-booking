@@ -41,6 +41,7 @@ var IngameCommand *ingame.Command
 
 func main() {
 	config.InitialiseConfiguration()
+	servers.InitialiseServers()
 	SetupCron()
 
 	logs, err := loghandler.Dial("", 3001)
@@ -150,7 +151,7 @@ func main() {
 func OnReady(s *discordgo.Session, r *discordgo.Ready) {
 	// Restore state from the state file, if it exists.
 	if HasState(".state.json") {
-		err, servers, users, userServers := LoadState(".state.json")
+		err, servers_, users, userServers := LoadState(".state.json")
 
 		if err != nil {
 			log.Println("Found state file, failed to restore:", err)
@@ -161,7 +162,7 @@ func OnReady(s *discordgo.Session, r *discordgo.Ready) {
 				log.Println("Failed to delete state file:", err)
 			}
 
-			config.Conf.Servers = servers
+			servers.Servers = servers_
 			Users = users
 			UserServers = userServers
 		}

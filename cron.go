@@ -15,8 +15,8 @@ import (
 // Check if any servers are ready to be unbooked by the automatic timeout after 4 hours.
 func CheckUnbookServers() {
 	// Iterate through servers.
-	for i := 0; i < len(config.Conf.Servers); i++ {
-		Serv := &config.Conf.Servers[i]
+	for i := 0; i < len(servers.Servers); i++ {
+		Serv := &servers.Servers[i]
 
 		if Serv.IsAvailable() {
 			return
@@ -67,8 +67,8 @@ func CheckUnbookServers() {
 
 func CheckIdleMinutes() {
 	// Iterate through servers.
-	for i := 0; i < len(config.Conf.Servers); i++ {
-		Serv := &config.Conf.Servers[i]
+	for i := 0; i < len(servers.Servers); i++ {
+		Serv := &servers.Servers[i]
 
 		if !Serv.IsAvailable() {
 			go func(s *servers.Server) {
@@ -135,8 +135,8 @@ func CheckIdleMinutes() {
 
 func CheckStats() {
 	// Iterate through servers.
-	for i := 0; i < len(config.Conf.Servers); i++ {
-		Serv := &config.Conf.Servers[i]
+	for i := 0; i < len(servers.Servers); i++ {
+		Serv := &servers.Servers[i]
 
 		if !Serv.IsAvailable() {
 			go func(s *servers.Server) {

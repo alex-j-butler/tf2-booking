@@ -9,7 +9,6 @@ import (
 	"regexp"
 	"sync"
 
-	"alex-j-butler.com/tf2-booking/config"
 	"alex-j-butler.com/tf2-booking/servers"
 )
 
@@ -72,7 +71,7 @@ func (lh *LogHandler) handleConn() {
 		}
 
 		// Find a server with the same IP and Port.
-		server, err := servers.GetServerByAddress(config.Conf.Servers, addr.String())
+		server, err := servers.GetServerByAddress(servers.Servers, addr.String())
 		if err != nil {
 			// Ignore this log line, we don't recognise the server.
 			log.Println("Unrecognised server:", err)

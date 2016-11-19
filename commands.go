@@ -29,7 +29,7 @@ func BookServer(m *discordgo.MessageCreate, command string, args []string) {
 	}
 
 	// Get the next available server.
-	Serv := servers.GetAvailableServer(config.Conf.Servers)
+	Serv := servers.GetAvailableServer(servers.Servers)
 
 	if Serv != nil {
 		// Book the server.
@@ -206,7 +206,7 @@ func ExtendServer(m *discordgo.MessageCreate, command string, args []string) {
 func PrintStats(m *discordgo.MessageCreate, command string, args []string) {
 	User := &util.PatchUser{m.Author}
 
-	servers := servers.GetBookedServers(config.Conf.Servers)
+	servers := servers.GetBookedServers(servers.Servers)
 	message := "Server stats:"
 	count := 0
 
@@ -242,7 +242,7 @@ func Update(m *discordgo.MessageCreate, command string, args []string) {
 	Session.ChannelMessageSend(m.ChannelID, fmt.Sprintf("%s: Starting update...", User.GetMention()))
 
 	go func(url string) {
-		SaveState(".state.json", config.Conf.Servers, Users, UserServers)
+		SaveState(".state.json", servers.Servers, Users, UserServers)
 		UpdateExecutable(url)
 
 		m, _ := Session.ChannelMessageSend(m.ChannelID, fmt.Sprintf("%s: Updated `tf2-booking` & restarting now from URL: %s", User.GetMention(), url))
@@ -259,6 +259,6 @@ func Exit(m *discordgo.MessageCreate, command string, args []string) {
 
 	Session.ChannelMessageSend(m.ChannelID, fmt.Sprintf("%s: Shutting down `tf2-booking`.", User.GetMention()))
 
-	SaveState(".state.json", config.Conf.Servers, Users, UserServers)
+	SaveState(".state.json", servers.Servers, Users, UserServers)
 	wait.Exit()
 }

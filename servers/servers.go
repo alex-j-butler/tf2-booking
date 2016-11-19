@@ -2,8 +2,23 @@ package servers
 
 import (
 	"errors"
+	"io/ioutil"
+	"log"
 	"math"
+
+	yaml "gopkg.in/yaml.v2"
 )
+
+var Servers []Server
+
+func InitialiseServers() {
+	configuration, _ := ioutil.ReadFile("./servers.yml")
+	err := yaml.Unmarshal(configuration, &Servers)
+
+	if err != nil {
+		log.Println("Failed to initialise server configuration:", err)
+	}
+}
 
 func GetAvailableServer(serverList []Server) *Server {
 	var bestServer *Server

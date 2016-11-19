@@ -4,7 +4,6 @@ import (
 	"io/ioutil"
 	"log"
 
-	"alex-j-butler.com/tf2-booking/servers"
 	"alex-j-butler.com/tf2-booking/util"
 
 	yaml "gopkg.in/yaml.v2"
@@ -40,8 +39,6 @@ type Config struct {
 	Commands struct {
 		ReportDuration util.DurationUtil `yaml:"report_duration"`
 	}
-
-	Servers []servers.Server `yaml:"servers"`
 }
 
 var Conf Config

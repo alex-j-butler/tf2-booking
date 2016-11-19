@@ -3,7 +3,6 @@ package main
 import (
 	"fmt"
 
-	"alex-j-butler.com/tf2-booking/config"
 	"alex-j-butler.com/tf2-booking/servers"
 )
 
@@ -18,7 +17,7 @@ func GetGameString(num int) string {
 }
 
 func UpdateGameString() {
-	availableServers := len(servers.GetAvailableServers(config.Conf.Servers))
+	availableServers := len(servers.GetAvailableServers(servers.Servers))
 
 	if availableServers == 0 {
 		Session.UpdateStatus(1, GetGameString(availableServers))
