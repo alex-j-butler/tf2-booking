@@ -44,7 +44,7 @@ func main() {
 	servers.InitialiseServers()
 	SetupCron()
 
-	logs, err := loghandler.Dial("", 3001)
+	logs, err := loghandler.Dial(config.Conf.LogServer.LogAddress, config.Conf.LogServer.LogPort)
 	if err != nil {
 		log.Println("LogHandler failed to connect:", err)
 	} else {
@@ -229,6 +229,7 @@ func IngameMessageCreate(lh *loghandler.LogHandler, server *servers.Server, even
 // and finally starts the cron scheduler.
 func SetupCron() {
 	c = cron.New()
+	c.AddFunc("*/10 * * * *", RunInitialCommands)
 	c.AddFunc("*/1 * * * *", CheckUnbookServers)
 	c.AddFunc("0 * * * *", CheckIdleMinutes)
 	c.AddFunc("*/10 * * * *", CheckStats)

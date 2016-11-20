@@ -19,6 +19,12 @@ type Config struct {
 		NotificationUsers  []string `yaml:"notification_users"`
 	} `yaml:"discord"`
 
+	LogServer struct {
+		LogAddress       string `yaml:"log_address"`
+		LogAddressRemote string `yaml:"log_address_remote"`
+		LogPort          int    `yaml:"log_port"`
+	} `yaml:"log_server"`
+
 	Booking struct {
 		Duration        util.DurationUtil `yaml:"duration"`
 		ExtendDuration  util.DurationUtil `yaml:"extend_duration"`

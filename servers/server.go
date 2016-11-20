@@ -27,11 +27,17 @@ type Server struct {
 	// If this RCON password is invalid, the server can send a tmux command to reset it.
 	RCONPassword string
 
+	// Last known server password.
+	Password string
+
 	// Average tick rate reported by the server.
 	TickRate float32
 
 	// Number of tick rate measurements (used internally for calculating a new average).
 	TickRateMeasurements int
+
+	// Whether the initial commands have been run on the server yet.
+	InitialCommandsRun bool
 
 	booked     bool
 	bookedDate time.Time
@@ -120,6 +126,7 @@ func (s *Server) Setup() (string, string, error) {
 	ServerPassword := strings.TrimSpace(string(stderrBytes))
 
 	s.RCONPassword = RCONPassword
+	s.Password = ServerPassword
 
 	return RCONPassword, ServerPassword, nil
 }
@@ -205,6 +212,7 @@ func (s *Server) Book(user *discordgo.User, duration time.Duration) (string, str
 	s.SentWarning = false
 	s.IdleMinutes = 0
 	s.ErrorMinutes = 0
+	s.InitialCommandsRun = false
 
 	var err error
 
@@ -232,6 +240,7 @@ func (s *Server) Unbook() error {
 	s.SentWarning = false
 	s.IdleMinutes = 0
 	s.ErrorMinutes = 0
+	s.InitialCommandsRun = false
 
 	return nil
 }

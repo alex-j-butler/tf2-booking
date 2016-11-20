@@ -14,8 +14,8 @@ import (
 
 func RunInitialCommands() {
 	// Iterate through servers.
-	for i := 0; i < len(Conf.Servers); i++ {
-		Serv := Conf.Servers[i]
+	for i := 0; i < len(servers.Servers); i++ {
+		Serv := servers.Servers[i]
 
 		if Serv.IsAvailable() {
 			return
@@ -26,7 +26,7 @@ func RunInitialCommands() {
 			commands := []string{
 				fmt.Sprintf("rcon_password %s", Serv.RCONPassword),
 				fmt.Sprintf("sv_password %s", Serv.Password),
-				fmt.Sprintf("logaddress_add %s:%d", config.Conf.LogAddressRemote, config.Conf.LogPort),
+				fmt.Sprintf("logaddress_add %s:%d", config.Conf.LogServer.LogAddressRemote, config.Conf.LogServer.LogPort),
 			}
 
 			failed := false
@@ -35,6 +35,7 @@ func RunInitialCommands() {
 
 				if err != nil {
 					failed = true
+					log.Println(fmt.Sprintf("Initial command \"%s\" failed to run:", command), err)
 				}
 			}
 
