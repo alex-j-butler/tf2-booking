@@ -12,41 +12,6 @@ import (
 	"github.com/kidoman/go-steam"
 )
 
-func RunInitialCommands() {
-	// Iterate through servers.
-	for i := 0; i < len(servers.Servers); i++ {
-		Serv := servers.Servers[i]
-
-		if Serv.IsAvailable() {
-			return
-		}
-
-		// Only run if the initial commands have never been run before.
-		if !Serv.InitialCommandsRun {
-			commands := []string{
-				fmt.Sprintf("rcon_password %s", Serv.RCONPassword),
-				fmt.Sprintf("sv_password %s", Serv.Password),
-				fmt.Sprintf("logaddress_add %s:%d", config.Conf.LogServer.LogAddressRemote, config.Conf.LogServer.LogPort),
-			}
-
-			failed := false
-			for _, command := range commands {
-				_, err := Serv.SendRCONCommand(command)
-
-				if err != nil {
-					failed = true
-					log.Println(fmt.Sprintf("Initial command \"%s\" failed to run:", command), err)
-				}
-			}
-
-			if !failed {
-				// Set
-				Serv.InitialCommandsRun = true
-			}
-		}
-	}
-}
-
 // Check if any servers are ready to be unbooked by the automatic timeout after 4 hours.
 func CheckUnbookServers() {
 	// Iterate through servers.
