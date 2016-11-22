@@ -44,7 +44,7 @@ func main() {
 	servers.InitialiseServers()
 	SetupCron()
 
-	logs, err := loghandler.Dial(config.Conf.LogServer.LogAddress, config.Conf.LogServer.LogPort)
+	logs, err := loghandler.Dial("", 3001)
 	if err != nil {
 		log.Println("LogHandler failed to connect:", err)
 	} else {
