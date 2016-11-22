@@ -1,8 +1,26 @@
+# Local server example
 - name: Server Name 1
   path: /home/example/server1
   address: 127.0.0.1:27015
   session_name: server_name1
+  type: local
+
+# SSH server with password example
 - name: Server Name 2
   path: /home/example/server2
   address: 127.0.0.1:27016
   session_name: server_name2
+  type: ssh
+  ssh_address: 127.0.0.1:22
+  ssh_username: example
+  ssh_password: example
+
+# SSH server with private key example
+- name: Server Name 3
+  path: /home/example/server3
+  address: 127.0.0.1:27017
+  session_name: server_name3
+  type: ssh
+  ssh_address: 127.0.0.1:22
+  ssh_username: example
+  ssh_private_key: /home/example/.ssh/id_rsa

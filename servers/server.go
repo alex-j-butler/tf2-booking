@@ -3,13 +3,8 @@ package servers
 import (
 	"errors"
 	"fmt"
-	"io/ioutil"
-	"log"
-	"os/exec"
-	"strings"
 	"time"
 
-	"alex-j-butler.com/tf2-booking/config"
 	"github.com/bwmarrin/discordgo"
 	"github.com/james4k/rcon"
 )
@@ -19,6 +14,12 @@ type Server struct {
 	Path        string `json:"path" yaml:"path"`
 	Address     string `json:"address" yaml:"address"`
 	SessionName string `json:"session_name" yaml:"session_name"`
+	Type        string `json:"type" yaml:"type"`
+
+	SSHAddress    string `json:"ssh_address" yaml:"ssh_address"`
+	SSHUsername   string `json:"ssh_username" yaml:"ssh_username"`
+	SSHPassword   string `json:"ssh_password" yaml:"ssh_password"`
+	SSHPrivateKey string `json:"ssh_private_key" yaml:"ssh_private_key"`
 
 	SentWarning bool
 	ReturnDate  time.Time
@@ -81,114 +82,45 @@ func (s *Server) ResetIdleMinutes() {
 //  string - Server password
 //  error - Error of a failed setup, or nil if none
 func (s *Server) Setup() (string, string, error) {
-	// Retrieve the RCON password & server password.
-	process := exec.Command(
-		"sh",
-		"-c",
-		fmt.Sprintf(
-			"cd %s; %s/%s",
-			s.Path,
-			s.Path,
-			config.Conf.Booking.SetupCommand,
-		),
-	)
-	stdout, _ := process.StdoutPipe()
-	stderr, _ := process.StderrPipe()
+	switch s.Type {
+	case "local":
+		return s.setupLocalServer()
 
-	var err error
-	err = process.Start()
+	case "ssh":
+		return s.setupSSHServer()
 
-	if err != nil {
-		log.Println("Failed to setup server:", err)
-		return "", "", errors.New("Your server could not be setup")
+	default:
+		return "", "", errors.New("Invalid server type.")
 	}
-
-	stdoutBytes, _ := ioutil.ReadAll(stdout)
-	stderrBytes, _ := ioutil.ReadAll(stderr)
-
-	err = process.Wait()
-
-	if err != nil {
-		log.Println("Failed to setup server:", err)
-		return "", "", errors.New("Your server could not be setup")
-	}
-
-	s.SentWarning = false
-
-	// Trim passwords.
-	RCONPassword := strings.TrimSpace(string(stdoutBytes))
-	ServerPassword := strings.TrimSpace(string(stderrBytes))
-
-	s.RCONPassword = RCONPassword
-
-	return RCONPassword, ServerPassword, nil
 }
 
 // Start the server using a bash script.
 // Returns:
 //  error - Error of a failed start, or nil if none
 func (s *Server) Start() error {
-	process := exec.Command(
-		"sh",
-		"-c",
-		fmt.Sprintf(
-			"cd %s; %s/%s",
-			s.Path,
-			s.Path,
-			config.Conf.Booking.StartCommand,
-		),
-	)
+	switch s.Type {
+	case "local":
+		return s.startLocalServer()
 
-	var err error
-	err = process.Start()
+	case "ssh":
+		return s.startRemoteServer()
 
-	if err != nil {
-		log.Println("Process failed to start:", err)
-		return errors.New("Your server could not be started")
+	default:
+		return errors.New("Invalid server type.")
 	}
-
-	err = process.Wait()
-
-	if err != nil {
-		log.Println("Process failed to wait:", err)
-		return errors.New("Your server could not be started")
-	}
-
-	return nil
 }
 
 func (s *Server) Stop() error {
-	// Stop the STV recording and kick all players cleanly.
-	KickCommand := fmt.Sprintf("tv_stop; kickall \"%s\"", config.Conf.Booking.KickMessage)
-	s.SendCommand(KickCommand)
+	switch s.Type {
+	case "local":
+		return s.stopLocalServer()
 
-	process := exec.Command(
-		"sh",
-		"-c",
-		fmt.Sprintf(
-			"cd %s; %s/%s",
-			s.Path,
-			s.Path,
-			config.Conf.Booking.StopCommand,
-		),
-	)
+	case "ssh":
+		return s.stopRemoteServer()
 
-	var err error
-	err = process.Start()
-
-	if err != nil {
-		log.Println("Process failed to start:", err)
-		return errors.New("Your server could not be stopped")
+	default:
+		return errors.New("Invalid server type.")
 	}
-
-	err = process.Wait()
-
-	if err != nil {
-		log.Println("Process failed to wait:", err)
-		return errors.New("Your server could not be stopped")
-	}
-
-	return nil
 }
 
 func (s *Server) Book(user *discordgo.User, duration time.Duration) (string, string, error) {
@@ -242,68 +174,29 @@ func (s *Server) ExtendBooking(amount time.Duration) {
 }
 
 func (s *Server) UploadSTV() (string, error) {
-	// Run upload STV demo script.
-	process := exec.Command(
-		"sh",
-		"-c",
-		fmt.Sprintf(
-			"cd %s; %s/%s",
-			s.Path,
-			s.Path,
-			config.Conf.Booking.UploadSTVCommand,
-		),
-	)
-	stdout, _ := process.StdoutPipe()
+	switch s.Type {
+	case "local":
+		return s.uploadSTVLocalServer()
 
-	var err error
-	err = process.Start()
+	case "ssh":
+		return s.uploadSTVRemoteServer()
 
-	if err != nil {
-		log.Println("Failed to upload STV:", err)
-		return "", errors.New("Your server failed to upload STV")
+	default:
+		return "", errors.New("Invalid server type.")
 	}
-
-	stdoutBytes, _ := ioutil.ReadAll(stdout)
-
-	err = process.Wait()
-
-	if err != nil {
-		log.Println("Failed to upload STV:", err)
-		return "", errors.New("Your server failed to upload STV")
-	}
-
-	Files := strings.Split(string(stdoutBytes), "\n")
-	for i := 0; i < len(Files); i++ {
-		Files[i] = strings.TrimSpace(Files[i])
-	}
-
-	Message := "STV Demo(s) uploaded:"
-	for i := 0; i < len(Files); i++ {
-		Message = fmt.Sprintf("%s\n\t%s", Message, Files[i])
-	}
-
-	return Message, nil
 }
 
 func (s *Server) SendCommand(command string) error {
-	process := exec.Command("tmux", "send-keys", "-t", s.SessionName, "C-m", command, "C-m")
+	switch s.Type {
+	case "local":
+		return s.sendCommandLocalServer(command)
 
-	var err error
-	err = process.Start()
+	case "ssh":
+		return s.sendCommandRemoteServer(command)
 
-	if err != nil {
-		log.Println("Failed to send command:", err)
-		return errors.New("Your server failed to respond to commands")
+	default:
+		return errors.New("Invalid server type.")
 	}
-
-	err = process.Wait()
-
-	if err != nil {
-		log.Println("Failed to send command:", err)
-		return errors.New("Your server failed to respond to commands")
-	}
-
-	return nil
 }
 
 func (s *Server) SendRCONCommand(command string) (string, error) {
