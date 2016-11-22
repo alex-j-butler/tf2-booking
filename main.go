@@ -229,7 +229,6 @@ func IngameMessageCreate(lh *loghandler.LogHandler, server *servers.Server, even
 // and finally starts the cron scheduler.
 func SetupCron() {
 	c = cron.New()
-	c.AddFunc("*/10 * * * *", RunInitialCommands)
 	c.AddFunc("*/1 * * * *", CheckUnbookServers)
 	c.AddFunc("0 * * * *", CheckIdleMinutes)
 	c.AddFunc("*/10 * * * *", CheckStats)
