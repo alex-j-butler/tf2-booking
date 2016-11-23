@@ -11,6 +11,7 @@ import (
 	"alex-j-butler.com/tf2-booking/commands/ingame/loghandler"
 	"alex-j-butler.com/tf2-booking/config"
 	"alex-j-butler.com/tf2-booking/servers"
+	"alex-j-butler.com/tf2-booking/steamauth"
 	"alex-j-butler.com/tf2-booking/util"
 	"alex-j-butler.com/tf2-booking/wait"
 
@@ -40,6 +41,8 @@ var Command *commands.Command
 var IngameCommand *ingame.Command
 
 func main() {
+	steamauth.Initialise()
+
 	config.InitialiseConfiguration()
 	servers.InitialiseServers()
 	SetupCron()

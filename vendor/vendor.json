@@ -18,6 +18,30 @@
 			"versionExact": "develop-fork"
 		},
 		{
+			"checksumSHA1": "2Fy1Y6Z3lRRX1891WF/+HT4XS2I=",
+			"path": "github.com/dgrijalva/jwt-go",
+			"revision": "9ed569b5d1ac936e6494082958d63a6aa4fff99a",
+			"revisionTime": "2016-11-01T19:39:35Z"
+		},
+		{
+			"checksumSHA1": "8OLWuwNwSa28m84NMs0R/sO+l3Q=",
+			"path": "github.com/emanoelxavier/openid2go/openid",
+			"revision": "efe3c34772c5a961048a05e9483da2bd24debed0",
+			"revisionTime": "2016-09-11T20:26:54Z"
+		},
+		{
+			"checksumSHA1": "g/V4qrXjUGG9B+e3hB+4NAYJ5Gs=",
+			"path": "github.com/gorilla/context",
+			"revision": "08b5f424b9271eedf6f9f0ce86cb9396ed337a42",
+			"revisionTime": "2016-08-17T18:46:32Z"
+		},
+		{
+			"checksumSHA1": "urMd7A9QPAJYY0GZJL9qBhlUmD8=",
+			"path": "github.com/gorilla/mux",
+			"revision": "757bef944d0f21880861c2dd9c871ca543023cba",
+			"revisionTime": "2016-09-20T23:08:13Z"
+		},
+		{
 			"checksumSHA1": "mMHT+mzAgdReYgu8zCqQxI1BnLk=",
 			"path": "github.com/gorilla/websocket",
 			"revision": "2d1e4548da234d9cb742cc3628556fef86aafbac",
@@ -60,6 +84,30 @@
 			"revisionTime": "2016-09-27T16:42:31Z"
 		},
 		{
+			"checksumSHA1": "qR3q2rm/H13PX5Twte9x7PK9Td4=",
+			"path": "github.com/square/go-jose",
+			"revision": "50df5ca198e569d06795909c091ac0cea62e925a",
+			"revisionTime": "2016-11-22T17:27:18Z"
+		},
+		{
+			"checksumSHA1": "3ZnGXnGyQ8NyD8mttaQgwNgMyJY=",
+			"path": "github.com/square/go-jose/cipher",
+			"revision": "50df5ca198e569d06795909c091ac0cea62e925a",
+			"revisionTime": "2016-11-22T17:27:18Z"
+		},
+		{
+			"checksumSHA1": "MjFMyZLaQYCfJyi3O0ynKNSmneA=",
+			"path": "github.com/square/go-jose/json",
+			"revision": "50df5ca198e569d06795909c091ac0cea62e925a",
+			"revisionTime": "2016-11-22T17:27:18Z"
+		},
+		{
+			"checksumSHA1": "6DgjLELXAt+fRY+xTok9DHB/Gc8=",
+			"path": "github.com/yohcop/openid-go",
+			"revision": "2c050d2dae5345c417db301f11fda6fbf5ad0f0a",
+			"revisionTime": "2016-09-14T08:04:27Z"
+		},
+		{
 			"checksumSHA1": "Y/FcWB2/xSfX1rRp7HYhktHNw8s=",
 			"path": "golang.org/x/crypto/nacl/secretbox",
 			"revision": "5f31782cfb2b6373211f8f9fbf31283fa234b570",
@@ -76,6 +124,18 @@
 			"path": "golang.org/x/crypto/salsa20/salsa",
 			"revision": "5f31782cfb2b6373211f8f9fbf31283fa234b570",
 			"revisionTime": "2016-10-12T21:56:05Z"
+		},
+		{
+			"checksumSHA1": "vqc3a+oTUGX8PmD0TS+qQ7gmN8I=",
+			"path": "golang.org/x/net/html",
+			"revision": "4971afdc2f162e82d185353533d3cf16188a9f4e",
+			"revisionTime": "2016-11-15T21:05:04Z"
+		},
+		{
+			"checksumSHA1": "00eQaGynDYrv3tL+C7l9xH0IDZg=",
+			"path": "golang.org/x/net/html/atom",
+			"revision": "4971afdc2f162e82d185353533d3cf16188a9f4e",
+			"revisionTime": "2016-11-15T21:05:04Z"
 		},
 		{
 			"checksumSHA1": "Xz3hUrPvOYGWTuHrEryoYAj9zwg=",
