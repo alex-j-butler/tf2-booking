@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"alex-j-butler.com/tf2-booking/config"
+	"alex-j-butler.com/tf2-booking/database"
 	"alex-j-butler.com/tf2-booking/servers"
 	"alex-j-butler.com/tf2-booking/util"
 	"alex-j-butler.com/tf2-booking/wait"
@@ -261,4 +262,12 @@ func Exit(m *discordgo.MessageCreate, command string, args []string) {
 
 	SaveState(".state.json", servers.Servers, Users, UserServers)
 	wait.Exit()
+}
+
+func Link(m *discordgo.MessageCreate, command string, args []string) {
+	User := &util.PatchUser{m.Author}
+
+	secret := util.RandStringBytes(24)
+	database.DB.Create(&database.AuthSecret{Secret: secret, DiscordID: User.ID})
+	Session.ChannelMessageSend(m.ChannelID, fmt.Sprintf("%s: Visit %s/auth/%s to link your Steam account.", User.GetMention(), config.Conf.SteamAuthServer.RootURL, secret))
 }

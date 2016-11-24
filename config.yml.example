@@ -22,6 +22,20 @@ log_server:
   # Port for the UDP server to bind to.
   log_port: 3001
 
+# Configuration for HTTP server that runs the OpenID Steam authentication service.
+steam_auth_server:
+  # Address for the HTTP server to bind to.
+  address: 127.0.0.1
+  # Port for the HTTP server to bind to.
+  port: 3002
+  # URL where the HTTP server is accessible from (eg. http://localhost:3002)
+  root_url: http://localhost:3002
+
+# Database section
+database:
+  dialect: mysql
+  url: "root:@/tf2-booking?charset=utf8&parseTime=True&loc=Local"
+
 # Booking section
 booking:
   # Duration of server booking.

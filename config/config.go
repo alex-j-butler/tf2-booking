@@ -25,6 +25,18 @@ type Config struct {
 		LogPort          int    `yaml:"log_port"`
 	} `yaml:"log_server"`
 
+	// Configuration for HTTP server that runs the OpenID Steam authentication service.
+	SteamAuthServer struct {
+		Address string `yaml:"address"`
+		Port    int    `yaml:"port"`
+		RootURL string `yaml:"root_url"`
+	} `yaml:"steam_auth_server"`
+
+	Database struct {
+		Dialect string `yaml:"dialect"`
+		URL     string `yaml:"url"`
+	} `yaml:"database"`
+
 	Booking struct {
 		Duration        util.DurationUtil `yaml:"duration"`
 		ExtendDuration  util.DurationUtil `yaml:"extend_duration"`

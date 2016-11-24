@@ -10,6 +10,7 @@ import (
 	"alex-j-butler.com/tf2-booking/commands/ingame"
 	"alex-j-butler.com/tf2-booking/commands/ingame/loghandler"
 	"alex-j-butler.com/tf2-booking/config"
+	"alex-j-butler.com/tf2-booking/database"
 	"alex-j-butler.com/tf2-booking/servers"
 	"alex-j-butler.com/tf2-booking/steamauth"
 	"alex-j-butler.com/tf2-booking/util"
@@ -40,11 +41,19 @@ var UserReportTimeouts map[string]time.Time
 var Command *commands.Command
 var IngameCommand *ingame.Command
 
-func main() {
-	steamauth.Initialise()
+var httpServer *steamauth.HTTPServer
 
+func main() {
 	config.InitialiseConfiguration()
 	servers.InitialiseServers()
+
+	database.Initialise()
+	defer database.DB.Close()
+
+	httpServer := steamauth.New(config.Conf.SteamAuthServer.Address, config.Conf.SteamAuthServer.Port, config.Conf.SteamAuthServer.RootURL)
+	httpServer.AddHandler(AccountLinked)
+	go httpServer.Run()
+
 	SetupCron()
 
 	logs, err := loghandler.Dial(config.Conf.LogServer.LogAddress, config.Conf.LogServer.LogPort)
@@ -88,6 +97,11 @@ func main() {
 			Permissions(discordgo.PermissionManageServer).
 			RespondToDM(true),
 		"exit",
+	)
+
+	Command.Add(
+		commands.NewCommand(Link),
+		"link",
 	)
 
 	// Register the ingame commands and their command handlers.
@@ -226,6 +240,11 @@ func MessageCreate(s *discordgo.Session, m *discordgo.MessageCreate) {
 func IngameMessageCreate(lh *loghandler.LogHandler, server *servers.Server, event *loghandler.SayEvent) {
 	log.Println(fmt.Sprintf("Received command from '%s' on server '%s': %s", event.Username, server.Name, event.Message))
 	IngameCommand.Handle(ingame.CommandInfo{SayEvent: *event, Server: server}, event.Message, 0)
+}
+
+// AccountLinked is the event handler for the LinkSuccessEvent event.
+func AccountLinked(httpServer *steamauth.HTTPServer, event *steamauth.LinkSuccessEvent) {
+	log.Println("Account linked:", event)
 }
 
 // SetupCron creates the cron scheduler and adds the functions and their respective schedules.

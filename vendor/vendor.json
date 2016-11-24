@@ -3,6 +3,10 @@
 	"ignore": "test",
 	"package": [
 		{
+			"path": "appengine/cloudsql",
+			"revision": ""
+		},
+		{
 			"checksumSHA1": "JiTaaqMJ0WfwRKycs3y6rDKZgAk=",
 			"path": "github.com/Sirupsen/logrus",
 			"revision": "3ec0642a7fb6488f65b06f9040adc67e3990296a",
@@ -18,25 +22,31 @@
 			"versionExact": "develop-fork"
 		},
 		{
-			"checksumSHA1": "2Fy1Y6Z3lRRX1891WF/+HT4XS2I=",
+			"checksumSHA1": "PcdItMMwb39o55X5JulfTDLGOKE=",
 			"path": "github.com/dgrijalva/jwt-go",
 			"revision": "9ed569b5d1ac936e6494082958d63a6aa4fff99a",
 			"revisionTime": "2016-11-01T19:39:35Z"
 		},
 		{
-			"checksumSHA1": "8OLWuwNwSa28m84NMs0R/sO+l3Q=",
-			"path": "github.com/emanoelxavier/openid2go/openid",
-			"revision": "efe3c34772c5a961048a05e9483da2bd24debed0",
-			"revisionTime": "2016-09-11T20:26:54Z"
+			"checksumSHA1": "UHpBsbltKldpfOWT7vdg3WS+2Yw=",
+			"path": "github.com/go-sql-driver/mysql",
+			"revision": "665b83488b90b902ce0a305ef6652e599771cdf9",
+			"revisionTime": "2016-11-16T07:07:42Z"
 		},
 		{
-			"checksumSHA1": "g/V4qrXjUGG9B+e3hB+4NAYJ5Gs=",
+			"checksumSHA1": "DBw0w/HBMOwVljOMev8OJmSKNkI=",
+			"path": "github.com/gocraft/dbr/dialect",
+			"revision": "10fa49bf1ee63a0f822283ef9805d818f9e84742",
+			"revisionTime": "2016-10-05T23:50:33Z"
+		},
+		{
+			"checksumSHA1": "IkPM2QLv9urri7S49wzroQx9oXA=",
 			"path": "github.com/gorilla/context",
 			"revision": "08b5f424b9271eedf6f9f0ce86cb9396ed337a42",
 			"revisionTime": "2016-08-17T18:46:32Z"
 		},
 		{
-			"checksumSHA1": "urMd7A9QPAJYY0GZJL9qBhlUmD8=",
+			"checksumSHA1": "QQe2WybsKsiDEsBzIElxUjQV3qg=",
 			"path": "github.com/gorilla/mux",
 			"revision": "757bef944d0f21880861c2dd9c871ca543023cba",
 			"revisionTime": "2016-09-20T23:08:13Z"
@@ -72,10 +82,40 @@
 			"revisionTime": "2012-09-23T21:54:19Z"
 		},
 		{
+			"checksumSHA1": "yo9hoT3m+7vNMNK2ibkII8jK9B8=",
+			"path": "github.com/jinzhu/gorm",
+			"revision": "066abcef408f2522f0a89952e44ab17eac176ed0",
+			"revisionTime": "2016-11-10T01:30:47Z"
+		},
+		{
+			"checksumSHA1": "w5/naAzcG0+g6aYx63/of1Wbgqw=",
+			"path": "github.com/jinzhu/gorm/dialects/mysql",
+			"revision": "066abcef408f2522f0a89952e44ab17eac176ed0",
+			"revisionTime": "2016-11-10T01:30:47Z"
+		},
+		{
+			"checksumSHA1": "YBNroGKEItNe0bENTEKbx71DyGQ=",
+			"path": "github.com/jinzhu/gorm/dialects/sqlite",
+			"revision": "066abcef408f2522f0a89952e44ab17eac176ed0",
+			"revisionTime": "2016-11-10T01:30:47Z"
+		},
+		{
+			"checksumSHA1": "aUOdLwQ5WHTQknuYP9ThnDcbK14=",
+			"path": "github.com/jinzhu/inflection",
+			"revision": "74387dc39a75e970e7a3ae6a3386b5bd2e5c5cff",
+			"revisionTime": "2016-08-17T01:46:01Z"
+		},
+		{
 			"checksumSHA1": "gMFFpQolN0DUUZw9A3RUTcQmHVU=",
 			"path": "github.com/kidoman/go-steam",
 			"revision": "2e40e0d508cbac591bab4ae18b231153295f3a0a",
 			"revisionTime": "2014-12-21T01:56:29Z"
+		},
+		{
+			"checksumSHA1": "YmcO1E/MwKS6ZW5xEgJy6NtFiig=",
+			"path": "github.com/mattn/go-sqlite3",
+			"revision": "fba66eb11643069e747022997e9be3b502b2c6fb",
+			"revisionTime": "2016-11-11T16:58:19Z"
 		},
 		{
 			"checksumSHA1": "lEzkjwyqZ1e8Zv/k1t8OW0e+YVQ=",
@@ -84,25 +124,25 @@
 			"revisionTime": "2016-09-27T16:42:31Z"
 		},
 		{
-			"checksumSHA1": "qR3q2rm/H13PX5Twte9x7PK9Td4=",
+			"checksumSHA1": "4SpieddnEzSSfyZ09QVwIz0g0Rk=",
 			"path": "github.com/square/go-jose",
 			"revision": "50df5ca198e569d06795909c091ac0cea62e925a",
 			"revisionTime": "2016-11-22T17:27:18Z"
 		},
 		{
-			"checksumSHA1": "3ZnGXnGyQ8NyD8mttaQgwNgMyJY=",
+			"checksumSHA1": "bWn2xNz0rCQig+QVwKa9EavD/S8=",
 			"path": "github.com/square/go-jose/cipher",
 			"revision": "50df5ca198e569d06795909c091ac0cea62e925a",
 			"revisionTime": "2016-11-22T17:27:18Z"
 		},
 		{
-			"checksumSHA1": "MjFMyZLaQYCfJyi3O0ynKNSmneA=",
+			"checksumSHA1": "FFSxW9+NPwzbnyTrYXor+KpBpCA=",
 			"path": "github.com/square/go-jose/json",
 			"revision": "50df5ca198e569d06795909c091ac0cea62e925a",
 			"revisionTime": "2016-11-22T17:27:18Z"
 		},
 		{
-			"checksumSHA1": "6DgjLELXAt+fRY+xTok9DHB/Gc8=",
+			"checksumSHA1": "HcGNOeFGurj5c8L9yLix+vFPjtM=",
 			"path": "github.com/yohcop/openid-go",
 			"revision": "2c050d2dae5345c417db301f11fda6fbf5ad0f0a",
 			"revisionTime": "2016-09-14T08:04:27Z"
@@ -124,6 +164,12 @@
 			"path": "golang.org/x/crypto/salsa20/salsa",
 			"revision": "5f31782cfb2b6373211f8f9fbf31283fa234b570",
 			"revisionTime": "2016-10-12T21:56:05Z"
+		},
+		{
+			"checksumSHA1": "9jjO5GjLa0XF/nfWihF02RoH4qc=",
+			"path": "golang.org/x/net/context",
+			"revision": "4971afdc2f162e82d185353533d3cf16188a9f4e",
+			"revisionTime": "2016-11-15T21:05:04Z"
 		},
 		{
 			"checksumSHA1": "vqc3a+oTUGX8PmD0TS+qQ7gmN8I=",
