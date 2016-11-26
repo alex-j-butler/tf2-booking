@@ -39,6 +39,13 @@ var UserReportTimeouts map[string]time.Time
 var Command *commands.Command
 var IngameCommand *ingame.Command
 
+// MessageCreateFunc stores the function that deletes the MessageCreate Discord event handler.
+// This is a fix for the bot receiving messages twice.
+// When the Discord client times out, it reconnects, calling the 'OnGuildReady' event again, which adds a new MessageCreate handler, without removing the old one.
+// This means the messages are being received and processed twice.
+// By storing the latest MessageCreate delete function, it can delete the previous MessageCreate handler before adding the new one.
+var MessageCreateFunc func()
+
 func main() {
 	config.InitialiseConfiguration()
 	servers.InitialiseServers()
@@ -180,7 +187,10 @@ func OnGuildReady(s *discordgo.Session, r *discordgo.GuildReady) {
 	// Register a message create handler.
 	// This must be done in the OnGuildReady event, otherwise guild lookups would fail because of
 	// it not having the list of guilds yet.
-	s.AddHandler(MessageCreate)
+	if MessageCreateFunc != nil {
+		MessageCreateFunc()
+	}
+	MessageCreateFunc = s.AddHandler(MessageCreate)
 
 	log.Println("Discord guilds successfully loaded.")
 }
