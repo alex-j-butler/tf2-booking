@@ -15,7 +15,10 @@ import (
 	"alex-j-butler.com/tf2-booking/wait"
 
 	"github.com/bwmarrin/discordgo"
+	"github.com/jmoiron/sqlx"
 	"github.com/robfig/cron"
+
+	_ "github.com/lib/pq"
 )
 
 var c *cron.Cron
@@ -47,6 +50,27 @@ var IngameCommand *ingame.Command
 var MessageCreateFunc func()
 
 func main() {
+
+	db, err := sqlx.Open("postgres", "user=tf2-booking dbname=tf2-booking host=192.168.1.106 sslmode=disable password=example")
+	if err != nil {
+		panic(err)
+	}
+	defer db.Close()
+
+	rows, err := db.Query("SELECT 1")
+	if err != nil {
+		panic(err)
+	}
+
+	for rows.Next() {
+		var i interface{}
+		rows.Scan(&i)
+		log.Println(i)
+	}
+
+	return
+	//
+
 	config.InitialiseConfiguration()
 	servers.InitialiseServers()
 	SetupCron()
