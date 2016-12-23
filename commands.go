@@ -213,7 +213,17 @@ func PrintStats(m *discordgo.MessageCreate, command string, args []string) {
 	for i := 0; i < len(servers); i++ {
 		server := servers[i]
 		if server != nil {
-			message = fmt.Sprintf("%s\n\t%s: %f", message, server.Name, server.TickRate)
+			bookerID := server.GetBooker()
+			bookerUser, err := Session.User(bookerID)
+
+			var username string
+			if err != nil {
+				username = "Unknown"
+			} else {
+				username = bookerUser.Username
+			}
+
+			message = fmt.Sprintf("%s\n\t%s (Booked by %s): %f", message, server.Name, username, server.TickRate)
 			count++
 		}
 	}
