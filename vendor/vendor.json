@@ -48,34 +48,10 @@
 			"revisionTime": "2012-09-23T21:54:19Z"
 		},
 		{
-			"checksumSHA1": "kVbqqmrosOi2vjMgxv0Iks3gs9Q=",
-			"path": "github.com/jmoiron/sqlx",
-			"revision": "cac998c4f0959c19c638c523e374fa8e4e0bcfe3",
-			"revisionTime": "2016-12-09T02:45:31Z"
-		},
-		{
-			"checksumSHA1": "kt7wuWQ5kHrtxlis12wLWJhUhHM=",
-			"path": "github.com/jmoiron/sqlx/reflectx",
-			"revision": "cac998c4f0959c19c638c523e374fa8e4e0bcfe3",
-			"revisionTime": "2016-12-09T02:45:31Z"
-		},
-		{
 			"checksumSHA1": "gMFFpQolN0DUUZw9A3RUTcQmHVU=",
 			"path": "github.com/kidoman/go-steam",
 			"revision": "2e40e0d508cbac591bab4ae18b231153295f3a0a",
 			"revisionTime": "2014-12-21T01:56:29Z"
-		},
-		{
-			"checksumSHA1": "TSeCZPpJ2r3YCdpoQ0y/jdKe47o=",
-			"path": "github.com/lib/pq",
-			"revision": "5bf161122cd640c2a5a2c1d7fa49ea9befff31dd",
-			"revisionTime": "2016-12-20T09:00:36Z"
-		},
-		{
-			"checksumSHA1": "K4XuhnpGWTFMLSDIdvDr5AH3fTw=",
-			"path": "github.com/lib/pq/oid",
-			"revision": "5bf161122cd640c2a5a2c1d7fa49ea9befff31dd",
-			"revisionTime": "2016-12-20T09:00:36Z"
 		},
 		{
 			"checksumSHA1": "lEzkjwyqZ1e8Zv/k1t8OW0e+YVQ=",
