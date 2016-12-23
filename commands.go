@@ -203,6 +203,56 @@ func ExtendServer(m *discordgo.MessageCreate, command string, args []string) {
 	}
 }
 
+func SendPassword(m *discordgo.MessageCreate, command string, args []string) {
+	User := &util.PatchUser{m.Author}
+
+	// Check if the user has already booked a server out.
+	if value, ok := Users[m.Author.ID]; !ok || value == false {
+		// Send a message to let the user know they do not have a server booked.
+		Session.ChannelMessageSend(m.ChannelID, fmt.Sprintf("%s: You haven't booked a server. Type `book` to book a server.", User.GetMention()))
+
+		return
+	}
+
+	if Serv, ok := UserServers[m.Author.ID]; ok && Serv != nil {
+		serverPassword, err := Serv.GetCurrentPassword()
+		if err != nil {
+			Session.ChannelMessageSend(
+				m.ChannelID,
+				fmt.Sprintf(
+					"%s: We failed to retrieve your server password.",
+					User.GetMention(),
+				),
+			)
+
+			return
+		}
+
+		// Send message to private DM, with server details.
+		UserChannel, _ := Session.UserChannelCreate(m.Author.ID)
+		Session.ChannelMessageSend(
+			UserChannel.ID,
+			fmt.Sprintf(
+				"Here is your server details:\n\tServer address: %s\n\tPassword: %s\n\tConnect string: `connect %s; password %s`",
+				Serv.Address,
+				serverPassword,
+				Serv.Address,
+				serverPassword,
+			),
+		)
+	} else {
+		// Notify Discord channel of failed operation.
+		Session.ChannelMessageSend(m.ChannelID, fmt.Sprintf("%s: You haven't booked a server. Type `book` to book a server.", User.GetMention()))
+
+		// If the program execution reaches here, the state of the users & user-servers map
+		// is invalid and should be reset to the 'unbooked' state.
+		Users[m.Author.ID] = false
+		UserServers[m.Author.ID] = nil
+
+		return
+	}
+}
+
 func PrintStats(m *discordgo.MessageCreate, command string, args []string) {
 	User := &util.PatchUser{m.Author}
 

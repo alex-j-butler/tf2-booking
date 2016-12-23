@@ -76,6 +76,10 @@ func main() {
 		"extend",
 	)
 	Command.Add(
+		commands.NewCommand(SendPassword),
+		"send password",
+	)
+	Command.Add(
 		commands.NewCommand(PrintStats).
 			Permissions(discordgo.PermissionManageServer).
 			RespondToDM(true),

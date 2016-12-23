@@ -6,6 +6,7 @@ import (
 	"io/ioutil"
 	"log"
 	"os/exec"
+	"regexp"
 	"strings"
 	"time"
 
@@ -73,6 +74,23 @@ func (s *Server) AddIdleMinute() {
 
 func (s *Server) ResetIdleMinutes() {
 	s.IdleMinutes = 0
+}
+
+// Retrieve the current server password from the server
+func (s *Server) GetCurrentPassword() (string, error) {
+	svPasswordResp, err := s.SendRCONCommand("sv_password")
+	if err != nil {
+		return "", err
+	}
+
+	re := regexp.MustCompile("\"sv_password\" = \"(.+)\" \\( def")
+	matches := re.FindStringSubmatch(svPasswordResp)
+
+	if len(matches) == 2 {
+		return matches[1], nil
+	}
+
+	return "", errors.New("Invalid sv_password response")
 }
 
 // Setup the server with a randomised RCON password & server password from a bash script.
