@@ -228,6 +228,9 @@ func SendPassword(m *discordgo.MessageCreate, command string, args []string) {
 			return
 		}
 
+		// Send message to public channel, without server details.
+		Session.ChannelMessageSend(m.ChannelID, fmt.Sprintf("%s: Server password have been sent via private message.", User.GetMention()))
+
 		// Send message to private DM, with server details.
 		UserChannel, _ := Session.UserChannelCreate(m.Author.ID)
 		Session.ChannelMessageSend(
