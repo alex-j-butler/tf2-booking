@@ -228,6 +228,8 @@ func PrintStats(m *discordgo.MessageCreate, command string, args []string) {
 		}
 	}
 
+	message = fmt.Sprintf("%s\n\n%d out of %d servers booked", message, count, len(servers))
+
 	if count == 0 {
 		message = "No servers are currently booked."
 	}
