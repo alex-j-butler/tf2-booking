@@ -84,6 +84,18 @@
 			"revisionTime": "2016-10-11T23:07:22Z"
 		},
 		{
+			"checksumSHA1": "1sRRODMrzNYYMuRZJpAdxzakRxI=",
+			"path": "gopkg.in/nullbio/null.v6",
+			"revision": "40264a2e6b7972d183906cf17663983c23231c82",
+			"revisionTime": "2016-11-15T15:23:47Z"
+		},
+		{
+			"checksumSHA1": "PkE+5BF72Jj7wkkZKKkedUqBV6A=",
+			"path": "gopkg.in/nullbio/null.v6/convert",
+			"revision": "40264a2e6b7972d183906cf17663983c23231c82",
+			"revisionTime": "2016-11-15T15:23:47Z"
+		},
+		{
 			"checksumSHA1": "21kDrz4DnDppRHgK7vVmOFwgcSQ=",
 			"path": "gopkg.in/yaml.v2",
 			"revision": "a5b47d31c556af34a302ce5d659e6fea44d90de0",

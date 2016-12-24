@@ -11,8 +11,12 @@ import (
 	"time"
 
 	"alex-j-butler.com/tf2-booking/config"
+	"alex-j-butler.com/tf2-booking/database"
+	"alex-j-butler.com/tf2-booking/models"
 	"github.com/bwmarrin/discordgo"
 	"github.com/james4k/rcon"
+	"github.com/vattle/sqlboiler/queries/qm"
+	"gopkg.in/nullbio/null.v6"
 )
 
 type Server struct {
@@ -42,6 +46,9 @@ type Server struct {
 
 	host string
 	port int
+
+	// Booking ID that the server is currently associated with.
+	bookingID int
 
 	IdleMinutes  int
 	ErrorMinutes int
@@ -214,6 +221,36 @@ func (s *Server) Book(user *discordgo.User, duration time.Duration) (string, str
 		return "", "", errors.New("Server is already booked")
 	}
 
+	// Tries to select the user by discord id,
+	// if no record is found, insert a new record.
+	dbUser, err := models.Users(database.DB, qm.Where("discord_id=?", user.ID)).One()
+	if err != nil {
+		// Insert new record.
+		var newUser models.User
+		newUser.DiscordID = null.StringFrom(user.ID)
+		newUser.Name = null.StringFrom(user.Username)
+
+		err = newUser.Insert(database.DB)
+
+		if err != nil {
+			return "", "", errors.New("Server record could not be created")
+		}
+
+		dbUser = &newUser
+	}
+
+	// Adds a new booking to the database
+	// and set the booking id.
+	var booking models.Booking
+	booking.SetBooker(database.DB, false, dbUser)
+	booking.ServerName = s.Name
+	booking.BookedTime = null.TimeFrom(time.Now())
+	err = booking.Insert(database.DB)
+
+	if err != nil {
+		return "", "", errors.New("Server record could not be created")
+	}
+
 	// Set the server variables.
 	s.ReturnDate = time.Now().Add(duration)
 	s.booked = true
@@ -223,8 +260,6 @@ func (s *Server) Book(user *discordgo.User, duration time.Duration) (string, str
 	s.SentWarning = false
 	s.IdleMinutes = 0
 	s.ErrorMinutes = 0
-
-	var err error
 
 	// Setup the server.
 	RCONPassword, ServerPassword, err := s.Setup()

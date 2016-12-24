@@ -1,6 +1,7 @@
 package main
 
 import (
+	"database/sql"
 	"fmt"
 	"log"
 	"strings"
@@ -10,12 +11,15 @@ import (
 	"alex-j-butler.com/tf2-booking/commands/ingame"
 	"alex-j-butler.com/tf2-booking/commands/ingame/loghandler"
 	"alex-j-butler.com/tf2-booking/config"
+	"alex-j-butler.com/tf2-booking/database"
 	"alex-j-butler.com/tf2-booking/servers"
 	"alex-j-butler.com/tf2-booking/util"
 	"alex-j-butler.com/tf2-booking/wait"
 
 	"github.com/bwmarrin/discordgo"
 	"github.com/robfig/cron"
+
+	_ "github.com/lib/pq"
 )
 
 var c *cron.Cron
@@ -50,6 +54,12 @@ func main() {
 	config.InitialiseConfiguration()
 	servers.InitialiseServers()
 	SetupCron()
+
+	db, err := sql.Open("postgres", "user=tf2-booking dbname=tf2-booking host=192.168.1.106 sslmode=disable password=example")
+	if err != nil {
+		log.Println("Database error:", err)
+	}
+	database.DB = db
 
 	logs, err := loghandler.Dial(config.Conf.LogServer.LogAddress, config.Conf.LogServer.LogPort)
 	if err != nil {
