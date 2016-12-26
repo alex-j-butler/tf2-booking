@@ -54,7 +54,9 @@ type Server struct {
 	ErrorMinutes int
 }
 
-// Returns whether the server is currently available for booking.
+// IsAvailable returns whether the server is currently available for booking.
+// Currently a server is available for booking if it is not being booked by another user,
+// in the future, this could be extended to block servers from being used (for example, if they are down).
 func (s *Server) IsAvailable() bool {
 	return !s.booked
 }
@@ -83,7 +85,7 @@ func (s *Server) ResetIdleMinutes() {
 	s.IdleMinutes = 0
 }
 
-// Retrieve the current server password from the server
+// GetCurrentPassword retrieves the current server password from the server.
 func (s *Server) GetCurrentPassword() (string, error) {
 	svPasswordResp, err := s.SendRCONCommand("sv_password")
 	if err != nil {
@@ -251,6 +253,8 @@ func (s *Server) Book(user *discordgo.User, duration time.Duration) (string, str
 		return "", "", errors.New("Server record could not be created")
 	}
 
+	s.bookingID = booking.BookingID
+
 	// Set the server variables.
 	s.ReturnDate = time.Now().Add(duration)
 	s.booked = true
@@ -275,6 +279,14 @@ func (s *Server) Unbook() error {
 	if s.booked == false {
 		return errors.New("Server is not booked")
 	}
+
+	booking, err := models.FindBooking(database.DB, s.bookingID)
+	if err != nil {
+		return errors.New("Server record could not be updated")
+	}
+
+	booking.UnbookedTime = null.TimeFrom(time.Now())
+	booking.Update(database.DB)
 
 	// Set the server variables.
 	s.ReturnDate = time.Time{}
@@ -325,14 +337,42 @@ func (s *Server) UploadSTV() (string, error) {
 		return "", errors.New("Your server failed to upload STV")
 	}
 
-	Files := strings.Split(string(stdoutBytes), "\n")
+	Files := strings.Split(strings.TrimSpace(string(stdoutBytes)), "\n")
 	for i := 0; i < len(Files); i++ {
 		Files[i] = strings.TrimSpace(Files[i])
 	}
 
+	var demos []models.Demo
+
 	Message := "STV Demo(s) uploaded:"
 	for i := 0; i < len(Files); i++ {
 		Message = fmt.Sprintf("%s\n\t%s", Message, Files[i])
+
+		// Create the demo model.
+		var demo models.Demo
+		demo.UploadedTime = null.TimeFrom(time.Now())
+		demo.URL = Files[i]
+
+		demos = append(demos, demo)
+	}
+
+	// Grab the current booking.
+	booking, err := models.FindBooking(database.DB, s.bookingID)
+	if err != nil {
+		log.Println("FindBooking failed")
+		return "", errors.New("Server record could not be updated")
+	}
+
+	// Add demos to booking.
+	for i := 0; i < len(demos); i++ {
+		booking.AddDemos(database.DB, true, &demos[i])
+	}
+
+	// Update booking.
+	err = booking.Update(database.DB)
+	if err != nil {
+		log.Println("Update failed")
+		return "", errors.New("Server record could not be updated")
 	}
 
 	return Message, nil
