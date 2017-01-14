@@ -53,3 +53,7 @@ booking:
 commands:
   # Delay between the !report command can be used.
   report_duration: "4m"
+
+database:
+  # DSN of PostgreSQL database.
+  dsn: "user=tf2-booking dbname=tf2-booking host=localhost sslmode=disable password=example"

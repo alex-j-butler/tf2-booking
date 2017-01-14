@@ -4,6 +4,7 @@ import (
 	"database/sql"
 	"fmt"
 	"log"
+	"os"
 	"strings"
 	"time"
 
@@ -19,6 +20,7 @@ import (
 	"github.com/bwmarrin/discordgo"
 	"github.com/robfig/cron"
 
+	"github.com/codegangsta/cli"
 	_ "github.com/lib/pq"
 )
 
@@ -52,10 +54,36 @@ var MessageCreateFunc func()
 
 func main() {
 	config.InitialiseConfiguration()
+
+	app := cli.NewApp()
+	app.Commands = []cli.Command{
+		{
+			Name:    "run",
+			Aliases: []string{"r"},
+			Usage:   "run the server",
+			Action:  RunServer,
+		},
+		{
+			Name:    "migrate",
+			Aliases: []string{"m"},
+			Usage:   "migrate the database",
+			Action:  Migrate,
+		},
+	}
+
+	app.Run(os.Args)
+}
+
+func Migrate(ctx *cli.Context) {
+	log.Println("Error: Migrate is currently unimplemented")
+}
+
+func RunServer(ctx *cli.Context) {
 	servers.InitialiseServers()
 	SetupCron()
 
-	db, err := sql.Open("postgres", "user=tf2-booking dbname=tf2-booking host=192.168.1.106 sslmode=disable password=example")
+	// Connect to the PostgreSQL database.
+	db, err := sql.Open("postgres", config.Conf.Database.DSN)
 	if err != nil {
 		log.Println("Database error:", err)
 	}
@@ -189,9 +217,9 @@ func OnReady(s *discordgo.Session, r *discordgo.Ready) {
 		}
 	}
 
-	log.Println("Updated game string.")
+	log.Println("Updating game string with currently booked server.")
 	UpdateGameString()
-
+	log.Println("Successfully updated game string.")
 	log.Println("Discord bot successfully started.")
 }
 

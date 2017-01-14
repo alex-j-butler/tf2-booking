@@ -45,6 +45,10 @@ type Config struct {
 	Commands struct {
 		ReportDuration util.DurationUtil `yaml:"report_duration"`
 	}
+
+	Database struct {
+		DSN string `yaml:"dsn"`
+	} `yaml:"database"`
 }
 
 var Conf Config
