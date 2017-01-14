@@ -36,6 +36,7 @@ func BookServer(m *discordgo.MessageCreate, command string, args []string) {
 		RCONPassword, ServerPassword, err := Serv.Book(m.Author, config.Conf.Booking.Duration.Duration)
 		if err != nil {
 			Session.ChannelMessageSend(m.ChannelID, fmt.Sprintf("%s: Something went wrong while trying to book your server, please try again later.", User.GetMention()))
+			log.Println(fmt.Sprintf("Failed to book server \"%s\" from \"%s\":", Serv.Name, m.Author.ID), err)
 		} else {
 			// Start the server.
 			go func(Serv *servers.Server, m *discordgo.MessageCreate) {
