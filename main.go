@@ -86,8 +86,15 @@ func RunServer(ctx *cli.Context) {
 	db, err := sql.Open("postgres", config.Conf.Database.DSN)
 	if err != nil {
 		log.Println("Database error:", err)
+		os.Exit(1)
 	}
 	database.DB = db
+
+	// Ping the database to make sure we're properly connected.
+	if err := database.DB.Ping(); err != nil {
+		log.Println("Database error:", err)
+		os.Exit(1)
+	}
 
 	logs, err := loghandler.Dial(config.Conf.LogServer.LogAddress, config.Conf.LogServer.LogPort)
 	if err != nil {
