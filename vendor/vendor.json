@@ -22,6 +22,10 @@
 			"versionExact": "develop-fork"
 		},
 		{
+			"path": "github.com/codegangsta/cli",
+			"revision": ""
+		},
+		{
 			"checksumSHA1": "hveFTNQ9YEyYRs6SWuXM+XU9qRI=",
 			"path": "github.com/fsnotify/fsnotify",
 			"revision": "fd9ec7deca8bf46ecd2a795baaacf2b3a9be1197",
