@@ -235,7 +235,8 @@ func (s *Server) Book(user *discordgo.User, duration time.Duration) (string, str
 		err = newUser.Insert(database.DB)
 
 		if err != nil {
-			return "", "", errors.New("Server record could not be created")
+			log.Println("Database error:", err)
+			return "", "", errors.New("User record could not be created")
 		}
 
 		dbUser = &newUser
@@ -250,6 +251,7 @@ func (s *Server) Book(user *discordgo.User, duration time.Duration) (string, str
 	err = booking.Insert(database.DB)
 
 	if err != nil {
+		log.Println("Database error:", err)
 		return "", "", errors.New("Server record could not be created")
 	}
 
