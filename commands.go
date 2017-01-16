@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"alex-j-butler.com/tf2-booking/config"
+	"alex-j-butler.com/tf2-booking/database"
 	"alex-j-butler.com/tf2-booking/servers"
 	"alex-j-butler.com/tf2-booking/util"
 	"alex-j-butler.com/tf2-booking/wait"
@@ -286,6 +287,31 @@ func PrintStats(m *discordgo.MessageCreate, command string, args []string) {
 
 	if count == 0 {
 		message = "No servers are currently booked."
+	}
+
+	stmt, err := database.DB.Prepare("SELECT server_name, sum(age(unbooked_time, booked_time)) FROM bookings WHERE booked_time > (current_date - $1::interval) GROUP BY server_name ORDER BY server_name ASC;")
+	defer stmt.Close()
+	if err != nil {
+		log.Println("Prepare error:", err)
+		Session.ChannelMessageSend(m.ChannelID, fmt.Sprintf("%s: %s", User.GetMention(), "Something went wrong retrieving server history!"))
+		return
+	}
+
+	rows, err := stmt.Query("7 days")
+	defer rows.Close()
+	if err != nil {
+		log.Println("Query error:", err)
+		Session.ChannelMessageSend(m.ChannelID, fmt.Sprintf("%s: %s", User.GetMention(), "Something went wrong retrieving server history!"))
+		return
+	}
+
+	message = fmt.Sprintf("%s\n\n%s", message, "7 day history:")
+
+	var serverName string
+	var duration string
+	for rows.Next() {
+		rows.Scan(&serverName, &duration)
+		message = fmt.Sprintf("%s\n\t%s: %s", message, serverName, duration)
 	}
 
 	Session.ChannelMessageSend(m.ChannelID, fmt.Sprintf("%s: %s", User.GetMention(), message))
