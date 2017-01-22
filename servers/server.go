@@ -23,6 +23,7 @@ type Server struct {
 	Name        string `json:"name" yaml:"name"`
 	Path        string `json:"path" yaml:"path"`
 	Address     string `json:"address" yaml:"address"`
+	STVAddress  string `json:"stv_address" yaml:"stv_address"`
 	SessionName string `json:"session_name" yaml:"session_name"`
 
 	SentWarning bool

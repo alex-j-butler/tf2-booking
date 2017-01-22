@@ -14,6 +14,66 @@ import (
 	"github.com/bwmarrin/discordgo"
 )
 
+func sendServerDetails(channelID string, serv *servers.Server, serverPassword, rconPassword string) {
+	Session.ChannelMessageSendEmbed(
+		channelID,
+		"**Here are the details for your booked server:**",
+		&discordgo.MessageEmbed{
+			Color: 12763842,
+			Type:  "rich",
+			Fields: []*discordgo.MessageEmbedField{
+				&discordgo.MessageEmbedField{
+					Name:   "Server Address",
+					Value:  fmt.Sprintf("`%s`", serv.Address),
+					Inline: true,
+				},
+				&discordgo.MessageEmbedField{
+					Name:   "Server Password",
+					Value:  fmt.Sprintf("`%s`", serverPassword),
+					Inline: true,
+				},
+				&discordgo.MessageEmbedField{
+					Name:   "RCON Password",
+					Value:  fmt.Sprintf("`%s`", rconPassword),
+					Inline: true,
+				},
+			},
+		},
+	)
+	Session.ChannelMessageSendEmbed(
+		channelID,
+		"",
+		&discordgo.MessageEmbed{
+			Color: 321378,
+			Type:  "rich",
+			Fields: []*discordgo.MessageEmbedField{
+				&discordgo.MessageEmbedField{
+					Name:   "Connect String",
+					Value:  fmt.Sprintf("`connect %s; password %s; rcon_password %s`", serv.Address, serverPassword, rconPassword),
+					Inline: false,
+				},
+				&discordgo.MessageEmbedField{
+					Name:   "STV String",
+					Value:  fmt.Sprintf("`connect %s`", serv.STVAddress),
+					Inline: false,
+				},
+			},
+		},
+	)
+	Session.ChannelMessageSendEmbed(
+		channelID,
+		"",
+		&discordgo.MessageEmbed{
+			Color: 12763842,
+			Type:  "rich",
+			Author: &discordgo.MessageEmbedAuthor{
+				Name:    "Did you know you can report a server by typing !report into ingame chat?",
+				IconURL: "https://tf2-au.qixalite.com/stv/help_icon.png",
+			},
+		},
+	)
+}
+
 // BookServer command handler
 // Called when a user types the 'book' command into the Discord channel.
 // This function checks whether the user has a server booked, if not,
@@ -66,17 +126,22 @@ func BookServer(m *discordgo.MessageCreate, command string, args []string) {
 
 			// Send message to private DM, with server details.
 			UserChannel, _ := Session.UserChannelCreate(m.Author.ID)
-			Session.ChannelMessageSend(
-				UserChannel.ID,
-				fmt.Sprintf(
-					"Here is your server:\n\tServer address: %s\n\tRCON Password: %s\n\tPassword: %s\n\tConnect string: `connect %s; password %s`",
-					Serv.Address,
-					RCONPassword,
-					ServerPassword,
-					Serv.Address,
-					ServerPassword,
-				),
-			)
+			/*
+				Session.ChannelMessageSend(
+					UserChannel.ID,
+					fmt.Sprintf(
+						"Here is your server:\n\tServer address: %s\n\tRCON Password: %s\n\tPassword: %s\n\tConnect string: `connect %s; password %s`",
+						Serv.Address,
+						RCONPassword,
+						ServerPassword,
+						Serv.Address,
+						ServerPassword,
+					),
+				)
+			*/
+
+			// Send the server details (and a small tip).
+			sendServerDetails(UserChannel.ID, Serv, ServerPassword, RCONPassword)
 
 			Users[m.Author.ID] = true
 			UserServers[m.Author.ID] = Serv
