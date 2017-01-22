@@ -326,12 +326,12 @@ func SendPassword(m *discordgo.MessageCreate, command string, args []string) {
 func PrintStats(m *discordgo.MessageCreate, command string, args []string) {
 	User := &util.PatchUser{m.Author}
 
-	servers := servers.GetBookedServers(servers.Servers)
+	servs := servers.GetBookedServers(servers.Servers)
 	message := "Server stats:"
 	count := 0
 
-	for i := 0; i < len(servers); i++ {
-		server := servers[i]
+	for i := 0; i < len(servs); i++ {
+		server := servs[i]
 		if server != nil {
 			bookerID := server.GetBooker()
 			bookerUser, err := Session.User(bookerID)
@@ -348,7 +348,7 @@ func PrintStats(m *discordgo.MessageCreate, command string, args []string) {
 		}
 	}
 
-	message = fmt.Sprintf("%s\n\n%d out of %d servers booked", message, count, len(servers))
+	message = fmt.Sprintf("%s\n\n%d out of %d servers booked", message, count, len(servers.Servers))
 
 	if count == 0 {
 		message = "No servers are currently booked."
