@@ -6,8 +6,11 @@ import (
 	"strings"
 	"time"
 
+	redis "gopkg.in/redis.v5"
+
 	"alex-j-butler.com/tf2-booking/config"
 	"alex-j-butler.com/tf2-booking/database"
+	"alex-j-butler.com/tf2-booking/globals"
 	"alex-j-butler.com/tf2-booking/servers"
 	"alex-j-butler.com/tf2-booking/util"
 	"alex-j-butler.com/tf2-booking/wait"
@@ -74,6 +77,12 @@ func sendServerDetails(channelID string, serv *servers.Server, serverPassword, r
 	)
 }
 
+func DebugPrint(m *discordgo.MessageCreate, command string, args []string) {
+	User := &util.PatchUser{m.Author}
+
+	Session.ChannelMessageSend(m.ChannelID, fmt.Sprintf("%s: %+v", User.GetMention(), servers.Servers))
+}
+
 // BookServer command handler
 // Called when a user types the 'book' command into the Discord channel.
 // This function checks whether the user has a server booked, if not,
@@ -83,7 +92,23 @@ func BookServer(m *discordgo.MessageCreate, command string, args []string) {
 	User := &util.PatchUser{m.Author}
 
 	// Check if the user has already booked a server out.
-	if value, _ := Users[m.Author.ID]; value == true {
+	getDefaultValue := redis.NewScript(`
+		local value = redis.call("GET", KEYS[1])
+		if (not value) then
+			redis.call("SET", KEYS[1], ARGV[1])
+			return ARGV[1]
+		end
+		return value
+	`)
+
+	bookingInfo, err := getDefaultValue.Run(globals.RedisClient, []string{fmt.Sprintf("user.%s", m.Author.ID)}, nil).Result()
+	if err != nil {
+		// Send a message to let the user know an error occurred.
+		Session.ChannelMessageSend(m.ChannelID, fmt.Sprintf("%s: Oops, looked like an error has occurred. Please contact an admin for assistance.", User.GetMention()))
+		return
+	}
+
+	if len(bookingInfo.(string)) != 0 {
 		// Send a message to let the user know they've already booked a server.
 		Session.ChannelMessageSend(m.ChannelID, fmt.Sprintf("%s: You've already booked a server. Type `unbook` to return the server.", User.GetMention()))
 		return
@@ -91,6 +116,7 @@ func BookServer(m *discordgo.MessageCreate, command string, args []string) {
 
 	// Get the next available server.
 	Serv := servers.GetAvailableServer(servers.Servers)
+	// TODO: Maybe the server should be synched now?
 
 	if Serv != nil {
 		// Book the server.
@@ -112,8 +138,11 @@ func BookServer(m *discordgo.MessageCreate, command string, args []string) {
 						),
 					)
 
-					Users[m.Author.ID] = false
-					UserServers[m.Author.ID] = nil
+					if globals.RedisClient.Set(fmt.Sprintf("user.%s", m.Author.ID), "", 0).Err() != nil {
+						log.Println("Redis error:", err)
+						log.Println("Failed to set user information for user:", m.Author.ID)
+						return
+					}
 
 					UpdateGameString()
 
@@ -124,27 +153,15 @@ func BookServer(m *discordgo.MessageCreate, command string, args []string) {
 			// Send message to public channel, without server details.
 			Session.ChannelMessageSend(m.ChannelID, fmt.Sprintf("%s: Server details have been sent via private message.", User.GetMention()))
 
-			// Send message to private DM, with server details.
+			// Create the private DM channel, and then send the server details (and a small tip).
 			UserChannel, _ := Session.UserChannelCreate(m.Author.ID)
-			/*
-				Session.ChannelMessageSend(
-					UserChannel.ID,
-					fmt.Sprintf(
-						"Here is your server:\n\tServer address: %s\n\tRCON Password: %s\n\tPassword: %s\n\tConnect string: `connect %s; password %s`",
-						Serv.Address,
-						RCONPassword,
-						ServerPassword,
-						Serv.Address,
-						ServerPassword,
-					),
-				)
-			*/
-
-			// Send the server details (and a small tip).
 			sendServerDetails(UserChannel.ID, Serv, ServerPassword, RCONPassword)
 
-			Users[m.Author.ID] = true
-			UserServers[m.Author.ID] = Serv
+			if globals.RedisClient.Set(fmt.Sprintf("user.%s", m.Author.ID), Serv.SessionName, 0).Err() != nil {
+				log.Println("Redis error:", err)
+				log.Println("Failed to set user information for user:", m.Author.ID)
+				return
+			}
 
 			UpdateGameString()
 

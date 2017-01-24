@@ -2,17 +2,21 @@ package main
 
 import (
 	"database/sql"
+	"encoding/json"
 	"fmt"
 	"log"
 	"os"
 	"strings"
 	"time"
 
+	redis "gopkg.in/redis.v5"
+
 	"alex-j-butler.com/tf2-booking/commands"
 	"alex-j-butler.com/tf2-booking/commands/ingame"
 	"alex-j-butler.com/tf2-booking/commands/ingame/loghandler"
 	"alex-j-butler.com/tf2-booking/config"
 	"alex-j-butler.com/tf2-booking/database"
+	"alex-j-butler.com/tf2-booking/globals"
 	"alex-j-butler.com/tf2-booking/servers"
 	"alex-j-butler.com/tf2-booking/util"
 	"alex-j-butler.com/tf2-booking/wait"
@@ -96,9 +100,58 @@ func RunServer(ctx *cli.Context) {
 		os.Exit(1)
 	}
 
+	// Setup the Redis client
+	// and PING it to make sure we properly connected
+	// and can issue commands to it.
+	client := redis.NewClient(&redis.Options{
+		Addr:     config.Conf.Redis.Address,
+		Password: config.Conf.Redis.Password,
+		DB:       config.Conf.Redis.DB,
+	})
+
+	_, err = client.Ping().Result()
+	if err != nil {
+		// Application won't work without a Redis connection.
+		log.Println("Redis error:", err)
+		os.Exit(1)
+	}
+	globals.RedisClient = client
+
+	// When the booking bot starts, we need to insert all the servers that we know about
+	// that do not currently exist in Redis (which is done through the SETNX Redis command),
+	// after which, it will synchronise all of the servers from Redis.
+	for i, server := range servers.Servers {
+		// Serialise the server as a JSON string.
+		serialised, err := json.Marshal(server)
+		if err != nil {
+			panic(err)
+		}
+
+		// Attempt to add the server.
+		err = client.SetNX(fmt.Sprintf("server.%s", server.SessionName), serialised, 0).Err()
+		if err != nil {
+			panic(err)
+		}
+
+		// Synchronise the server from Redis, to get information for existing servers.
+		err = server.Synchronise(globals.RedisClient)
+		if err != nil {
+			panic(err)
+		}
+
+		// Put the modified server back.
+		servers.Servers[i] = server
+	}
+
+	// Create the loghandler server
+	// and bind it to the appropriate address & port.
 	logs, err := loghandler.Dial(config.Conf.LogServer.LogAddress, config.Conf.LogServer.LogPort)
 	if err != nil {
-		log.Println("LogHandler failed to connect:", err)
+		// Loghandler server couldn't bind properly.
+		// Not a problem, results in ingame commands not being received by the
+		// booking bot.
+		log.Println("LogHandler failed to bind:", err)
+		log.Println("NOTE: This will disable ingame commands from functioning correctly.")
 	} else {
 		log.Println(fmt.Sprintf("LogHandler listening on %s:%d", logs.Address, logs.Port))
 	}
@@ -107,6 +160,10 @@ func RunServer(ctx *cli.Context) {
 
 	// Register the commands and their command handlers.
 	Command = commands.New("")
+	Command.Add(
+		commands.NewCommand(DebugPrint),
+		"debug",
+	)
 	Command.Add(
 		commands.NewCommand(BookServer),
 		"book",
@@ -205,24 +262,28 @@ func RunServer(ctx *cli.Context) {
 // OnReady handler for Discord.
 // Called when the connection has been completely setup.
 func OnReady(s *discordgo.Session, r *discordgo.Ready) {
+	// TODO: Remove state loading, in place of Redis.
+
 	// Restore state from the state file, if it exists.
-	if HasState(".state.json") {
-		err, servers_, users, userServers := LoadState(".state.json")
+	/*
+		if HasState(".state.json") {
+			err, servers_, users, userServers := LoadState(".state.json")
 
-		if err != nil {
-			log.Println("Found state file, failed to restore:", err)
-		} else {
-			log.Println("Found state file, restoring from previous state.")
+			if err != nil {
+				log.Println("Found state file, failed to restore:", err)
+			} else {
+				log.Println("Found state file, restoring from previous state.")
 
-			if err = DeleteState(".state.json"); err != nil {
-				log.Println("Failed to delete state file:", err)
+				if err = DeleteState(".state.json"); err != nil {
+					log.Println("Failed to delete state file:", err)
+				}
+
+				servers.Servers = servers_
+				Users = users
+				UserServers = userServers
 			}
-
-			servers.Servers = servers_
-			Users = users
-			UserServers = userServers
 		}
-	}
+	*/
 
 	log.Println("Updating game string with currently booked server.")
 	UpdateGameString()
