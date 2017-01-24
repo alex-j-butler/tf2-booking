@@ -4,6 +4,7 @@ import (
 	"fmt"
 
 	"alex-j-butler.com/tf2-booking/config"
+	"alex-j-butler.com/tf2-booking/globals"
 	"alex-j-butler.com/tf2-booking/servers"
 )
 
@@ -44,4 +45,6 @@ func HandleQueryError(s *servers.Server, err error) {
 			Session.ChannelMessageSend(UserChannel.ID, message)
 		}
 	}
+
+	s.Update(globals.RedisClient)
 }

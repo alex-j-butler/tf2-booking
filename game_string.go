@@ -16,12 +16,12 @@ func GetGameString(num int) string {
 	}
 }
 
-func UpdateGameString() {
+func UpdateGameString() error {
 	availableServers := len(servers.GetAvailableServers(servers.Servers))
 
 	if availableServers == 0 {
-		Session.UpdateStatus(1, GetGameString(availableServers))
+		return Session.UpdateStatus(1, GetGameString(availableServers))
 	} else {
-		Session.UpdateStatus(0, GetGameString(availableServers))
+		return Session.UpdateStatus(0, GetGameString(availableServers))
 	}
 }

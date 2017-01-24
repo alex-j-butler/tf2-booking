@@ -1,6 +1,7 @@
 package servers
 
 import (
+	"encoding/json"
 	"errors"
 	"fmt"
 	"io/ioutil"
@@ -11,12 +12,13 @@ import (
 	"time"
 
 	"alex-j-butler.com/tf2-booking/config"
-	"alex-j-butler.com/tf2-booking/database"
+	"alex-j-butler.com/tf2-booking/globals"
 	"alex-j-butler.com/tf2-booking/models"
 	"github.com/bwmarrin/discordgo"
 	"github.com/james4k/rcon"
 	"github.com/vattle/sqlboiler/queries/qm"
 	"gopkg.in/nullbio/null.v6"
+	redis "gopkg.in/redis.v5"
 )
 
 type Server struct {
@@ -27,7 +29,9 @@ type Server struct {
 	SessionName string `json:"session_name" yaml:"session_name"`
 
 	SentWarning bool
-	ReturnDate  time.Time
+
+	// Timestamp indicating when the server is to be returned.
+	ReturnDate time.Time
 
 	// Last known RCON password.
 	// If this RCON password is invalid, the server can send a tmux command to reset it.
@@ -39,39 +43,83 @@ type Server struct {
 	// Number of tick rate measurements (used internally for calculating a new average).
 	TickRateMeasurements int
 
-	booked     bool
-	bookedDate time.Time
+	// Time that the next performance warning will occur.
+	NextPerformanceWarning time.Time
 
-	booker        string
-	bookerMention string
+	// Specifies whether the server is currently booked.
+	Booked bool
 
-	host string
-	port int
+	// Specifies when the server was booked.
+	BookedDate time.Time
+
+	// The ID of the Discord user who booked the server.
+	Booker string
+
+	// The mention string of the Discord user who booked the server.
+	BookerMention string
 
 	// Booking ID that the server is currently associated with.
-	bookingID int
+	BookingID int
 
-	IdleMinutes  int
+	// IdleMinutes is the number of minutes the server has been idle for.
+	IdleMinutes int
+
+	// ErrorMinutes is the number of minutes the server has been in an errored state for.
 	ErrorMinutes int
+}
+
+// Update performs an update of the server into the specified Redis client.
+func (s *Server) Update(redisClient *redis.Client) error {
+	// Serialise the server as JSON.
+	serialised, err := json.Marshal(s)
+	if err != nil {
+		return err
+	}
+
+	// Perform a SET command on the Redis client.
+	err = redisClient.Set(fmt.Sprintf("server.%s", s.SessionName), serialised, 0).Err()
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+// Synchronise performs a synchronise of the server, retrieving the server data from the specified Redis client.
+func (s *Server) Synchronise(redisClient *redis.Client) error {
+	result, err := redisClient.Get(fmt.Sprintf("server.%s", s.SessionName)).Result()
+	if err != nil {
+		return err
+	}
+
+	// Deserialise the JSON.
+	err = json.Unmarshal([]byte(result), &s)
+	if err != nil {
+		return err
+	}
+
+	return nil
 }
 
 // IsAvailable returns whether the server is currently available for booking.
 // Currently a server is available for booking if it is not being booked by another user,
 // in the future, this could be extended to block servers from being used (for example, if they are down).
 func (s *Server) IsAvailable() bool {
-	return !s.booked
+	return !s.Booked
 }
 
+// BEGIN Deprecated
+
 func (s *Server) GetBookedTime() time.Time {
-	return s.bookedDate
+	return s.BookedDate
 }
 
 func (s *Server) GetBooker() string {
-	return s.booker
+	return s.Booker
 }
 
 func (s *Server) GetBookerMention() string {
-	return s.bookerMention
+	return s.BookerMention
 }
 
 func (s *Server) GetIdleMinutes() int {
@@ -80,11 +128,17 @@ func (s *Server) GetIdleMinutes() int {
 
 func (s *Server) AddIdleMinute() {
 	s.IdleMinutes++
+
+	s.Update(globals.RedisClient)
 }
 
 func (s *Server) ResetIdleMinutes() {
 	s.IdleMinutes = 0
+
+	s.Update(globals.RedisClient)
 }
+
+// END Deprecated
 
 // GetCurrentPassword retrieves the current server password from the server.
 func (s *Server) GetCurrentPassword() (string, error) {
@@ -141,13 +195,18 @@ func (s *Server) Setup() (string, string, error) {
 		return "", "", errors.New("Your server could not be setup")
 	}
 
+	// Reset the warning notification so that it can be sent again.
 	s.SentWarning = false
 
 	// Trim passwords.
 	RCONPassword := strings.TrimSpace(string(stdoutBytes))
 	ServerPassword := strings.TrimSpace(string(stderrBytes))
 
+	// Cache the RCON password, since it can't be changed by the user.
 	s.RCONPassword = RCONPassword
+
+	// Update the server.
+	s.Update(globals.RedisClient)
 
 	return RCONPassword, ServerPassword, nil
 }
@@ -220,20 +279,23 @@ func (s *Server) Stop() error {
 }
 
 func (s *Server) Book(user *discordgo.User, duration time.Duration) (string, string, error) {
-	if s.booked == true {
+	if s.Booked == true {
 		return "", "", errors.New("Server is already booked")
 	}
 
+	// TODO: Move the database handling to after the server setup
+	// in case an error occurs before then.
+
 	// Tries to select the user by discord id,
 	// if no record is found, insert a new record.
-	dbUser, err := models.Users(database.DB, qm.Where("discord_id=?", user.ID)).One()
+	dbUser, err := models.Users(globals.DB, qm.Where("discord_id=?", user.ID)).One()
 	if err != nil {
 		// Insert new record.
 		var newUser models.User
 		newUser.DiscordID = null.StringFrom(user.ID)
 		newUser.Name = null.StringFrom(user.Username)
 
-		err = newUser.Insert(database.DB)
+		err = newUser.Insert(globals.DB)
 
 		if err != nil {
 			log.Println("Database error:", err)
@@ -246,24 +308,29 @@ func (s *Server) Book(user *discordgo.User, duration time.Duration) (string, str
 	// Adds a new booking to the database
 	// and set the booking id.
 	var booking models.Booking
-	booking.SetBooker(database.DB, false, dbUser)
+	booking.SetBooker(globals.DB, false, dbUser)
 	booking.ServerName = s.Name
 	booking.BookedTime = null.TimeFrom(time.Now())
-	err = booking.Insert(database.DB)
+	err = booking.Insert(globals.DB)
 
 	if err != nil {
 		log.Println("Database error:", err)
 		return "", "", errors.New("Server record could not be created")
 	}
 
-	s.bookingID = booking.BookingID
+	s.BookingID = booking.BookingID
+
+	// Update the server to Redis
+	// This is deferred to make sure it happens whether the server is setup or not.
+	defer s.Update(globals.RedisClient)
 
 	// Set the server variables.
 	s.ReturnDate = time.Now().Add(duration)
-	s.booked = true
-	s.bookedDate = time.Now()
-	s.booker = user.ID
-	s.bookerMention = fmt.Sprintf("<@%s>", user.ID)
+	s.Booked = true
+	s.BookedDate = time.Now()
+	s.Booker = user.ID
+	s.BookerMention = fmt.Sprintf("<@%s>", user.ID)
+	s.NextPerformanceWarning = time.Now().Add(5 * time.Minute)
 	s.SentWarning = false
 	s.IdleMinutes = 0
 	s.ErrorMinutes = 0
@@ -272,6 +339,18 @@ func (s *Server) Book(user *discordgo.User, duration time.Duration) (string, str
 	RCONPassword, ServerPassword, err := s.Setup()
 
 	if err != nil {
+		// Reset the server variables so that
+		// the booking bot correctly unbooks the server in case of an error.
+		s.ReturnDate = time.Time{}
+		s.Booked = false
+		s.BookedDate = time.Time{}
+		s.Booker = ""
+		s.BookerMention = ""
+		s.NextPerformanceWarning = time.Time{}
+		s.SentWarning = false
+		s.IdleMinutes = 0
+		s.ErrorMinutes = 0
+
 		return "", "", err
 	}
 
@@ -279,27 +358,31 @@ func (s *Server) Book(user *discordgo.User, duration time.Duration) (string, str
 }
 
 func (s *Server) Unbook() error {
-	if s.booked == false {
+	if s.Booked == false {
 		return errors.New("Server is not booked")
 	}
 
-	booking, err := models.FindBooking(database.DB, s.bookingID)
+	booking, err := models.FindBooking(globals.DB, s.BookingID)
 	if err != nil {
 		return errors.New("Server record could not be updated")
 	}
 
 	booking.UnbookedTime = null.TimeFrom(time.Now())
-	booking.Update(database.DB)
+	booking.Update(globals.DB)
 
 	// Set the server variables.
 	s.ReturnDate = time.Time{}
-	s.booked = false
-	s.bookedDate = time.Time{}
-	s.booker = ""
-	s.bookerMention = ""
+	s.Booked = false
+	s.BookedDate = time.Time{}
+	s.Booker = ""
+	s.BookerMention = ""
+	s.NextPerformanceWarning = time.Time{}
 	s.SentWarning = false
 	s.IdleMinutes = 0
 	s.ErrorMinutes = 0
+
+	// Update the server in Redis.
+	s.Update(globals.RedisClient)
 
 	return nil
 }
@@ -307,6 +390,9 @@ func (s *Server) Unbook() error {
 func (s *Server) ExtendBooking(amount time.Duration) {
 	// Add duration to the return date.
 	s.ReturnDate = s.ReturnDate.Add(amount)
+
+	// Update the server in Redis.
+	s.Update(globals.RedisClient)
 }
 
 func (s *Server) UploadSTV() (string, error) {
@@ -360,7 +446,7 @@ func (s *Server) UploadSTV() (string, error) {
 	}
 
 	// Grab the current booking.
-	booking, err := models.FindBooking(database.DB, s.bookingID)
+	booking, err := models.FindBooking(globals.DB, s.BookingID)
 	if err != nil {
 		log.Println("FindBooking failed")
 		return "", errors.New("Server record could not be updated")
@@ -368,11 +454,11 @@ func (s *Server) UploadSTV() (string, error) {
 
 	// Add demos to booking.
 	for i := 0; i < len(demos); i++ {
-		booking.AddDemos(database.DB, true, &demos[i])
+		booking.AddDemos(globals.DB, true, &demos[i])
 	}
 
 	// Update booking.
-	err = booking.Update(database.DB)
+	err = booking.Update(globals.DB)
 	if err != nil {
 		log.Println("Update failed")
 		return "", errors.New("Server record could not be updated")

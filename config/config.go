@@ -49,6 +49,12 @@ type Config struct {
 	Database struct {
 		DSN string `yaml:"dsn"`
 	} `yaml:"database"`
+
+	Redis struct {
+		Address  string `yaml:"address"`
+		Password string `yaml:"password"`
+		DB       int    `yaml:"db"`
+	}
 }
 
 var Conf Config

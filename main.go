@@ -2,17 +2,20 @@ package main
 
 import (
 	"database/sql"
+	"encoding/json"
 	"fmt"
 	"log"
 	"os"
 	"strings"
 	"time"
 
+	redis "gopkg.in/redis.v5"
+
 	"alex-j-butler.com/tf2-booking/commands"
 	"alex-j-butler.com/tf2-booking/commands/ingame"
 	"alex-j-butler.com/tf2-booking/commands/ingame/loghandler"
 	"alex-j-butler.com/tf2-booking/config"
-	"alex-j-butler.com/tf2-booking/database"
+	"alex-j-butler.com/tf2-booking/globals"
 	"alex-j-butler.com/tf2-booking/servers"
 	"alex-j-butler.com/tf2-booking/util"
 	"alex-j-butler.com/tf2-booking/wait"
@@ -32,14 +35,10 @@ var Session *discordgo.Session
 // BotID represents the ID of the current user.
 var BotID string
 
-// Users maps user IDs to booking state (true = booked, false = unbooked)
-var Users map[string]bool
-
-// UserServers maps user IDs to server pointers.
-var UserServers map[string]*servers.Server
-
 // UserReportTimeouts maps user's steamids to the time after which they can report again.
 var UserReportTimeouts map[string]time.Time
+
+var GetDefaultValue *redis.Script
 
 // Command system
 var Command *commands.Command
@@ -88,17 +87,77 @@ func RunServer(ctx *cli.Context) {
 		log.Println("Database error:", err)
 		os.Exit(1)
 	}
-	database.DB = db
+	globals.DB = db
 
 	// Ping the database to make sure we're properly connected.
-	if err := database.DB.Ping(); err != nil {
+	if err := globals.DB.Ping(); err != nil {
 		log.Println("Database error:", err)
 		os.Exit(1)
 	}
 
+	// Setup the Redis client
+	// and PING it to make sure we properly connected
+	// and can issue commands to it.
+	client := redis.NewClient(&redis.Options{
+		Addr:     config.Conf.Redis.Address,
+		Password: config.Conf.Redis.Password,
+		DB:       config.Conf.Redis.DB,
+	})
+
+	_, err = client.Ping().Result()
+	if err != nil {
+		// Application won't work without a Redis connection.
+		log.Println("Redis error:", err)
+		os.Exit(1)
+	}
+	globals.RedisClient = client
+
+	// When the booking bot starts, we need to insert all the servers that we know about
+	// that do not currently exist in Redis (which is done through the SETNX Redis command),
+	// after which, it will synchronise all of the servers from Redis.
+	for i, server := range servers.Servers {
+		// Serialise the server as a JSON string.
+		serialised, err := json.Marshal(server)
+		if err != nil {
+			panic(err)
+		}
+
+		// Attempt to add the server.
+		err = client.SetNX(fmt.Sprintf("server.%s", server.SessionName), serialised, 0).Err()
+		if err != nil {
+			panic(err)
+		}
+
+		// Synchronise the server from Redis, to get information for existing servers.
+		err = server.Synchronise(globals.RedisClient)
+		if err != nil {
+			panic(err)
+		}
+
+		// Put the modified server back.
+		servers.Servers[i] = server
+	}
+
+	// Create Redis scripts.
+	// Check if the user has already booked a server out.
+	GetDefaultValue = redis.NewScript(`
+		local value = redis.call("GET", KEYS[1])
+		if (not value) then
+			redis.call("SET", KEYS[1], ARGV[1])
+			return ARGV[1]
+		end
+		return value
+	`)
+
+	// Create the loghandler server
+	// and bind it to the appropriate address & port.
 	logs, err := loghandler.Dial(config.Conf.LogServer.LogAddress, config.Conf.LogServer.LogPort)
 	if err != nil {
-		log.Println("LogHandler failed to connect:", err)
+		// Loghandler server couldn't bind properly.
+		// Not a problem, results in ingame commands not being received by the
+		// booking bot.
+		log.Println("LogHandler failed to bind:", err)
+		log.Println("NOTE: This will disable ingame commands from functioning correctly.")
 	} else {
 		log.Println(fmt.Sprintf("LogHandler listening on %s:%d", logs.Address, logs.Port))
 	}
@@ -107,6 +166,10 @@ func RunServer(ctx *cli.Context) {
 
 	// Register the commands and their command handlers.
 	Command = commands.New("")
+	Command.Add(
+		commands.NewCommand(DebugPrint),
+		"debug",
+	)
 	Command.Add(
 		commands.NewCommand(BookServer),
 		"book",
@@ -155,8 +218,6 @@ func RunServer(ctx *cli.Context) {
 	)
 
 	// Create maps.
-	Users = make(map[string]bool)
-	UserServers = make(map[string]*servers.Server)
 	UserReportTimeouts = make(map[string]time.Time)
 
 	// Create the Discord client from the bot token in the configuration.
@@ -205,28 +266,13 @@ func RunServer(ctx *cli.Context) {
 // OnReady handler for Discord.
 // Called when the connection has been completely setup.
 func OnReady(s *discordgo.Session, r *discordgo.Ready) {
-	// Restore state from the state file, if it exists.
-	if HasState(".state.json") {
-		err, servers_, users, userServers := LoadState(".state.json")
-
-		if err != nil {
-			log.Println("Found state file, failed to restore:", err)
-		} else {
-			log.Println("Found state file, restoring from previous state.")
-
-			if err = DeleteState(".state.json"); err != nil {
-				log.Println("Failed to delete state file:", err)
-			}
-
-			servers.Servers = servers_
-			Users = users
-			UserServers = userServers
-		}
+	log.Println("Updating game string with currently booked servers.")
+	err := UpdateGameString()
+	if err != nil {
+		log.Println("Failed updating game string:", err)
+	} else {
+		log.Println("Successfully updated game string.")
 	}
-
-	log.Println("Updating game string with currently booked server.")
-	UpdateGameString()
-	log.Println("Successfully updated game string.")
 	log.Println("Discord bot successfully started.")
 }
 

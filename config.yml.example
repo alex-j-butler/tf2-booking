@@ -57,3 +57,8 @@ commands:
 database:
   # DSN of PostgreSQL database.
   dsn: "user=tf2-booking dbname=tf2-booking host=localhost sslmode=disable password=example"
+
+redis:
+  address: "localhost:6379"
+  password: "example"
+  db: 0
