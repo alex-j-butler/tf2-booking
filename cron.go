@@ -3,9 +3,11 @@ package main
 import (
 	"fmt"
 	"log"
+	"math"
 	"time"
 
 	"alex-j-butler.com/tf2-booking/config"
+	"alex-j-butler.com/tf2-booking/globals"
 	"alex-j-butler.com/tf2-booking/servers"
 	"alex-j-butler.com/tf2-booking/util"
 
@@ -40,8 +42,11 @@ func CheckUnbookServers() {
 			UserMention := Serv.GetBookerMention()
 
 			// Remove the user's booked state.
-			Users[UserID] = false
-			UserServers[UserID] = nil
+			if err := globals.RedisClient.Set(fmt.Sprintf("user.%s", UserID), "", 0).Err(); err != nil {
+				log.Println("Redis error:", err)
+				log.Println("Failed to set user information for user:", UserID)
+				return
+			}
 
 			// Unbook the server.
 			Serv.Unbook()
@@ -106,8 +111,11 @@ func CheckIdleMinutes() {
 					s.ResetIdleMinutes()
 
 					// Remove the user's booked state.
-					Users[UserID] = false
-					UserServers[UserID] = nil
+					if err := globals.RedisClient.Set(fmt.Sprintf("user.%s", UserID), "", 0).Err(); err != nil {
+						log.Println("Redis error:", err)
+						log.Println("Failed to set user information for user:", UserID)
+						return
+					}
 
 					// Unbook the server.
 					s.Unbook()
@@ -162,6 +170,17 @@ func CheckStats() {
 					s.TickRate = ((s.TickRate*float32(s.TickRateMeasurements) + st.FPS) / float32(s.TickRateMeasurements+1))
 					s.TickRateMeasurements++
 				}
+
+				tickrate := 1000.0 / 15.0
+				if math.Abs(float64(s.TickRate)-tickrate) > 3.0 && Serv.NextPerformanceWarning.Before(time.Now()) {
+					// Only allow this message to be sent once.
+					Serv.NextPerformanceWarning = time.Now().Add(5 * time.Minute)
+
+					// The 'var' of the server is too high, notify the server.
+					Serv.SendCommand("say The server may be performing poorly, type '!report server' if the server is lagging.")
+				}
+
+				s.Update(globals.RedisClient)
 			}(Serv)
 		}
 	}

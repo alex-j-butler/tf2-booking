@@ -68,3 +68,13 @@ func GetServerByAddress(serverList []Server, address string) (*Server, error) {
 
 	return nil, errors.New("Server not found.")
 }
+
+func GetServerBySessionName(serverList []Server, sessionName string) (*Server, error) {
+	for i := 0; i < len(serverList); i++ {
+		if serverList[i].SessionName == sessionName {
+			return &serverList[i], nil
+		}
+	}
+
+	return nil, errors.New("Server not found.")
+}

@@ -15,7 +15,6 @@ import (
 	"alex-j-butler.com/tf2-booking/commands/ingame"
 	"alex-j-butler.com/tf2-booking/commands/ingame/loghandler"
 	"alex-j-butler.com/tf2-booking/config"
-	"alex-j-butler.com/tf2-booking/database"
 	"alex-j-butler.com/tf2-booking/globals"
 	"alex-j-butler.com/tf2-booking/servers"
 	"alex-j-butler.com/tf2-booking/util"
@@ -36,14 +35,10 @@ var Session *discordgo.Session
 // BotID represents the ID of the current user.
 var BotID string
 
-// Users maps user IDs to booking state (true = booked, false = unbooked)
-var Users map[string]bool
-
-// UserServers maps user IDs to server pointers.
-var UserServers map[string]*servers.Server
-
 // UserReportTimeouts maps user's steamids to the time after which they can report again.
 var UserReportTimeouts map[string]time.Time
+
+var GetDefaultValue *redis.Script
 
 // Command system
 var Command *commands.Command
@@ -92,10 +87,10 @@ func RunServer(ctx *cli.Context) {
 		log.Println("Database error:", err)
 		os.Exit(1)
 	}
-	database.DB = db
+	globals.DB = db
 
 	// Ping the database to make sure we're properly connected.
-	if err := database.DB.Ping(); err != nil {
+	if err := globals.DB.Ping(); err != nil {
 		log.Println("Database error:", err)
 		os.Exit(1)
 	}
@@ -142,6 +137,17 @@ func RunServer(ctx *cli.Context) {
 		// Put the modified server back.
 		servers.Servers[i] = server
 	}
+
+	// Create Redis scripts.
+	// Check if the user has already booked a server out.
+	GetDefaultValue = redis.NewScript(`
+		local value = redis.call("GET", KEYS[1])
+		if (not value) then
+			redis.call("SET", KEYS[1], ARGV[1])
+			return ARGV[1]
+		end
+		return value
+	`)
 
 	// Create the loghandler server
 	// and bind it to the appropriate address & port.
@@ -212,8 +218,6 @@ func RunServer(ctx *cli.Context) {
 	)
 
 	// Create maps.
-	Users = make(map[string]bool)
-	UserServers = make(map[string]*servers.Server)
 	UserReportTimeouts = make(map[string]time.Time)
 
 	// Create the Discord client from the bot token in the configuration.
@@ -262,32 +266,13 @@ func RunServer(ctx *cli.Context) {
 // OnReady handler for Discord.
 // Called when the connection has been completely setup.
 func OnReady(s *discordgo.Session, r *discordgo.Ready) {
-	// TODO: Remove state loading, in place of Redis.
-
-	// Restore state from the state file, if it exists.
-	/*
-		if HasState(".state.json") {
-			err, servers_, users, userServers := LoadState(".state.json")
-
-			if err != nil {
-				log.Println("Found state file, failed to restore:", err)
-			} else {
-				log.Println("Found state file, restoring from previous state.")
-
-				if err = DeleteState(".state.json"); err != nil {
-					log.Println("Failed to delete state file:", err)
-				}
-
-				servers.Servers = servers_
-				Users = users
-				UserServers = userServers
-			}
-		}
-	*/
-
-	log.Println("Updating game string with currently booked server.")
-	UpdateGameString()
-	log.Println("Successfully updated game string.")
+	log.Println("Updating game string with currently booked servers.")
+	err := UpdateGameString()
+	if err != nil {
+		log.Println("Failed updating game string:", err)
+	} else {
+		log.Println("Successfully updated game string.")
+	}
 	log.Println("Discord bot successfully started.")
 }
 

@@ -12,7 +12,6 @@ import (
 	"time"
 
 	"alex-j-butler.com/tf2-booking/config"
-	"alex-j-butler.com/tf2-booking/database"
 	"alex-j-butler.com/tf2-booking/globals"
 	"alex-j-butler.com/tf2-booking/models"
 	"github.com/bwmarrin/discordgo"
@@ -43,6 +42,9 @@ type Server struct {
 
 	// Number of tick rate measurements (used internally for calculating a new average).
 	TickRateMeasurements int
+
+	// Time that the next performance warning will occur.
+	NextPerformanceWarning time.Time
 
 	// Specifies whether the server is currently booked.
 	Booked bool
@@ -126,10 +128,14 @@ func (s *Server) GetIdleMinutes() int {
 
 func (s *Server) AddIdleMinute() {
 	s.IdleMinutes++
+
+	s.Update(globals.RedisClient)
 }
 
 func (s *Server) ResetIdleMinutes() {
 	s.IdleMinutes = 0
+
+	s.Update(globals.RedisClient)
 }
 
 // END Deprecated
@@ -282,14 +288,14 @@ func (s *Server) Book(user *discordgo.User, duration time.Duration) (string, str
 
 	// Tries to select the user by discord id,
 	// if no record is found, insert a new record.
-	dbUser, err := models.Users(database.DB, qm.Where("discord_id=?", user.ID)).One()
+	dbUser, err := models.Users(globals.DB, qm.Where("discord_id=?", user.ID)).One()
 	if err != nil {
 		// Insert new record.
 		var newUser models.User
 		newUser.DiscordID = null.StringFrom(user.ID)
 		newUser.Name = null.StringFrom(user.Username)
 
-		err = newUser.Insert(database.DB)
+		err = newUser.Insert(globals.DB)
 
 		if err != nil {
 			log.Println("Database error:", err)
@@ -302,10 +308,10 @@ func (s *Server) Book(user *discordgo.User, duration time.Duration) (string, str
 	// Adds a new booking to the database
 	// and set the booking id.
 	var booking models.Booking
-	booking.SetBooker(database.DB, false, dbUser)
+	booking.SetBooker(globals.DB, false, dbUser)
 	booking.ServerName = s.Name
 	booking.BookedTime = null.TimeFrom(time.Now())
-	err = booking.Insert(database.DB)
+	err = booking.Insert(globals.DB)
 
 	if err != nil {
 		log.Println("Database error:", err)
@@ -324,6 +330,7 @@ func (s *Server) Book(user *discordgo.User, duration time.Duration) (string, str
 	s.BookedDate = time.Now()
 	s.Booker = user.ID
 	s.BookerMention = fmt.Sprintf("<@%s>", user.ID)
+	s.NextPerformanceWarning = time.Now().Add(5 * time.Minute)
 	s.SentWarning = false
 	s.IdleMinutes = 0
 	s.ErrorMinutes = 0
@@ -339,6 +346,7 @@ func (s *Server) Book(user *discordgo.User, duration time.Duration) (string, str
 		s.BookedDate = time.Time{}
 		s.Booker = ""
 		s.BookerMention = ""
+		s.NextPerformanceWarning = time.Time{}
 		s.SentWarning = false
 		s.IdleMinutes = 0
 		s.ErrorMinutes = 0
@@ -354,13 +362,13 @@ func (s *Server) Unbook() error {
 		return errors.New("Server is not booked")
 	}
 
-	booking, err := models.FindBooking(database.DB, s.BookingID)
+	booking, err := models.FindBooking(globals.DB, s.BookingID)
 	if err != nil {
 		return errors.New("Server record could not be updated")
 	}
 
 	booking.UnbookedTime = null.TimeFrom(time.Now())
-	booking.Update(database.DB)
+	booking.Update(globals.DB)
 
 	// Set the server variables.
 	s.ReturnDate = time.Time{}
@@ -368,6 +376,7 @@ func (s *Server) Unbook() error {
 	s.BookedDate = time.Time{}
 	s.Booker = ""
 	s.BookerMention = ""
+	s.NextPerformanceWarning = time.Time{}
 	s.SentWarning = false
 	s.IdleMinutes = 0
 	s.ErrorMinutes = 0
@@ -437,7 +446,7 @@ func (s *Server) UploadSTV() (string, error) {
 	}
 
 	// Grab the current booking.
-	booking, err := models.FindBooking(database.DB, s.BookingID)
+	booking, err := models.FindBooking(globals.DB, s.BookingID)
 	if err != nil {
 		log.Println("FindBooking failed")
 		return "", errors.New("Server record could not be updated")
@@ -445,11 +454,11 @@ func (s *Server) UploadSTV() (string, error) {
 
 	// Add demos to booking.
 	for i := 0; i < len(demos); i++ {
-		booking.AddDemos(database.DB, true, &demos[i])
+		booking.AddDemos(globals.DB, true, &demos[i])
 	}
 
 	// Update booking.
-	err = booking.Update(database.DB)
+	err = booking.Update(globals.DB)
 	if err != nil {
 		log.Println("Update failed")
 		return "", errors.New("Server record could not be updated")

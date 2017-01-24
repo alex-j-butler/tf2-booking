@@ -353,6 +353,42 @@
 			"revisionTime": "2016-11-15T15:23:47Z"
 		},
 		{
+			"checksumSHA1": "Wryy554xobXiDkO7L10ejJXe14M=",
+			"path": "gopkg.in/redis.v5",
+			"revision": "8829ddcd8bdb333e477cc845946c4b9b2ef66280",
+			"revisionTime": "2017-01-16T08:01:07Z"
+		},
+		{
+			"checksumSHA1": "MQyhe1N+NO0+uyJiEc6M2WGfb3s=",
+			"path": "gopkg.in/redis.v5/internal",
+			"revision": "8829ddcd8bdb333e477cc845946c4b9b2ef66280",
+			"revisionTime": "2017-01-16T08:01:07Z"
+		},
+		{
+			"checksumSHA1": "2Ek4SixeRSKOX3mUiBMs3Aw+Guc=",
+			"path": "gopkg.in/redis.v5/internal/consistenthash",
+			"revision": "8829ddcd8bdb333e477cc845946c4b9b2ef66280",
+			"revisionTime": "2017-01-16T08:01:07Z"
+		},
+		{
+			"checksumSHA1": "rJYVKcBrwYUGl7nuuusmZGrt8mY=",
+			"path": "gopkg.in/redis.v5/internal/hashtag",
+			"revision": "8829ddcd8bdb333e477cc845946c4b9b2ef66280",
+			"revisionTime": "2017-01-16T08:01:07Z"
+		},
+		{
+			"checksumSHA1": "yLZQUKNxXzwGlzfXhWC0Mwme2nw=",
+			"path": "gopkg.in/redis.v5/internal/pool",
+			"revision": "8829ddcd8bdb333e477cc845946c4b9b2ef66280",
+			"revisionTime": "2017-01-16T08:01:07Z"
+		},
+		{
+			"checksumSHA1": "KoSfO3h/KmlaGphIM4KzBGm65O4=",
+			"path": "gopkg.in/redis.v5/internal/proto",
+			"revision": "8829ddcd8bdb333e477cc845946c4b9b2ef66280",
+			"revisionTime": "2017-01-16T08:01:07Z"
+		},
+		{
 			"checksumSHA1": "brhONOPp4CSdTZf5uEtcH+FpFUI=",
 			"path": "gopkg.in/urfave/cli.v1",
 			"revision": "0bdeddeeb0f650497d603c4ad7b20cfe685682f6",
