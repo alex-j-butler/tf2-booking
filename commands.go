@@ -67,7 +67,7 @@ func sendServerDetails(channelID string, serv *servers.Server, serverPassword, r
 			Color: 12763842,
 			Type:  "rich",
 			Author: &discordgo.MessageEmbedAuthor{
-				Name:    "Did you know you can report a server by typing !report into ingame chat?",
+				Name:    ChooseRandomTip(),
 				IconURL: "https://tf2-au.qixalite.com/stv/help_icon.png",
 			},
 		},

@@ -62,3 +62,9 @@ redis:
   address: "localhost:6379"
   password: "example"
   db: 0
+
+tips:
+  - "Did you know you can report a server by typing !report into ingame chat?"
+  - "Did you know you can check the remaining time by typing !time into ingame chat?"
+  - "Did you know you can extend your booking by typing 'extend' into Discord?"
+  - "Use 'send password' in Discord to get the password for TF2Center lobbies!"

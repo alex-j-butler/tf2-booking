@@ -55,6 +55,8 @@ type Config struct {
 		Password string `yaml:"password"`
 		DB       int    `yaml:"db"`
 	}
+
+	Tips []string `yaml:"tips"`
 }
 
 var Conf Config
