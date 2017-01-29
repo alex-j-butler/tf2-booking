@@ -318,15 +318,16 @@ func MessageCreate(s *discordgo.Session, m *discordgo.MessageCreate) {
 
 	Permissions, err := Session.State.UserChannelPermissions(m.Author.ID, permissionsChannelID)
 	if err != nil {
-		log.Println("discord error: failed to lookup permissions.", err, fmt.Sprintf("(id %s name %s)", m.Author.ID, m.Author.Username))
-
 		// Grab the timestamp of this error in GMT+10 time.
 		gmt10 := time.FixedZone("GMT+10", 10*60*60)
 		timestamp := time.Now().In(gmt10)
 
-		Session.ChannelMessageSend(m.ChannelID, fmt.Sprintf("%s: Sorry, we couldn't look up your Discord permissions, please contact an admin for assistance. (id %s time %s)", fmt.Sprintf("<@%s>", m.Author.ID), m.Author.ID, timestamp.String()))
+		log.Println("discord error: failed to lookup permissions.", err, fmt.Sprintf("(id %s name %s time %s)", m.Author.ID, m.Author.Username, timestamp.String()))
 
-		return
+		// Assume permissions = 0
+		Permissions = 0
+
+		// Session.ChannelMessageSend(m.ChannelID, fmt.Sprintf("%s: Sorry, we couldn't look up your Discord permissions, please contact an admin for assistance. (id %s time %s)", fmt.Sprintf("<@%s>", m.Author.ID), m.Author.ID, timestamp.String()))
 	}
 
 	// Send the message content to the command handler to be dispatched appropriately.
