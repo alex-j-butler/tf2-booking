@@ -330,7 +330,7 @@ func SendPassword(m *discordgo.MessageCreate, command string, args []string) {
 
 	Serv, err := servers.GetServerBySessionName(servers.Servers, bookingInfoStr)
 
-	if err != nil && Serv != nil {
+	if err == nil && Serv != nil {
 		serverPassword, err := Serv.GetCurrentPassword()
 		if err != nil {
 			Session.ChannelMessageSend(
