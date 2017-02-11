@@ -3,8 +3,6 @@ package main
 import (
 	"fmt"
 	"log"
-	"strings"
-	"time"
 
 	"alex-j-butler.com/tf2-booking/config"
 	"alex-j-butler.com/tf2-booking/globals"
@@ -12,6 +10,7 @@ import (
 	"alex-j-butler.com/tf2-booking/util"
 	"alex-j-butler.com/tf2-booking/wait"
 	"github.com/bwmarrin/discordgo"
+	"github.com/google/go-github/github"
 )
 
 func sendServerDetails(channelID string, serv *servers.Server, serverPassword, rconPassword string) {
@@ -437,28 +436,45 @@ func PrintStats(m *discordgo.MessageCreate, command string, args []string) {
 func Update(m *discordgo.MessageCreate, command string, args []string) {
 	User := &util.PatchUser{m.Author}
 
-	// Delete the sent message in 10 seconds.
-	go DeleteMessage(m.ChannelID, m.ID, time.Second*10)
-
 	if len(args) <= 0 {
-		// Send error.
-		Session.ChannelMessageSend(m.ChannelID, fmt.Sprintf("%s: Invalid arguments: `update <url>`", User.GetMention()))
+		// Send usage.
+		Session.ChannelMessageSend(m.ChannelID, fmt.Sprintf("%s: Usage: `update <release tag>`", User.GetMention()))
 		return
 	}
 
-	url := strings.Join(args, " ")
-	Session.ChannelMessageSend(m.ChannelID, fmt.Sprintf("%s: Starting update...", User.GetMention()))
+	// Create a GitHub API client.
+	client := github.NewClient(nil)
+	// Tag name
+	tagName := args[0]
 
-	go func(url string) {
-		UpdateExecutable(url)
+	// Get release by tag.
+	release, _, err := client.Repositories.GetReleaseByTag("alex-j-butler", "tf2-booking", tagName)
+	if err != nil {
+		// Send error message.
+		Session.ChannelMessageSend(m.ChannelID, fmt.Sprintf("%s: Failed to retrieve release.", User.GetMention()))
+		return
+	}
 
-		m, _ := Session.ChannelMessageSend(m.ChannelID, fmt.Sprintf("%s: Updated `tf2-booking` & restarting now from URL: %s", User.GetMention(), url))
+	asset, err := util.GetReleaseAsset(release.Assets, "tf2-booking-amd64")
+	if err != nil {
+		// Send error message.
+		Session.ChannelMessageSend(m.ChannelID, fmt.Sprintf("%s: Failed to retrieve release asset.", User.GetMention()))
+		return
+	}
 
-		// Delete the sent message in 10 seconds.
-		go DeleteMessage(m.ChannelID, m.ID, time.Second*10)
+	//
+	Session.ChannelMessageSend(m.ChannelID, fmt.Sprintf("%s: Starting update to release %s", User.GetMention(), *release.TagName))
 
+	go func(asset github.ReleaseAsset) {
+		// Update the executable.
+		UpdateExecutable(*asset.BrowserDownloadURL)
+
+		// Send the success notification.
+		Session.ChannelMessageSend(m.ChannelID, fmt.Sprintf("%s: Updated `tf2-booking` & restarting now.", User.GetMention()))
+
+		// Annnnnd, exit.
 		wait.Exit()
-	}(url)
+	}(asset)
 }
 
 func Exit(m *discordgo.MessageCreate, command string, args []string) {
