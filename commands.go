@@ -405,6 +405,10 @@ func PrintStats(m *discordgo.MessageCreate, command string, args []string) {
 		message = "No servers are currently booked."
 	}
 
+	// This command seems to be taking a long time, so for debugging, we'll see how long this SQL query takes
+	// to run.
+	dbqueryStartTime := time.Now()
+
 	stmt, err := globals.DB.Prepare("SELECT server_name, sum(age(unbooked_time, booked_time)) FROM bookings WHERE booked_time > (current_date - $1::interval) GROUP BY server_name ORDER BY server_name ASC;")
 	defer stmt.Close()
 	if err != nil {
@@ -421,6 +425,9 @@ func PrintStats(m *discordgo.MessageCreate, command string, args []string) {
 		return
 	}
 
+	// Get the db query time.
+	dbqueryTimeElapsed := time.Since(dbqueryStartTime)
+
 	message = fmt.Sprintf("%s\n\n%s", message, "7 day history:")
 
 	var serverName string
@@ -430,7 +437,7 @@ func PrintStats(m *discordgo.MessageCreate, command string, args []string) {
 		message = fmt.Sprintf("%s\n\t%s: %s", message, serverName, duration)
 	}
 
-	Session.ChannelMessageSend(m.ChannelID, fmt.Sprintf("%s: %s", User.GetMention(), message))
+	Session.ChannelMessageSend(m.ChannelID, fmt.Sprintf("%s: %s\nQuery took %s", User.GetMention(), message, dbqueryTimeElapsed))
 }
 
 func Update(m *discordgo.MessageCreate, command string, args []string) {
