@@ -26,9 +26,10 @@ type Config struct {
 	} `yaml:"log_server"`
 
 	Booking struct {
-		Duration        util.DurationUtil `yaml:"duration"`
-		ExtendDuration  util.DurationUtil `yaml:"extend_duration"`
-		WarningDuration util.DurationUtil `yaml:"warning_duration"`
+		Duration            util.DurationUtil `yaml:"duration"`
+		ExtendDuration      util.DurationUtil `yaml:"extend_duration"`
+		WarningDuration     util.DurationUtil `yaml:"warning_duration"`
+		IdleWarningDuration int               `yaml:"idle_warning_duration"`
 
 		KickMessage      string `yaml:"kick_message"`
 		SetupCommand     string `yaml:"setup_command"`
