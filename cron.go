@@ -61,6 +61,7 @@ func CheckUnbookServers() {
 				),
 			)
 
+			UserMention := Serv.GetBookerMention()
 			// Send warning message in Discord.
 			Session.ChannelMessageSend(
 				config.Conf.Discord.DefaultChannel,
