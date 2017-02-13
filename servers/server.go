@@ -28,7 +28,11 @@ type Server struct {
 	STVAddress  string `json:"stv_address" yaml:"stv_address"`
 	SessionName string `json:"session_name" yaml:"session_name"`
 
+	// Whether this server has been sent the unbooking warning.
 	SentWarning bool
+
+	// Whether this server has been sent the idle unbooking warning.
+	SentIdleWarning bool
 
 	// Timestamp indicating when the server is to be returned.
 	ReturnDate time.Time
@@ -332,6 +336,7 @@ func (s *Server) Book(user *discordgo.User, duration time.Duration) (string, str
 	s.BookerMention = fmt.Sprintf("<@%s>", user.ID)
 	s.NextPerformanceWarning = time.Now().Add(5 * time.Minute)
 	s.SentWarning = false
+	s.SentIdleWarning = false
 	s.IdleMinutes = 0
 	s.ErrorMinutes = 0
 
@@ -348,6 +353,7 @@ func (s *Server) Book(user *discordgo.User, duration time.Duration) (string, str
 		s.BookerMention = ""
 		s.NextPerformanceWarning = time.Time{}
 		s.SentWarning = false
+		s.SentIdleWarning = false
 		s.IdleMinutes = 0
 		s.ErrorMinutes = 0
 
@@ -378,6 +384,7 @@ func (s *Server) Unbook() error {
 	s.BookerMention = ""
 	s.NextPerformanceWarning = time.Time{}
 	s.SentWarning = false
+	s.SentIdleWarning = false
 	s.IdleMinutes = 0
 	s.ErrorMinutes = 0
 

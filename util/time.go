@@ -65,3 +65,12 @@ func ToHuman(duration *time.Duration) string {
 
 	return strings.TrimSpace(str)
 }
+
+// PluralMinutes returns the appropriate word for 'minute'.
+// Eg. If 'minutes' == 1, this function will return 'minute', otherwise it'll return 'minutes'.
+func PluralMinutes(minutes int) string {
+	if minutes == 1 {
+		return "minute"
+	}
+	return "minutes"
+}

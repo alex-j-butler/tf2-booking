@@ -20,10 +20,12 @@ func CheckUnbookServers() {
 	for i := 0; i < len(servers.Servers); i++ {
 		Serv := &servers.Servers[i]
 
+		// Don't need to do anything if this server isn't booked.
 		if Serv.IsAvailable() {
 			return
 		}
 
+		// Send the timelimit warning notification, if required.
 		if !Serv.IsAvailable() && !Serv.SentWarning && (Serv.ReturnDate.Add(config.Conf.Booking.WarningDuration.Duration)).Before(time.Now()) {
 			// Only allow this message to be sent once.
 			Serv.SentWarning = true
@@ -37,6 +39,36 @@ func CheckUnbookServers() {
 			)
 		}
 
+		// Notify the user that their booking is about to timeout due to idle.
+		// This will happen x minutes before the max idle minute time (set to 15), configurable through the IdleWarningDuration option in the configuration file.
+		// This will only happen once, unless the idle timeout is reset.
+
+		// TODO: Move this to the configuration file?
+		maxIdleMinutes := 15
+		if !Serv.IsAvailable() && !Serv.SentIdleWarning && (Serv.IdleMinutes-maxIdleMinutes) >= config.Conf.Booking.IdleWarningDuration {
+			// Only allow this message to be sent once.
+			Serv.SentIdleWarning = true
+
+			// Calculate minutes remaining before the idle timeout.
+			minutesRemaining := maxIdleMinutes - Serv.IdleMinutes
+
+			// Send warning message in server.
+			Serv.SendCommand(
+				fmt.Sprintf(
+					"say Your booking will timeout in %d %s, to prevent this, make sure 2 players are on the server.",
+					minutesRemaining,
+					util.PluralMinutes(minutesRemaining),
+				)
+			)
+
+			// Send warning message in Discord.
+			Session.ChannelMessageSend(
+				config.Conf.Discord.DefaultChannel,
+				fmt.Sprintf("%s: Your booking will timeout in %d %s. To prevent this, make sure 2 players are on the server.", UserMention, minutesRemaining, util.PluralMinutes(minutesRemaining)),
+			)
+		}
+
+		// Check if their server is past the return date.
 		if !Serv.IsAvailable() && Serv.ReturnDate.Before(time.Now()) {
 			UserID := Serv.GetBooker()
 			UserMention := Serv.GetBookerMention()
@@ -56,7 +88,7 @@ func CheckUnbookServers() {
 			STVMessage, err := Serv.UploadSTV()
 
 			// Send 'returned' message
-			Session.ChannelMessageSend(config.Conf.Discord.DefaultChannel, fmt.Sprintf("%s: Your server was automatically unbooked.", UserMention))
+			Session.ChannelMessageSend(config.Conf.Discord.DefaultChannel, fmt.Sprintf("%s: Your server was automatically unbooked (timelimit reached).", UserMention))
 
 			// Send 'stv' message, if it uploaded successfully.
 			if err == nil {
@@ -100,6 +132,8 @@ func CheckIdleMinutes() {
 				if info.Players < config.Conf.Booking.MinPlayers {
 					s.AddIdleMinute()
 				} else {
+					// Reset the number of idle minutes, and allow the timeout warning message to be sent again.
+					s.SentIdleWarning = false
 					s.ResetIdleMinutes()
 				}
 
@@ -125,7 +159,7 @@ func CheckIdleMinutes() {
 					STVMessage, err := s.UploadSTV()
 
 					// Send 'returned' message
-					Session.ChannelMessageSend(config.Conf.Discord.DefaultChannel, fmt.Sprintf("%s: Your server was automatically unbooked.", UserMention))
+					Session.ChannelMessageSend(config.Conf.Discord.DefaultChannel, fmt.Sprintf("%s: Your server was automatically unbooked (not enough players).", UserMention))
 
 					// Send 'stv' message, if it uploaded successfully.
 					if err == nil {
