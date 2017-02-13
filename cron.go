@@ -58,7 +58,7 @@ func CheckUnbookServers() {
 					"say Your booking will timeout in %d %s, to prevent this, make sure 2 players are on the server.",
 					minutesRemaining,
 					util.PluralMinutes(minutesRemaining),
-				)
+				),
 			)
 
 			// Send warning message in Discord.
