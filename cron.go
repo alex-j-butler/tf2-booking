@@ -45,7 +45,7 @@ func CheckUnbookServers() {
 
 		// TODO: Move this to the configuration file?
 		maxIdleMinutes := 15
-		if !Serv.IsAvailable() && !Serv.SentIdleWarning && (Serv.IdleMinutes-maxIdleMinutes) >= config.Conf.Booking.IdleWarningDuration {
+		if !Serv.IsAvailable() && !Serv.SentIdleWarning && (maxIdleMinutes-Serv.IdleMinutes) <= config.Conf.Booking.IdleWarningDuration {
 			// Only allow this message to be sent once.
 			Serv.SentIdleWarning = true
 
