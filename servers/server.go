@@ -21,12 +21,50 @@ import (
 	redis "gopkg.in/redis.v5"
 )
 
+// Current TODO:
+// This branch was created to implement the ability to dynamically manage servers through commands that can be run in Discord.
+// 	Command examples:
+// 		* -b add local <name> <path> <address> <stv address>
+// 		* -b add remote <name> <ssh address> <path> <address> <stv address>
+// 		* -b delete <name>
+// 		* -b delete <uuid>
+// 		* -b list
+// 		* -b confirm <name>
+// 		* -b confirm <uuid>
+//
+// These changes will require that a number of other changes are completed:
+//  * Support for remote servers over SSH.
+//		This means the booking bot will need the public SSH key that will be used to access the remote SSH server
+//		so that it can be added to the authorized_keys file of the target server.
+// 		This also means that the bash script dependencies should be removed, or at the very least, minimized.
+//  * Refactor the current command handling system to handle subcommands, as well as prefixes for certain commands,
+// 	  so that creating these new commands is painless.
+//  * Add a UUID field to the server information, so that servers can be identified by that, rather than their name.
+
 type Server struct {
-	Name        string `json:"name" yaml:"name"`
-	Path        string `json:"path" yaml:"path"`
-	Address     string `json:"address" yaml:"address"`
-	STVAddress  string `json:"stv_address" yaml:"stv_address"`
-	SessionName string `json:"session_name" yaml:"session_name"`
+	// Unique identifier for the server.
+	UUID string
+
+	// Name of the server.
+	Name string
+
+	// Type of the server, currently 'local' or 'remote'.
+	Type string
+
+	// Filesystem path of the server.
+	Path string
+
+	// Connection address of the server.
+	Address string
+
+	// STV address of the server.
+	STVAddress string
+
+	// Tmux session name of the server.
+	SessionName string
+
+	// Whether this server is currently active and can accept bookings.
+	Active bool
 
 	// Whether this server has been sent the unbooking warning.
 	SentWarning bool
@@ -81,7 +119,7 @@ func (s *Server) Update(redisClient *redis.Client) error {
 	}
 
 	// Perform a SET command on the Redis client.
-	err = redisClient.Set(fmt.Sprintf("server.%s", s.SessionName), serialised, 0).Err()
+	err = redisClient.Set(fmt.Sprintf("server.%s", s.UUID), serialised, 0).Err()
 	if err != nil {
 		return err
 	}
@@ -91,7 +129,7 @@ func (s *Server) Update(redisClient *redis.Client) error {
 
 // Synchronise performs a synchronise of the server, retrieving the server data from the specified Redis client.
 func (s *Server) Synchronise(redisClient *redis.Client) error {
-	result, err := redisClient.Get(fmt.Sprintf("server.%s", s.SessionName)).Result()
+	result, err := redisClient.Get(fmt.Sprintf("server.%s", s.UUID)).Result()
 	if err != nil {
 		return err
 	}
@@ -109,6 +147,13 @@ func (s *Server) Synchronise(redisClient *redis.Client) error {
 // Currently a server is available for booking if it is not being booked by another user,
 // in the future, this could be extended to block servers from being used (for example, if they are down).
 func (s *Server) IsAvailable() bool {
+	return !s.Booked && s.Active
+}
+
+// IsBooked returns whether the server is currently booked out by a user.
+// Note: A server may be booked, but still be unavailable (as reported by IsAvailable), in this case, a server should be unbooked properly,
+// but should not allow any future bookings.
+func (s *Server) IsBooked() bool {
 	return !s.Booked
 }
 

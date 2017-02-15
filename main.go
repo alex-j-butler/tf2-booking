@@ -422,7 +422,7 @@ func ReloadServers() {
 			fmt.Sscanf(key, "server.%s", &uuid)
 
 			// Create a new server from the UUID.
-			server := servers.Server{
+			server := &servers.Server{
 				UUID: uuid,
 			}
 
@@ -432,6 +432,7 @@ func ReloadServers() {
 				log.Println("Error syncing:", err)
 			}
 
+			// Add the server.
 			servers.Servers[uuid] = server
 
 			// Debug print

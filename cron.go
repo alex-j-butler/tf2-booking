@@ -17,16 +17,14 @@ import (
 // Check if any servers are ready to be unbooked by the automatic timeout after 4 hours.
 func CheckUnbookServers() {
 	// Iterate through servers.
-	for i := 0; i < len(servers.Servers); i++ {
-		Serv := &servers.Servers[i]
-
+	for _, Serv := range servers.Servers {
 		// Don't need to do anything if this server isn't booked.
-		if Serv.IsAvailable() {
+		if Serv.IsBooked() {
 			return
 		}
 
 		// Send the timelimit warning notification, if required.
-		if !Serv.IsAvailable() && !Serv.SentWarning && (Serv.ReturnDate.Add(config.Conf.Booking.WarningDuration.Duration)).Before(time.Now()) {
+		if !Serv.IsBooked() && !Serv.SentWarning && (Serv.ReturnDate.Add(config.Conf.Booking.WarningDuration.Duration)).Before(time.Now()) {
 			// Only allow this message to be sent once.
 			Serv.SentWarning = true
 
@@ -45,7 +43,7 @@ func CheckUnbookServers() {
 
 		// TODO: Move this to the configuration file?
 		maxIdleMinutes := 15
-		if !Serv.IsAvailable() && !Serv.SentIdleWarning && (maxIdleMinutes-Serv.IdleMinutes) <= config.Conf.Booking.IdleWarningDuration {
+		if !Serv.IsBooked() && !Serv.SentIdleWarning && (maxIdleMinutes-Serv.IdleMinutes) <= config.Conf.Booking.IdleWarningDuration {
 			// Only allow this message to be sent once.
 			Serv.SentIdleWarning = true
 
@@ -70,7 +68,7 @@ func CheckUnbookServers() {
 		}
 
 		// Check if their server is past the return date.
-		if !Serv.IsAvailable() && Serv.ReturnDate.Before(time.Now()) {
+		if !Serv.IsBooked() && Serv.ReturnDate.Before(time.Now()) {
 			UserID := Serv.GetBooker()
 			UserMention := Serv.GetBookerMention()
 
@@ -105,10 +103,8 @@ func CheckUnbookServers() {
 
 func CheckIdleMinutes() {
 	// Iterate through servers.
-	for i := 0; i < len(servers.Servers); i++ {
-		Serv := &servers.Servers[i]
-
-		if !Serv.IsAvailable() {
+	for _, Serv := range servers.Servers {
+		if !Serv.IsBooked() {
 			go func(s *servers.Server) {
 				server, err := steam.Connect(s.Address)
 				if err != nil {
@@ -178,10 +174,8 @@ func CheckIdleMinutes() {
 
 func CheckStats() {
 	// Iterate through servers.
-	for i := 0; i < len(servers.Servers); i++ {
-		Serv := &servers.Servers[i]
-
-		if !Serv.IsAvailable() {
+	for _, Serv := range servers.Servers {
+		if !Serv.IsBooked() {
 			go func(s *servers.Server) {
 				stats, err := Serv.SendRCONCommand("stats")
 

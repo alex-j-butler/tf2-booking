@@ -40,8 +40,7 @@ func PrintStats(m *discordgo.MessageCreate, input string, args []string) bool {
 	message := "Server stats:"
 	count := 0
 
-	for i := 0; i < len(servs); i++ {
-		server := servs[i]
+	for _, server := range servs {
 		if server != nil {
 			bookerID := server.GetBooker()
 			bookerUser, err := Session.User(bookerID)
@@ -125,6 +124,9 @@ func AddLocalServer(message *discordgo.MessageCreate, input string, args []strin
 			Path:       path,
 			Address:    address,
 			STVAddress: stvAddress,
+
+			// Servers are inactive until they are confirmed using the '-b confirm <uuid|name>' command.
+			Active: false,
 		}
 
 		// Serialise the server as JSON.
@@ -154,7 +156,7 @@ func AddLocalServer(message *discordgo.MessageCreate, input string, args []strin
 
 func AddRemoteServer(message *discordgo.MessageCreate, input string, args []string) bool {
 	User := &util.PatchUser{message.Author}
-	Session.ChannelMessageSend(message.ChannelID, fmt.Sprintf("%s: Added remote server", User.GetMention()))
+	Session.ChannelMessageSend(message.ChannelID, fmt.Sprintf("%s: Not yet implemented.", User.GetMention()))
 
 	// We've handled everything we need to.
 	return true
@@ -162,7 +164,40 @@ func AddRemoteServer(message *discordgo.MessageCreate, input string, args []stri
 
 func ConfirmServer(message *discordgo.MessageCreate, input string, args []string) bool {
 	User := &util.PatchUser{message.Author}
-	Session.ChannelMessageSend(message.ChannelID, fmt.Sprintf("%s: Confirmed server creation", User.GetMention()))
+
+	// Is the argument passed in a UUID or a server name?
+	isUUID := util.IsUUID4(args[0])
+
+	var server *servers.Server
+	var err error
+
+	if isUUID {
+		// Nice and simple - UUID's are unique to a server.
+		server, err = servers.GetServerByUUID(servers.Servers, args[0])
+	} else {
+		// This should later be renamed to GetServersByName, and will return a slice of servers that match
+		// since server names do not need to be unique.
+		// If more than one server is found in this situation, we should reply and tell them that the name is ambiguous (and provide the appropriate commands for every possible server).
+		server, err = servers.GetServerByName(servers.Servers, args[0])
+	}
+
+	if err != nil {
+		// Yo, what. We can't find that server.
+		Session.ChannelMessageSend(message.ChannelID, fmt.Sprintf("%s: Server was not found.", User.GetMention()))
+		return true
+	}
+
+	// Activate that server & save it in Redis.
+	server.Active = true
+	err = server.Update(globals.RedisClient)
+	if err != nil {
+		// Redis error, oh no!
+		Session.ChannelMessageSend(message.ChannelID, fmt.Sprintf("%s: Server could not be saved.", User.GetMention()))
+		return true
+	}
+
+	// Send a message.
+	Session.ChannelMessageSend(message.ChannelID, fmt.Sprintf("%s: Server '%s' was successfully activated!", User.GetMention(), server.Name))
 
 	// We've handled everything we need to.
 	return true
@@ -170,15 +205,71 @@ func ConfirmServer(message *discordgo.MessageCreate, input string, args []string
 
 func DeleteServer(message *discordgo.MessageCreate, input string, args []string) bool {
 	User := &util.PatchUser{message.Author}
-	Session.ChannelMessageSend(message.ChannelID, fmt.Sprintf("%s: Deleted server", User.GetMention()))
+
+	// Is the argument passed in a UUID or a server name?
+	isUUID := util.IsUUID4(args[0])
+
+	var server *servers.Server
+	var err error
+
+	if isUUID {
+		// Nice and simple - UUID's are unique to a server.
+		server, err = servers.GetServerByUUID(servers.Servers, args[0])
+	} else {
+		// This should later be renamed to GetServersByName, and will return a slice of servers that match
+		// since server names do not need to be unique.
+		// If more than one server is found in this situation, we should reply and tell them that the name is ambiguous (and provide the appropriate commands for every possible server).
+		server, err = servers.GetServerByName(servers.Servers, args[0])
+	}
+
+	if err != nil {
+		// Yo, what. We can't find that server.
+		Session.ChannelMessageSend(message.ChannelID, fmt.Sprintf("%s: Server was not found.", User.GetMention()))
+		return true
+	}
+
+	// Delete the server in Redis.
+	err = globals.RedisClient.Del(fmt.Sprintf("server.%s", server.UUID)).Err()
+	if err != nil {
+		// Error deleting the server in Redis.
+		Session.ChannelMessageSend(message.ChannelID, fmt.Sprintf("%s: Server could not be deleted.", User.GetMention()))
+		return true
+	}
+
+	// Delete the server.
+	delete(servers.Servers, server.UUID)
+
+	// Send a message.
+	Session.ChannelMessageSend(message.ChannelID, fmt.Sprintf("%s: Server '%s' was successfully deleted!", User.GetMention(), server.Name))
 
 	// We've handled everything we need to.
 	return true
 }
 
 func ListServers(message *discordgo.MessageCreate, input string, args []string) bool {
-	User := &util.PatchUser{message.Author}
-	Session.ChannelMessageSend(message.ChannelID, fmt.Sprintf("%s: Servers:", User.GetMention()))
+	// User := &util.PatchUser{message.Author}
+	// Session.ChannelMessageSend(message.ChannelID, fmt.Sprintf("%s: Servers:", User.GetMention()))
+
+	Session.ChannelMessageSendEmbed(
+		message.ChannelID,
+		"Servers:",
+		&discordgo.MessageEmbed{
+			Color: 12763842,
+			Type:  "rich",
+			Fields: []*discordgo.MessageEmbedField{
+				&discordgo.MessageEmbedField{
+					Name:   "UUID",
+					Value:  fmt.Sprintf("`%s`", "fd082283-c847-4082-8255-ccf1d5437e57"),
+					Inline: true,
+				},
+				&discordgo.MessageEmbedField{
+					Name:   "Server name",
+					Value:  fmt.Sprintf("`%s`", "official10"),
+					Inline: true,
+				},
+			},
+		},
+	)
 
 	// We've handled everything we need to.
 	return true
