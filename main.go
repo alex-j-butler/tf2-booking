@@ -2,7 +2,6 @@ package main
 
 import (
 	"database/sql"
-	"encoding/json"
 	"fmt"
 	"log"
 	"os"
@@ -17,11 +16,13 @@ import (
 	"alex-j-butler.com/tf2-booking/config"
 	"alex-j-butler.com/tf2-booking/globals"
 	"alex-j-butler.com/tf2-booking/servers"
+	"alex-j-butler.com/tf2-booking/triggers"
 	"alex-j-butler.com/tf2-booking/util"
 	"alex-j-butler.com/tf2-booking/wait"
 
 	"github.com/bwmarrin/discordgo"
 	"github.com/robfig/cron"
+	uuid "github.com/satori/go.uuid"
 
 	"github.com/codegangsta/cli"
 	_ "github.com/lib/pq"
@@ -41,7 +42,8 @@ var UserReportTimeouts map[string]time.Time
 var GetDefaultValue *redis.Script
 
 // Command system
-var Command *commands.Command
+var Command *commands.CommandSystem
+var Trigger *triggers.Command
 var IngameCommand *ingame.Command
 
 // MessageCreateFunc stores the function that deletes the MessageCreate Discord event handler.
@@ -85,14 +87,14 @@ func RunServer(ctx *cli.Context) {
 	db, err := sql.Open("postgres", config.Conf.Database.DSN)
 	if err != nil {
 		log.Println("Database error:", err)
-		os.Exit(1)
+		// os.Exit(1)
 	}
 	globals.DB = db
 
 	// Ping the database to make sure we're properly connected.
 	if err := globals.DB.Ping(); err != nil {
 		log.Println("Database error:", err)
-		os.Exit(1)
+		// os.Exit(1)
 	}
 
 	// Setup the Redis client
@@ -112,31 +114,40 @@ func RunServer(ctx *cli.Context) {
 	}
 	globals.RedisClient = client
 
-	// When the booking bot starts, we need to insert all the servers that we know about
-	// that do not currently exist in Redis (which is done through the SETNX Redis command),
-	// after which, it will synchronise all of the servers from Redis.
-	for i, server := range servers.Servers {
-		// Serialise the server as a JSON string.
-		serialised, err := json.Marshal(server)
-		if err != nil {
-			panic(err)
-		}
-
-		// Attempt to add the server.
-		err = client.SetNX(fmt.Sprintf("server.%s", server.SessionName), serialised, 0).Err()
-		if err != nil {
-			panic(err)
-		}
-
-		// Synchronise the server from Redis, to get information for existing servers.
-		err = server.Synchronise(globals.RedisClient)
-		if err != nil {
-			panic(err)
-		}
-
-		// Put the modified server back.
-		servers.Servers[i] = server
+	for i := 0; i < 5; i++ {
+		id := uuid.NewV4()
+		log.Println(id.String())
 	}
+
+	ReloadServers()
+
+	/*
+		// When the booking bot starts, we need to insert all the servers that we know about
+		// that do not currently exist in Redis (which is done through the SETNX Redis command),
+		// after which, it will synchronise all of the servers from Redis.
+		for i, server := range servers.Servers {
+			// Serialise the server as a JSON string.
+			serialised, err := json.Marshal(server)
+			if err != nil {
+				panic(err)
+			}
+
+			// Attempt to add the server.
+			err = client.SetNX(fmt.Sprintf("server.%s", server.SessionName), serialised, 0).Err()
+			if err != nil {
+				// panic(err)
+			}
+
+			// Synchronise the server from Redis, to get information for existing servers.
+			err = server.Synchronise(globals.RedisClient)
+			if err != nil {
+				// panic(err)
+			}
+
+			// Put the modified server back.
+			servers.Servers[i] = server
+		}
+	*/
 
 	// Create Redis scripts.
 	// Check if the user has already booked a server out.
@@ -165,46 +176,72 @@ func RunServer(ctx *cli.Context) {
 	logs.AddHandler(IngameMessageCreate)
 
 	// Register the commands and their command handlers.
-	Command = commands.New("")
-	Command.Add(
-		commands.NewCommand(DebugPrint),
+	// Register triggers and commands.
+	Trigger = triggers.New("")
+	Trigger.Add(
+		triggers.NewCommand(DebugPrint),
 		"debug",
 	)
-	Command.Add(
-		commands.NewCommand(BookServer),
+	Trigger.Add(
+		triggers.NewCommand(BookServer),
 		"book",
 	)
-	Command.Add(
-		commands.NewCommand(UnbookServer),
+	Trigger.Add(
+		triggers.NewCommand(UnbookServer),
 		"return",
 		"unbook",
 	)
-	Command.Add(
-		commands.NewCommand(ExtendServer),
+	Trigger.Add(
+		triggers.NewCommand(ExtendServer),
 		"extend",
 	)
-	Command.Add(
-		commands.NewCommand(SendPassword),
+	Trigger.Add(
+		triggers.NewCommand(SendPassword),
 		"send password",
 	)
-	Command.Add(
-		commands.NewCommand(PrintStats).
-			Permissions(discordgo.PermissionManageServer).
-			RespondToDM(true),
-		"stats",
-	)
-	Command.Add(
-		commands.NewCommand(Update).
+	Trigger.Add(
+		triggers.NewCommand(Update).
 			Permissions(discordgo.PermissionManageServer).
 			RespondToDM(true),
 		"update",
 	)
-	Command.Add(
-		commands.NewCommand(Exit).
+	Trigger.Add(
+		triggers.NewCommand(Exit).
 			Permissions(discordgo.PermissionManageServer).
 			RespondToDM(true),
 		"exit",
 	)
+
+	Command = commands.NewCommandSystem()
+
+	// Create the global '-b' command.
+	BCommand := commands.NewCommand(nil)
+
+	// Synchronise command
+	SynchroniseCommand := commands.NewCommand(SynchroniseServers)
+
+	// Add command
+	AddCommand := commands.NewCommand(nil)
+	AddCommand.AddSubcommand("local", commands.NewCommand(AddLocalServer))
+	AddCommand.AddSubcommand("remote", commands.NewCommand(AddRemoteServer))
+
+	// Confirm server creation command
+	ConfirmCommand := commands.NewCommand(ConfirmServer)
+
+	// Delete command
+	DeleteCommand := commands.NewCommand(DeleteServer)
+
+	// List command
+	ListCommand := commands.NewCommand(ListServers)
+
+	BCommand.AddSubcommand("sync", SynchroniseCommand)
+	BCommand.AddSubcommand("add", AddCommand)
+	BCommand.AddSubcommand("confirm", ConfirmCommand)
+	BCommand.AddSubcommand("delete", DeleteCommand)
+	BCommand.AddSubcommand("list", ListCommand)
+	BCommand.AddSubcommand("example", commands.NewCommand(ExampleCommand))
+
+	Command.AddCommand("-b", BCommand)
 
 	// Register the ingame commands and their command handlers.
 	IngameCommand = ingame.New("!")
@@ -330,8 +367,11 @@ func MessageCreate(s *discordgo.Session, m *discordgo.MessageCreate) {
 		// Session.ChannelMessageSend(m.ChannelID, fmt.Sprintf("%s: Sorry, we couldn't look up your Discord permissions, please contact an admin for assistance. (id %s time %s)", fmt.Sprintf("<@%s>", m.Author.ID), m.Author.ID, timestamp.String()))
 	}
 
+	// Send the message to the command system.
+	Command.HandleCommand(m, "", strings.Split(m.Content, " "))
+
 	// Send the message content to the command handler to be dispatched appropriately.
-	Command.Handle(Session, m, strings.ToLower(m.Content), Permissions)
+	Trigger.Handle(Session, m, strings.ToLower(m.Content), Permissions)
 }
 
 func IngameMessageCreate(lh *loghandler.LogHandler, server *servers.Server, event *loghandler.SayEvent) {
@@ -352,4 +392,54 @@ func SetupCron() {
 func DeleteMessage(channelID string, messageID string, duration time.Duration) error {
 	time.Sleep(duration)
 	return Session.ChannelMessageDelete(channelID, messageID)
+}
+
+func ExampleCommand(message *discordgo.MessageCreate, input string, args []string) bool {
+	User := &util.PatchUser{message.Author}
+	Session.ChannelMessageSend(message.ChannelID, fmt.Sprintf("%s: Hello, the command system is working!", User.GetMention()))
+
+	// We've handled everything we need to.
+	return true
+}
+
+func ReloadServers() {
+	// When the booking bot starts, we need to insert all the servers that we know about
+	// that do not currently exist in Redis (which is done through the SETNX Redis command),
+	// after which, it will synchronise all of the servers from Redis.
+
+	var cursor uint64
+	for {
+		var keys []string
+		var err error
+		keys, cursor, err = globals.RedisClient.Scan(cursor, "server.*", 20).Result()
+		if err != nil {
+			panic(err)
+		}
+
+		for _, key := range keys {
+			// Extract the UUID from the key.
+			var uuid string
+			fmt.Sscanf(key, "server.%s", &uuid)
+
+			// Create a new server from the UUID.
+			server := servers.Server{
+				UUID: uuid,
+			}
+
+			// Synchronise this server properly.
+			err = server.Synchronise(globals.RedisClient)
+			if err != nil {
+				log.Println("Error syncing:", err)
+			}
+
+			servers.Servers[uuid] = server
+
+			// Debug print
+			log.Println(fmt.Sprintf("%+v", server))
+		}
+
+		if cursor == 0 {
+			break
+		}
+	}
 }
