@@ -1,7 +1,6 @@
 package main
 
 import (
-	"encoding/json"
 	"fmt"
 	"log"
 	"sort"
@@ -17,6 +16,8 @@ import (
 	uuid "github.com/satori/go.uuid"
 )
 
+// SynchroniseServers is the command handler function for the command
+// that synchronises all the locally cached servers from the Redis database.
 func SynchroniseServers(message *discordgo.MessageCreate, input string, args []string) bool {
 	User := &util.PatchUser{message.Author}
 
@@ -37,6 +38,8 @@ func SynchroniseServers(message *discordgo.MessageCreate, input string, args []s
 	return true
 }
 
+// PrintStats is the command handler function that prints the stats of all the currently booked servers
+// as well as providing an overview of the number of hours each server has been booked in the last 7 days.
 func PrintStats(m *discordgo.MessageCreate, input string, args []string) bool {
 	User := &util.PatchUser{m.Author}
 
@@ -133,19 +136,11 @@ func AddLocalServer(message *discordgo.MessageCreate, input string, args []strin
 			Active: false,
 		}
 
-		// Serialise the server as JSON.
-		serialised, err := json.Marshal(server)
-		if err != nil {
-			Session.ChannelMessageSend(message.ChannelID, fmt.Sprintf("%s: Failed to save server", User.GetMention()))
-			return true
-		}
+		// Add the server to our cached list of servers.
+		servers.Servers[serverUUID.String()] = &server
 
-		// Save the server in redis.
-		err = globals.RedisClient.Set(fmt.Sprintf("server.%s", serverUUID.String()), serialised, 0).Err()
-		if err != nil {
-			Session.ChannelMessageSend(message.ChannelID, fmt.Sprintf("%s: Failed to save server", User.GetMention()))
-			return true
-		}
+		// Save the server to Redis.
+		server.Update(globals.RedisClient)
 
 		// Send success message.
 		Session.ChannelMessageSend(message.ChannelID, fmt.Sprintf("%s: Added local server: %s", User.GetMention(), serverUUID.String()))

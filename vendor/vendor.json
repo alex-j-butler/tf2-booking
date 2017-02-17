@@ -41,13 +41,13 @@
 			"revisionTime": "2016-12-24T12:10:19Z"
 		},
 		{
-			"checksumSHA1": "u/r8oNNhGePsOYUql/Hg4teD/So=",
+			"checksumSHA1": "88SulQNgVdnFsyQeAxi5l/BVfdQ=",
 			"path": "github.com/google/go-github/github",
 			"revision": "30a21ee1a3839fb4a408efe331f226b73faac379",
 			"revisionTime": "2017-02-13T22:27:33Z"
 		},
 		{
-			"checksumSHA1": "ZXja1pB/YvDYcNpkp7AtOm1mhgk=",
+			"checksumSHA1": "p3IB18uJRs4dL2K5yx24MrLYE9A=",
 			"path": "github.com/google/go-querystring/query",
 			"revision": "53e6ce116135b80d037921a7fdd5138cf32d7a8a",
 			"revisionTime": "2017-01-11T10:11:55Z"
@@ -173,7 +173,7 @@
 			"revisionTime": "2017-01-13T09:48:12Z"
 		},
 		{
-			"checksumSHA1": "DaFJEymjWyYkhresokm/8OxDkIg=",
+			"checksumSHA1": "MNkKJyk2TazKMJYbal5wFHybpyA=",
 			"path": "github.com/mattn/go-runewidth",
 			"revision": "14207d285c6c197daabb5c9793d63e7af9ab2d50",
 			"revisionTime": "2017-02-01T02:35:40Z"
@@ -191,7 +191,7 @@
 			"revisionTime": "2016-09-02T15:44:25Z"
 		},
 		{
-			"checksumSHA1": "Pc8xXumeXymW7wNgN5lNW8RG9kU=",
+			"checksumSHA1": "h+oCMj21PiQfIdBog0eyUtF1djs=",
 			"path": "github.com/olekukonko/tablewriter",
 			"revision": "febf2d34b54a69ce7530036c7503b1c9fbfdf0bb",
 			"revisionTime": "2017-01-28T05:05:32Z"
@@ -221,7 +221,7 @@
 			"revisionTime": "2016-09-27T16:42:31Z"
 		},
 		{
-			"checksumSHA1": "HUXE+Nrcau8FSaVEvPYHMvDjxOE=",
+			"checksumSHA1": "zmC8/3V4ls53DJlNTKDZwPSC/dA=",
 			"path": "github.com/satori/go.uuid",
 			"revision": "b061729afc07e77a8aa4fad0a2fd840958f1942a",
 			"revisionTime": "2016-09-27T10:08:44Z"
