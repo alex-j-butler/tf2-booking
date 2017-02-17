@@ -24,7 +24,7 @@ func SynchroniseServers(message *discordgo.MessageCreate, input string, args []s
 		// Synchronise the server from Redis, to get information for existing servers.
 		err := server.Synchronise(globals.RedisClient)
 		if err != nil {
-			// panic(err)
+			log.Println("Synchronise failure:", err)
 		}
 
 		// Put the modified server back.
