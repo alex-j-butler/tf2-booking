@@ -22,7 +22,6 @@ import (
 
 	"github.com/bwmarrin/discordgo"
 	"github.com/robfig/cron"
-	uuid "github.com/satori/go.uuid"
 
 	"github.com/codegangsta/cli"
 	_ "github.com/lib/pq"
@@ -114,40 +113,7 @@ func RunServer(ctx *cli.Context) {
 	}
 	globals.RedisClient = client
 
-	for i := 0; i < 5; i++ {
-		id := uuid.NewV4()
-		log.Println(id.String())
-	}
-
 	ReloadServers()
-
-	/*
-		// When the booking bot starts, we need to insert all the servers that we know about
-		// that do not currently exist in Redis (which is done through the SETNX Redis command),
-		// after which, it will synchronise all of the servers from Redis.
-		for i, server := range servers.Servers {
-			// Serialise the server as a JSON string.
-			serialised, err := json.Marshal(server)
-			if err != nil {
-				panic(err)
-			}
-
-			// Attempt to add the server.
-			err = client.SetNX(fmt.Sprintf("server.%s", server.SessionName), serialised, 0).Err()
-			if err != nil {
-				// panic(err)
-			}
-
-			// Synchronise the server from Redis, to get information for existing servers.
-			err = server.Synchronise(globals.RedisClient)
-			if err != nil {
-				// panic(err)
-			}
-
-			// Put the modified server back.
-			servers.Servers[i] = server
-		}
-	*/
 
 	// Create Redis scripts.
 	// Check if the user has already booked a server out.
