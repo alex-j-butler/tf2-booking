@@ -21,16 +21,9 @@ import (
 func SynchroniseServers(message *discordgo.MessageCreate, input string, args []string) bool {
 	User := &util.PatchUser{message.Author}
 
-	for i, server := range servers.Servers {
-		// Synchronise the server from Redis, to get information for existing servers.
-		err := server.Synchronise(globals.RedisClient)
-		if err != nil {
-			log.Println("Synchronise failure:", err)
-		}
-
-		// Put the modified server back.
-		servers.Servers[i] = server
-	}
+	// Properly reloads all available servers from the Redis store, and attempts to update the status text.
+	ReloadServers()
+	UpdateGameString()
 
 	Session.ChannelMessageSend(message.ChannelID, fmt.Sprintf("%s: Synchronised all servers.", User.GetMention()))
 
