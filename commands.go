@@ -11,7 +11,9 @@ import (
 	"alex-j-butler.com/tf2-booking/globals"
 	"alex-j-butler.com/tf2-booking/servers"
 	"alex-j-butler.com/tf2-booking/util"
+	"alex-j-butler.com/tf2-booking/wait"
 	"github.com/bwmarrin/discordgo"
+	"github.com/google/go-github/github"
 	"github.com/olekukonko/tablewriter"
 	uuid "github.com/satori/go.uuid"
 )
@@ -282,5 +284,56 @@ func ListServers(message *discordgo.MessageCreate, input string, args []string) 
 	Session.ChannelMessageSend(message.ChannelID, fmt.Sprintf("%s: Servers:\n```%s```", User.GetMention(), buf.String()))
 
 	// We've handled everything we need to.
+	return true
+}
+
+func Update(message *discordgo.MessageCreate, input string, args []string) bool {
+	User := &util.PatchUser{message.Author}
+
+	if len(args) == 1 {
+		// Create a GitHub API client.
+		client := github.NewClient(nil)
+		// Tag name
+		tagName := args[0]
+
+		// Get release by tag.
+		release, _, err := client.Repositories.GetReleaseByTag("alex-j-butler", "tf2-booking", tagName)
+		if err != nil {
+			// Send error message.
+			Session.ChannelMessageSend(message.ChannelID, fmt.Sprintf("%s: Failed to retrieve release.", User.GetMention()))
+			return true
+		}
+
+		asset, err := util.GetReleaseAsset(release.Assets, "tf2-booking-amd64")
+		if err != nil {
+			// Send error message.
+			Session.ChannelMessageSend(message.ChannelID, fmt.Sprintf("%s: Failed to retrieve release asset.", User.GetMention()))
+			return true
+		}
+
+		Session.ChannelMessageSend(message.ChannelID, fmt.Sprintf("%s: Starting update to release %s", User.GetMention(), *release.TagName))
+
+		go func(asset github.ReleaseAsset, message *discordgo.MessageCreate) {
+			// Update the executable.
+			UpdateExecutable(*asset.BrowserDownloadURL)
+
+			// Send the success notification.
+			Session.ChannelMessageSend(message.ChannelID, fmt.Sprintf("%s: Updated `tf2-booking` & restarting now.", User.GetMention()))
+
+			// Annnnnd, exit.
+			wait.Exit()
+		}(asset, message)
+	}
+
+	return true
+}
+
+func Exit(message *discordgo.MessageCreate, input string, args []string) bool {
+	User := &util.PatchUser{message.Author}
+
+	Session.ChannelMessageSend(message.ChannelID, fmt.Sprintf("%s: Shutting down `tf2-booking`.", User.GetMention()))
+
+	wait.Exit()
+
 	return true
 }

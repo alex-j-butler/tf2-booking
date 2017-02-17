@@ -17,7 +17,6 @@ import (
 	"alex-j-butler.com/tf2-booking/globals"
 	"alex-j-butler.com/tf2-booking/servers"
 	"alex-j-butler.com/tf2-booking/triggers"
-	"alex-j-butler.com/tf2-booking/util"
 	"alex-j-butler.com/tf2-booking/wait"
 
 	"github.com/bwmarrin/discordgo"
@@ -141,43 +140,6 @@ func RunServer(ctx *cli.Context) {
 
 	logs.AddHandler(IngameMessageCreate)
 
-	// Register the commands and their command handlers.
-	// Register triggers and commands.
-	Trigger = triggers.New("")
-	Trigger.Add(
-		triggers.NewCommand(DebugPrint),
-		"debug",
-	)
-	Trigger.Add(
-		triggers.NewCommand(BookServer),
-		"book",
-	)
-	Trigger.Add(
-		triggers.NewCommand(UnbookServer),
-		"return",
-		"unbook",
-	)
-	Trigger.Add(
-		triggers.NewCommand(ExtendServer),
-		"extend",
-	)
-	Trigger.Add(
-		triggers.NewCommand(SendPassword),
-		"send password",
-	)
-	Trigger.Add(
-		triggers.NewCommand(Update).
-			Permissions(discordgo.PermissionManageServer).
-			RespondToDM(true),
-		"update",
-	)
-	Trigger.Add(
-		triggers.NewCommand(Exit).
-			Permissions(discordgo.PermissionManageServer).
-			RespondToDM(true),
-		"exit",
-	)
-
 	Command = commands.NewCommandSystem()
 
 	// Create the global '-b' command.
@@ -203,14 +165,40 @@ func RunServer(ctx *cli.Context) {
 	// Stats command
 	StatsCommand := commands.NewCommand(PrintStats)
 
+	// Update command
+	UpdateCommand := commands.NewCommand(Update)
+
+	// Exit command
+	ExitCommand := commands.NewCommand(Exit)
+
 	BCommand.AddSubcommand("sync", SynchroniseCommand)
 	BCommand.AddSubcommand("add", AddCommand)
 	BCommand.AddSubcommand("confirm", ConfirmCommand)
 	BCommand.AddSubcommand("delete", DeleteCommand)
 	BCommand.AddSubcommand("list", ListCommand)
 	BCommand.AddSubcommand("stats", StatsCommand)
+	BCommand.AddSubcommand("update", UpdateCommand)
+	BCommand.AddSubcommand("exit", ExitCommand)
 
 	Command.AddCommand("-b", BCommand)
+
+	// Add triggers.
+	BookServerTrigger := commands.NewTrigger(BookServer).
+		RespondToDM(false)
+	UnbookServerTrigger := commands.NewTrigger(UnbookServer).
+		RespondToDM(false)
+	ExtendServerTrigger := commands.NewTrigger(ExtendServer).
+		RespondToDM(false)
+	SendPasswordTrigger := commands.NewTrigger(SendPassword).
+		RespondToDM(false)
+
+	Command.AddTrigger("book", BookServerTrigger)
+	Command.AddTrigger("book a server", BookServerTrigger)
+	Command.AddTrigger("unbook", UnbookServerTrigger)
+	Command.AddTrigger("unbook a server", UnbookServerTrigger)
+	Command.AddTrigger("return", UnbookServerTrigger)
+	Command.AddTrigger("extend", ExtendServerTrigger)
+	Command.AddTrigger("send password", SendPasswordTrigger)
 
 	// Register the ingame commands and their command handlers.
 	IngameCommand = ingame.New("!")
@@ -304,43 +292,46 @@ func MessageCreate(s *discordgo.Session, m *discordgo.MessageCreate) {
 		return
 	}
 
-	permissionsChannelID := m.ChannelID
+	/*
 
-	// Lookup Discord channel.
-	channel, err := s.State.Channel(m.ChannelID)
-	if err != nil {
-		log.Println("Failed to lookup channels.", err)
-	}
+		permissionsChannelID := m.ChannelID
 
-	if channel.IsPrivate {
-		permissionsChannelID = config.Conf.Discord.DefaultChannel
-	}
+		// Lookup Discord channel.
+		channel, err := s.State.Channel(m.ChannelID)
+		if err != nil {
+			log.Println("Failed to lookup channels.", err)
+		}
 
-	// Configuration has a string slice containing channels the bot should operate in.
-	// If the channel of the newly received message is not in the slice, stop now.
-	if !util.Contains(config.Conf.Discord.AcceptableChannels, m.ChannelID) && !channel.IsPrivate {
-		return
-	}
+		if channel.IsPrivate {
+			permissionsChannelID = config.Conf.Discord.DefaultChannel
+		}
 
-	Permissions, err := Session.State.UserChannelPermissions(m.Author.ID, permissionsChannelID)
-	if err != nil {
-		// Grab the timestamp of this error in GMT+10 time.
-		gmt10 := time.FixedZone("GMT+10", 10*60*60)
-		timestamp := time.Now().In(gmt10)
+		// Configuration has a string slice containing channels the bot should operate in.
+		// If the channel of the newly received message is not in the slice, stop now.
+		if !util.Contains(config.Conf.Discord.AcceptableChannels, m.ChannelID) && !channel.IsPrivate {
+			return
+		}
 
-		log.Println("discord error: failed to lookup permissions.", err, fmt.Sprintf("(id %s name %s time %s)", m.Author.ID, m.Author.Username, timestamp.String()))
+			Permissions, err := Session.State.UserChannelPermissions(m.Author.ID, permissionsChannelID)
+			if err != nil {
+				// Grab the timestamp of this error in GMT+10 time.
+				gmt10 := time.FixedZone("GMT+10", 10*60*60)
+				timestamp := time.Now().In(gmt10)
 
-		// Assume permissions = 0
-		Permissions = 0
+				log.Println("discord error: failed to lookup permissions.", err, fmt.Sprintf("(id %s name %s time %s)", m.Author.ID, m.Author.Username, timestamp.String()))
 
-		// Session.ChannelMessageSend(m.ChannelID, fmt.Sprintf("%s: Sorry, we couldn't look up your Discord permissions, please contact an admin for assistance. (id %s time %s)", fmt.Sprintf("<@%s>", m.Author.ID), m.Author.ID, timestamp.String()))
-	}
+				// Assume permissions = 0
+				Permissions = 0
+
+				// Session.ChannelMessageSend(m.ChannelID, fmt.Sprintf("%s: Sorry, we couldn't look up your Discord permissions, please contact an admin for assistance. (id %s time %s)", fmt.Sprintf("<@%s>", m.Author.ID), m.Author.ID, timestamp.String()))
+			}
+	*/
 
 	// Send the message to the command system.
 	Command.HandleCommand(m, "", strings.Split(m.Content, " "))
 
 	// Send the message content to the command handler to be dispatched appropriately.
-	Trigger.Handle(Session, m, strings.ToLower(m.Content), Permissions)
+	// Trigger.Handle(Session, m, strings.ToLower(m.Content), Permissions)
 }
 
 func IngameMessageCreate(lh *loghandler.LogHandler, server *servers.Server, event *loghandler.SayEvent) {

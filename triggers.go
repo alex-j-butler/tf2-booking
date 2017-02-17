@@ -8,9 +8,7 @@ import (
 	"alex-j-butler.com/tf2-booking/globals"
 	"alex-j-butler.com/tf2-booking/servers"
 	"alex-j-butler.com/tf2-booking/util"
-	"alex-j-butler.com/tf2-booking/wait"
 	"github.com/bwmarrin/discordgo"
-	"github.com/google/go-github/github"
 )
 
 func sendServerDetails(channelID string, serv *servers.Server, serverPassword, rconPassword string) {
@@ -95,7 +93,8 @@ func DebugPrint(m *discordgo.MessageCreate, command string, args []string) {
 // This function checks whether the user has a server booked, if not,
 // it books a new server, preventing it from being used by another user,
 // sets up the RCON password & Server Password and finally starts the TF2 server.
-func BookServer(m *discordgo.MessageCreate, command string, args []string) {
+// func BookServer(m *discordgo.MessageCreate, command string, args []string) {
+func BookServer(m *discordgo.MessageCreate, input string) {
 	User := &util.PatchUser{m.Author}
 
 	bookingInfo, err := GetDefaultValue.Run(globals.RedisClient, []string{fmt.Sprintf("user.%s", m.Author.ID)}, nil).Result()
@@ -176,7 +175,8 @@ func BookServer(m *discordgo.MessageCreate, command string, args []string) {
 // This function checks whether the user has a server booked, if so,
 // it unbooks it, allowing it for use by another user, and shutting down
 // the TF2 server.
-func UnbookServer(m *discordgo.MessageCreate, command string, args []string) {
+// func UnbookServer(m *discordgo.MessageCreate, command string, args []string) {
+func UnbookServer(m *discordgo.MessageCreate, input string) {
 	User := &util.PatchUser{m.Author}
 
 	bookingInfo, err := GetDefaultValue.Run(globals.RedisClient, []string{fmt.Sprintf("user.%s", m.Author.ID)}, nil).Result()
@@ -253,7 +253,7 @@ func UnbookServer(m *discordgo.MessageCreate, command string, args []string) {
 // Called when a user types the 'extend' command into the Discord channel.
 // This function checks whether the user has a server booked out, if so,
 // it will extend the booking by adding time onto the servers return time.
-func ExtendServer(m *discordgo.MessageCreate, command string, args []string) {
+func ExtendServer(m *discordgo.MessageCreate, input string) {
 	User := &util.PatchUser{m.Author}
 
 	bookingInfo, err := GetDefaultValue.Run(globals.RedisClient, []string{fmt.Sprintf("user.%s", m.Author.ID)}, nil).Result()
@@ -310,7 +310,7 @@ func ExtendServer(m *discordgo.MessageCreate, command string, args []string) {
 	}
 }
 
-func SendPassword(m *discordgo.MessageCreate, command string, args []string) {
+func SendPassword(m *discordgo.MessageCreate, input string) {
 	User := &util.PatchUser{m.Author}
 
 	bookingInfo, err := GetDefaultValue.Run(globals.RedisClient, []string{fmt.Sprintf("user.%s", m.Author.ID)}, nil).Result()
@@ -372,56 +372,4 @@ func SendPassword(m *discordgo.MessageCreate, command string, args []string) {
 
 		return
 	}
-}
-
-func Update(m *discordgo.MessageCreate, command string, args []string) {
-	User := &util.PatchUser{m.Author}
-
-	if len(args) <= 0 {
-		// Send usage.
-		Session.ChannelMessageSend(m.ChannelID, fmt.Sprintf("%s: Usage: `update <release tag>`", User.GetMention()))
-		return
-	}
-
-	// Create a GitHub API client.
-	client := github.NewClient(nil)
-	// Tag name
-	tagName := args[0]
-
-	// Get release by tag.
-	release, _, err := client.Repositories.GetReleaseByTag("alex-j-butler", "tf2-booking", tagName)
-	if err != nil {
-		// Send error message.
-		Session.ChannelMessageSend(m.ChannelID, fmt.Sprintf("%s: Failed to retrieve release.", User.GetMention()))
-		return
-	}
-
-	asset, err := util.GetReleaseAsset(release.Assets, "tf2-booking-amd64")
-	if err != nil {
-		// Send error message.
-		Session.ChannelMessageSend(m.ChannelID, fmt.Sprintf("%s: Failed to retrieve release asset.", User.GetMention()))
-		return
-	}
-
-	//
-	Session.ChannelMessageSend(m.ChannelID, fmt.Sprintf("%s: Starting update to release %s", User.GetMention(), *release.TagName))
-
-	go func(asset github.ReleaseAsset) {
-		// Update the executable.
-		UpdateExecutable(*asset.BrowserDownloadURL)
-
-		// Send the success notification.
-		Session.ChannelMessageSend(m.ChannelID, fmt.Sprintf("%s: Updated `tf2-booking` & restarting now.", User.GetMention()))
-
-		// Annnnnd, exit.
-		wait.Exit()
-	}(asset)
-}
-
-func Exit(m *discordgo.MessageCreate, command string, args []string) {
-	User := &util.PatchUser{m.Author}
-
-	Session.ChannelMessageSend(m.ChannelID, fmt.Sprintf("%s: Shutting down `tf2-booking`.", User.GetMention()))
-
-	wait.Exit()
 }

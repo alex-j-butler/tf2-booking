@@ -8,6 +8,7 @@ import (
 )
 
 type CommandFunction func(*discordgo.MessageCreate, string, []string) bool
+type TriggerFunction func(*discordgo.MessageCreate, string)
 
 type Command struct {
 	// Function to be called when this function is executed.
@@ -21,6 +22,17 @@ type Command struct {
 
 	// Subcommands that this command can call.
 	subcommands map[string]*Command
+}
+
+type Trigger struct {
+	// Function to be called when this trigger is executed.
+	function TriggerFunction
+
+	// Specifies the required permissions for the command to run.
+	permissions int
+
+	// Specifies whether this command responds to Direct Messages/Private chat messages.
+	respondToDM bool
 }
 
 func NewCommand(function CommandFunction) *Command {
@@ -87,14 +99,36 @@ func (c *Command) handleCommand(message *discordgo.MessageCreate, input string, 
 	}
 }
 
+func NewTrigger(function TriggerFunction) *Trigger {
+	return &Trigger{
+		function:    function,
+		permissions: -1,
+		respondToDM: true,
+	}
+}
+
+func (t *Trigger) Permissions(permissions int) *Trigger {
+	t.permissions = permissions
+	return t
+}
+
+func (t *Trigger) RespondToDM(respondToDM bool) *Trigger {
+	t.respondToDM = respondToDM
+	return t
+}
+
 type CommandSystem struct {
 	// Commands that the command system can handle.
 	commands map[string]*Command
+
+	// Triggers that the command system can handle.
+	triggers map[string]*Trigger
 }
 
 func NewCommandSystem() *CommandSystem {
 	return &CommandSystem{
 		commands: make(map[string]*Command),
+		triggers: make(map[string]*Trigger),
 	}
 }
 
@@ -119,6 +153,27 @@ func (cs *CommandSystem) RemoveCommand(commandName string) error {
 	return nil
 }
 
+func (cs *CommandSystem) AddTrigger(triggerName string, trigger *Trigger) error {
+	triggerName = strings.ToLower(triggerName)
+	if _, ok := cs.triggers[triggerName]; ok {
+		return fmt.Errorf("%s trigger already exists", triggerName)
+	}
+
+	cs.triggers[triggerName] = trigger
+	return nil
+}
+
+func (cs *CommandSystem) RemoveTrigger(triggerName string) error {
+	triggerName = strings.ToLower(triggerName)
+	if _, ok := cs.triggers[triggerName]; !ok {
+		return fmt.Errorf("%s trigger does not exist", triggerName)
+	}
+
+	// Delete the trigger.
+	delete(cs.triggers, triggerName)
+	return nil
+}
+
 func (cs *CommandSystem) HandleCommand(message *discordgo.MessageCreate, input string, args []string) {
 	input = args[0]
 
@@ -128,6 +183,15 @@ func (cs *CommandSystem) HandleCommand(message *discordgo.MessageCreate, input s
 			args = args[1:]
 
 			command.handleCommand(message, input, args)
+			return
+		}
+	}
+
+	if len(cs.triggers) > 0 {
+		// Check if any triggers are a match.
+		if trigger, ok := cs.triggers[strings.ToLower(message.Content)]; ok {
+			// Call the trigger function.
+			trigger.function(message, message.Content)
 			return
 		}
 	}
