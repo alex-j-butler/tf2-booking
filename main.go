@@ -209,7 +209,6 @@ func RunServer(ctx *cli.Context) {
 	BCommand.AddSubcommand("delete", DeleteCommand)
 	BCommand.AddSubcommand("list", ListCommand)
 	BCommand.AddSubcommand("stats", StatsCommand)
-	BCommand.AddSubcommand("example", commands.NewCommand(ExampleCommand))
 
 	Command.AddCommand("-b", BCommand)
 
@@ -362,14 +361,6 @@ func SetupCron() {
 func DeleteMessage(channelID string, messageID string, duration time.Duration) error {
 	time.Sleep(duration)
 	return Session.ChannelMessageDelete(channelID, messageID)
-}
-
-func ExampleCommand(message *discordgo.MessageCreate, input string, args []string) bool {
-	User := &util.PatchUser{message.Author}
-	Session.ChannelMessageSend(message.ChannelID, fmt.Sprintf("%s: Hello, the command system is working!", User.GetMention()))
-
-	// We've handled everything we need to.
-	return true
 }
 
 func ReloadServers() {
