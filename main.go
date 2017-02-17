@@ -200,11 +200,15 @@ func RunServer(ctx *cli.Context) {
 	// List command
 	ListCommand := commands.NewCommand(ListServers)
 
+	// Stats command
+	StatsCommand := commands.NewCommand(PrintStats)
+
 	BCommand.AddSubcommand("sync", SynchroniseCommand)
 	BCommand.AddSubcommand("add", AddCommand)
 	BCommand.AddSubcommand("confirm", ConfirmCommand)
 	BCommand.AddSubcommand("delete", DeleteCommand)
 	BCommand.AddSubcommand("list", ListCommand)
+	BCommand.AddSubcommand("stats", StatsCommand)
 	BCommand.AddSubcommand("example", commands.NewCommand(ExampleCommand))
 
 	Command.AddCommand("-b", BCommand)
