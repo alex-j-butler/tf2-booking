@@ -6,6 +6,20 @@ import (
 	"strings"
 )
 
+type ServersSlice []*Server
+
+func (s ServersSlice) Len() int {
+	return len(s)
+}
+
+func (s ServersSlice) Swap(i, j int) {
+	s[i], s[j] = s[j], s[i]
+}
+
+func (s ServersSlice) Less(i, j int) bool {
+	return s[i].Name < s[j].Name
+}
+
 var Servers map[string]*Server
 
 func InitialiseServers() {
@@ -87,4 +101,13 @@ func GetServerBySessionName(serverList map[string]*Server, sessionName string) (
 	}
 
 	return nil, errors.New("Server not found.")
+}
+
+func ServersToSlice(serverList map[string]*Server) ServersSlice {
+	servers := make(ServersSlice, 0, len(serverList))
+	for _, server := range serverList {
+		servers = append(servers, server)
+	}
+
+	return servers
 }

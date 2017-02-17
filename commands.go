@@ -4,12 +4,16 @@ import (
 	"encoding/json"
 	"fmt"
 	"log"
+	"sort"
 	"time"
+
+	"bytes"
 
 	"alex-j-butler.com/tf2-booking/globals"
 	"alex-j-butler.com/tf2-booking/servers"
 	"alex-j-butler.com/tf2-booking/util"
 	"github.com/bwmarrin/discordgo"
+	"github.com/olekukonko/tablewriter"
 	uuid "github.com/satori/go.uuid"
 )
 
@@ -106,7 +110,7 @@ func PrintStats(m *discordgo.MessageCreate, input string, args []string) bool {
 func AddLocalServer(message *discordgo.MessageCreate, input string, args []string) bool {
 	User := &util.PatchUser{message.Author}
 
-	if len(args) > 3 {
+	if len(args) == 4 {
 		// Generate UUID for the server.
 		serverUUID := uuid.NewV4()
 
@@ -165,39 +169,44 @@ func AddRemoteServer(message *discordgo.MessageCreate, input string, args []stri
 func ConfirmServer(message *discordgo.MessageCreate, input string, args []string) bool {
 	User := &util.PatchUser{message.Author}
 
-	// Is the argument passed in a UUID or a server name?
-	isUUID := util.IsUUID4(args[0])
+	if len(args) == 1 {
+		// Is the argument passed in a UUID or a server name?
+		isUUID := util.IsUUID4(args[0])
 
-	var server *servers.Server
-	var err error
+		var server *servers.Server
+		var err error
 
-	if isUUID {
-		// Nice and simple - UUID's are unique to a server.
-		server, err = servers.GetServerByUUID(servers.Servers, args[0])
+		if isUUID {
+			// Nice and simple - UUID's are unique to a server.
+			server, err = servers.GetServerByUUID(servers.Servers, args[0])
+		} else {
+			// This should later be renamed to GetServersByName, and will return a slice of servers that match
+			// since server names do not need to be unique.
+			// If more than one server is found in this situation, we should reply and tell them that the name is ambiguous (and provide the appropriate commands for every possible server).
+			server, err = servers.GetServerByName(servers.Servers, args[0])
+		}
+
+		if err != nil {
+			// Yo, what. We can't find that server.
+			Session.ChannelMessageSend(message.ChannelID, fmt.Sprintf("%s: Server was not found.", User.GetMention()))
+			return true
+		}
+
+		// Activate that server & save it in Redis.
+		server.Active = true
+		err = server.Update(globals.RedisClient)
+		if err != nil {
+			// Redis error, oh no!
+			Session.ChannelMessageSend(message.ChannelID, fmt.Sprintf("%s: Server could not be saved.", User.GetMention()))
+			return true
+		}
+
+		// Send a message.
+		Session.ChannelMessageSend(message.ChannelID, fmt.Sprintf("%s: Server '%s' was successfully activated!", User.GetMention(), server.Name))
 	} else {
-		// This should later be renamed to GetServersByName, and will return a slice of servers that match
-		// since server names do not need to be unique.
-		// If more than one server is found in this situation, we should reply and tell them that the name is ambiguous (and provide the appropriate commands for every possible server).
-		server, err = servers.GetServerByName(servers.Servers, args[0])
+		// Print usage.
+		Session.ChannelMessageSend(message.ChannelID, fmt.Sprintf("%s: Invalid command, usage: '-b confirm <uuid|name>'", User.GetMention()))
 	}
-
-	if err != nil {
-		// Yo, what. We can't find that server.
-		Session.ChannelMessageSend(message.ChannelID, fmt.Sprintf("%s: Server was not found.", User.GetMention()))
-		return true
-	}
-
-	// Activate that server & save it in Redis.
-	server.Active = true
-	err = server.Update(globals.RedisClient)
-	if err != nil {
-		// Redis error, oh no!
-		Session.ChannelMessageSend(message.ChannelID, fmt.Sprintf("%s: Server could not be saved.", User.GetMention()))
-		return true
-	}
-
-	// Send a message.
-	Session.ChannelMessageSend(message.ChannelID, fmt.Sprintf("%s: Server '%s' was successfully activated!", User.GetMention(), server.Name))
 
 	// We've handled everything we need to.
 	return true
@@ -247,29 +256,42 @@ func DeleteServer(message *discordgo.MessageCreate, input string, args []string)
 }
 
 func ListServers(message *discordgo.MessageCreate, input string, args []string) bool {
-	// User := &util.PatchUser{message.Author}
-	// Session.ChannelMessageSend(message.ChannelID, fmt.Sprintf("%s: Servers:", User.GetMention()))
+	User := &util.PatchUser{message.Author}
 
-	Session.ChannelMessageSendEmbed(
-		message.ChannelID,
-		"Servers:",
-		&discordgo.MessageEmbed{
-			Color: 12763842,
-			Type:  "rich",
-			Fields: []*discordgo.MessageEmbedField{
-				&discordgo.MessageEmbedField{
-					Name:   "UUID",
-					Value:  fmt.Sprintf("`%s`", "fd082283-c847-4082-8255-ccf1d5437e57"),
-					Inline: true,
-				},
-				&discordgo.MessageEmbedField{
-					Name:   "Server name",
-					Value:  fmt.Sprintf("`%s`", "official10"),
-					Inline: true,
-				},
-			},
+	serverSlice := servers.ServersToSlice(servers.Servers)
+	sort.Sort(serverSlice)
+
+	var data [][]string
+	var buf bytes.Buffer
+
+	for _, server := range serverSlice {
+		data = append(data, []string{
+			server.UUID,
+			server.Name,
+			server.Type,
+			server.Address,
+			server.STVAddress,
+			fmt.Sprintf("%t", server.Active),
+		})
+	}
+
+	table := tablewriter.NewWriter(&buf)
+	table.SetHeader(
+		[]string{
+			"UUID",
+			"Name",
+			"Type",
+			"Address",
+			"STV Address",
+			"Active",
 		},
 	)
+	table.SetBorders(tablewriter.Border{Left: true, Top: false, Right: true, Bottom: false})
+	table.SetCenterSeparator("|")
+	table.AppendBulk(data)
+	table.Render()
+
+	Session.ChannelMessageSend(message.ChannelID, fmt.Sprintf("%s: Servers:\n```%s```", User.GetMention(), buf.String()))
 
 	// We've handled everything we need to.
 	return true
