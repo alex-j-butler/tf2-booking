@@ -10,7 +10,6 @@ import (
 
 	redis "gopkg.in/redis.v5"
 
-	"alex-j-butler.com/emoji-spam/util"
 	"alex-j-butler.com/tf2-booking/commands"
 	"alex-j-butler.com/tf2-booking/commands/ingame"
 	"alex-j-butler.com/tf2-booking/commands/ingame/loghandler"
@@ -18,6 +17,7 @@ import (
 	"alex-j-butler.com/tf2-booking/globals"
 	"alex-j-butler.com/tf2-booking/servers"
 	"alex-j-butler.com/tf2-booking/triggers"
+	"alex-j-butler.com/tf2-booking/util"
 	"alex-j-butler.com/tf2-booking/wait"
 
 	"github.com/bwmarrin/discordgo"
