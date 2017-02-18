@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"log"
 	"sort"
+	"strings"
 	"time"
 
 	"bytes"
@@ -108,12 +109,41 @@ func PrintStats(m *discordgo.MessageCreate, input string, args []string) bool {
 func AddLocalServer(message *discordgo.MessageCreate, input string, args []string) bool {
 	User := &util.PatchUser{message.Author}
 
-	if len(args) == 4 {
+	// Do not even ask what in the hell is going on here.
+	// This is to allow spaces in the 'name' argument.
+	firstArg := args[0]
+	if len(args) > 4 {
+		if strings.HasPrefix(firstArg, "\"") {
+			firstArg = firstArg[1:]
+			deleted := 0
+
+			// Iterate over the arguments.
+			for k, arg := range args {
+				if k == 0 {
+					continue
+				}
+
+				// Delete from the slice.
+				j := k - deleted
+				args = args[:j+copy(args[j:], args[j+1:])]
+				deleted++
+
+				if strings.HasSuffix(arg, "\"") {
+					firstArg = fmt.Sprintf("%s %s", firstArg, arg[:len(arg)-1])
+					break
+				} else {
+					firstArg = fmt.Sprintf("%s %s", firstArg, arg)
+				}
+			}
+		}
+	}
+
+	if len(args) >= 4 {
 		// Generate UUID for the server.
 		serverUUID := uuid.NewV4()
 
 		// Get server details from command.
-		name := args[0]
+		name := firstArg
 		path := args[1]
 		address := args[2]
 		stvAddress := args[3]

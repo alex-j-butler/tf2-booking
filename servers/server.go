@@ -44,7 +44,6 @@ import (
 // Completed features:
 //  * New command system is mostly completed, permissions and DM responding is still to be implemented, currently
 //    any user can run any command. This *must* be fixed before merging these changes into master.
-//  * Dynamically managing servers is implemented, but the command system must be improved in order to allow spaces in parameters (which would allow server names to be eg. Qixalite #1).
 
 type Server struct {
 	// Unique identifier for the server.
