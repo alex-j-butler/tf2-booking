@@ -10,6 +10,7 @@ import (
 
 	redis "gopkg.in/redis.v5"
 
+	"alex-j-butler.com/emoji-spam/util"
 	"alex-j-butler.com/tf2-booking/commands"
 	"alex-j-butler.com/tf2-booking/commands/ingame"
 	"alex-j-butler.com/tf2-booking/commands/ingame/loghandler"
@@ -146,30 +147,41 @@ func RunServer(ctx *cli.Context) {
 	BCommand := commands.NewCommand(nil)
 
 	// Synchronise command
-	SynchroniseCommand := commands.NewCommand(SynchroniseServers)
+	SynchroniseCommand := commands.NewCommand(SynchroniseServers).
+		Permissions(discordgo.PermissionManageServer)
 
 	// Add command
 	AddCommand := commands.NewCommand(nil)
-	AddCommand.AddSubcommand("local", commands.NewCommand(AddLocalServer))
-	AddCommand.AddSubcommand("remote", commands.NewCommand(AddRemoteServer))
+	AddCommand.AddSubcommand("local", commands.NewCommand(AddLocalServer).
+		Permissions(discordgo.PermissionManageServer),
+	)
+	AddCommand.AddSubcommand("remote", commands.NewCommand(AddRemoteServer).
+		Permissions(discordgo.PermissionManageServer),
+	)
 
 	// Confirm server creation command
-	ConfirmCommand := commands.NewCommand(ConfirmServer)
+	ConfirmCommand := commands.NewCommand(ConfirmServer).
+		Permissions(discordgo.PermissionManageServer)
 
 	// Delete command
-	DeleteCommand := commands.NewCommand(DeleteServer)
+	DeleteCommand := commands.NewCommand(DeleteServer).
+		Permissions(discordgo.PermissionManageServer)
 
 	// List command
-	ListCommand := commands.NewCommand(ListServers)
+	ListCommand := commands.NewCommand(ListServers).
+		Permissions(discordgo.PermissionManageServer)
 
 	// Stats command
-	StatsCommand := commands.NewCommand(PrintStats)
+	StatsCommand := commands.NewCommand(PrintStats).
+		Permissions(discordgo.PermissionManageServer)
 
 	// Update command
-	UpdateCommand := commands.NewCommand(Update)
+	UpdateCommand := commands.NewCommand(Update).
+		Permissions(discordgo.PermissionManageServer)
 
 	// Exit command
-	ExitCommand := commands.NewCommand(Exit)
+	ExitCommand := commands.NewCommand(Exit).
+		Permissions(discordgo.PermissionManageServer)
 
 	BCommand.AddSubcommand("sync", SynchroniseCommand)
 	BCommand.AddSubcommand("add", AddCommand)
@@ -292,6 +304,34 @@ func MessageCreate(s *discordgo.Session, m *discordgo.MessageCreate) {
 		return
 	}
 
+	channel, err := Session.State.Channel(m.ChannelID)
+	if err != nil {
+		log.Println("Failed to lookup channel.", err)
+	}
+
+	permissionsChannelID := m.ChannelID
+	if channel.IsPrivate {
+		permissionsChannelID = config.Conf.Discord.DefaultChannel
+	}
+
+	// Configuration has a string slice containing channels the bot should operate in.
+	// If the channel of the newly received message is not in the slice, stop now.
+	if !util.Contains(config.Conf.Discord.AcceptableChannels, m.ChannelID) && !channel.IsPrivate {
+		return
+	}
+
+	permissions, err := Session.State.UserChannelPermissions(m.Author.ID, permissionsChannelID)
+	if err != nil {
+		// Grab the timestamp of this error in GMT+10 time.
+		gmt10 := time.FixedZone("GMT+10", 10*60*60)
+		timestamp := time.Now().In(gmt10)
+
+		log.Println("discord error: failed to lookup permissions.", err, fmt.Sprintf("(id %s name %s time %s)", m.Author.ID, m.Author.Username, timestamp.String()))
+
+		// Assume permissions = 0
+		permissions = 0
+	}
+
 	/*
 
 		permissionsChannelID := m.ChannelID
@@ -328,7 +368,7 @@ func MessageCreate(s *discordgo.Session, m *discordgo.MessageCreate) {
 	*/
 
 	// Send the message to the command system.
-	Command.HandleCommand(m, "", strings.Split(m.Content, " "))
+	Command.HandleCommand(Session, m, channel, permissions, "", strings.Split(m.Content, " "))
 
 	// Send the message content to the command handler to be dispatched appropriately.
 	// Trigger.Handle(Session, m, strings.ToLower(m.Content), Permissions)

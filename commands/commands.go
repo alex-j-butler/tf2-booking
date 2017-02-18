@@ -2,7 +2,10 @@ package commands
 
 import (
 	"fmt"
+	"log"
 	"strings"
+
+	"alex-j-butler.com/tf2-booking/util"
 
 	"github.com/bwmarrin/discordgo"
 )
@@ -75,7 +78,7 @@ func (c *Command) RemoveSubcommand(commandName string) error {
 	return nil
 }
 
-func (c *Command) handleCommand(message *discordgo.MessageCreate, input string, args []string) {
+func (c *Command) handleCommand(session *discordgo.Session, message *discordgo.MessageCreate, channel *discordgo.Channel, userPermissions int, input string, args []string) {
 	// Call the handler function for our command.
 	if c.function != nil {
 		// If the handler function for our command returns true, then we shouldn't handle
@@ -93,7 +96,20 @@ func (c *Command) handleCommand(message *discordgo.MessageCreate, input string, 
 			input = fmt.Sprintf("%s %s", input, args[0])
 			args = args[1:]
 
-			command.handleCommand(message, input, args)
+			if !command.respondToDM {
+				if channel.IsPrivate {
+					log.Println("Oh shit")
+					return
+				}
+			}
+
+			if userPermissions&command.permissions != 0 || command.permissions == -1 {
+				command.handleCommand(session, message, channel, userPermissions, input, args)
+				return
+			}
+
+			User := &util.PatchUser{message.Author}
+			session.ChannelMessageSend(message.ChannelID, fmt.Sprintf("%s: You don't have permission for that command.", User.GetMention()))
 			return
 		}
 	}
@@ -174,7 +190,7 @@ func (cs *CommandSystem) RemoveTrigger(triggerName string) error {
 	return nil
 }
 
-func (cs *CommandSystem) HandleCommand(message *discordgo.MessageCreate, input string, args []string) {
+func (cs *CommandSystem) HandleCommand(session *discordgo.Session, message *discordgo.MessageCreate, channel *discordgo.Channel, userPermissions int, input string, args []string) {
 	input = args[0]
 
 	if len(cs.commands) > 0 && len(args) > 0 {
@@ -182,16 +198,45 @@ func (cs *CommandSystem) HandleCommand(message *discordgo.MessageCreate, input s
 		if command, ok := cs.commands[strings.ToLower(input)]; ok {
 			args = args[1:]
 
-			command.handleCommand(message, input, args)
+			if !command.respondToDM {
+				if channel.IsPrivate {
+					log.Println("No!")
+					// I'm sorry :(
+					goto triggers
+				}
+			}
+
+			if userPermissions&command.permissions != 0 || command.permissions == -1 {
+				command.handleCommand(session, message, channel, userPermissions, input, args)
+				return
+			}
+
+			User := &util.PatchUser{message.Author}
+			session.ChannelMessageSend(message.ChannelID, fmt.Sprintf("%s: You don't have permission for that command.", User.GetMention()))
 			return
 		}
 	}
 
+triggers:
 	if len(cs.triggers) > 0 {
 		// Check if any triggers are a match.
 		if trigger, ok := cs.triggers[strings.ToLower(message.Content)]; ok {
-			// Call the trigger function.
-			trigger.function(message, message.Content)
+
+			if !trigger.respondToDM {
+				if channel.IsPrivate {
+					goto triggers
+				}
+			}
+
+			if userPermissions&trigger.permissions != 0 || trigger.permissions == -1 {
+				// Call the trigger function.
+				trigger.function(message, message.Content)
+				return
+			}
+
+			User := &util.PatchUser{message.Author}
+			session.ChannelMessageSend(message.ChannelID, fmt.Sprintf("%s: You don't have permission for that command.", User.GetMention()))
+
 			return
 		}
 	}
