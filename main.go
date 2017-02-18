@@ -332,46 +332,8 @@ func MessageCreate(s *discordgo.Session, m *discordgo.MessageCreate) {
 		permissions = 0
 	}
 
-	/*
-
-		permissionsChannelID := m.ChannelID
-
-		// Lookup Discord channel.
-		channel, err := s.State.Channel(m.ChannelID)
-		if err != nil {
-			log.Println("Failed to lookup channels.", err)
-		}
-
-		if channel.IsPrivate {
-			permissionsChannelID = config.Conf.Discord.DefaultChannel
-		}
-
-		// Configuration has a string slice containing channels the bot should operate in.
-		// If the channel of the newly received message is not in the slice, stop now.
-		if !util.Contains(config.Conf.Discord.AcceptableChannels, m.ChannelID) && !channel.IsPrivate {
-			return
-		}
-
-			Permissions, err := Session.State.UserChannelPermissions(m.Author.ID, permissionsChannelID)
-			if err != nil {
-				// Grab the timestamp of this error in GMT+10 time.
-				gmt10 := time.FixedZone("GMT+10", 10*60*60)
-				timestamp := time.Now().In(gmt10)
-
-				log.Println("discord error: failed to lookup permissions.", err, fmt.Sprintf("(id %s name %s time %s)", m.Author.ID, m.Author.Username, timestamp.String()))
-
-				// Assume permissions = 0
-				Permissions = 0
-
-				// Session.ChannelMessageSend(m.ChannelID, fmt.Sprintf("%s: Sorry, we couldn't look up your Discord permissions, please contact an admin for assistance. (id %s time %s)", fmt.Sprintf("<@%s>", m.Author.ID), m.Author.ID, timestamp.String()))
-			}
-	*/
-
 	// Send the message to the command system.
 	Command.HandleCommand(Session, m, channel, permissions, "", strings.Split(m.Content, " "))
-
-	// Send the message content to the command handler to be dispatched appropriately.
-	// Trigger.Handle(Session, m, strings.ToLower(m.Content), Permissions)
 }
 
 func IngameMessageCreate(lh *loghandler.LogHandler, server *servers.Server, event *loghandler.SayEvent) {
