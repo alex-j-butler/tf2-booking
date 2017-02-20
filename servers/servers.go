@@ -53,6 +53,8 @@ func GetAvailableServers(serverList map[string]*Server) map[string]*Server {
 	return servers
 }
 
+// GetBookedServers returns a map of the servers that are currently booked out by
+// users. This may include servers that are unavailable, but are currently booked.
 func GetBookedServers(serverList map[string]*Server) map[string]*Server {
 	servers := make(map[string]*Server)
 	for k, v := range serverList {
