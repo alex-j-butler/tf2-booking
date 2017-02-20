@@ -207,7 +207,7 @@ func CheckStats() {
 				}
 
 				tickrate := 1000.0 / 15.0
-				if math.Abs(float64(s.TickRate)-tickrate) > 3.0 && Serv.NextPerformanceWarning.Before(time.Now()) {
+				if math.Abs(float64(s.TickRate)-tickrate) > 5.0 && Serv.NextPerformanceWarning.Before(time.Now()) {
 					// Only allow this message to be sent once.
 					Serv.NextPerformanceWarning = time.Now().Add(5 * time.Minute)
 
