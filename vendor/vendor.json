@@ -41,10 +41,10 @@
 			"revisionTime": "2016-12-24T12:10:19Z"
 		},
 		{
-			"checksumSHA1": "Bn+jLz/gDn8d6apEb70H9fvMOec=",
+			"checksumSHA1": "88SulQNgVdnFsyQeAxi5l/BVfdQ=",
 			"path": "github.com/google/go-github/github",
-			"revision": "27c7c32b6d369610435bd2ad7b4d8554f235eb01",
-			"revisionTime": "2016-12-16T23:18:18Z"
+			"revision": "30a21ee1a3839fb4a408efe331f226b73faac379",
+			"revisionTime": "2017-02-13T22:27:33Z"
 		},
 		{
 			"checksumSHA1": "p3IB18uJRs4dL2K5yx24MrLYE9A=",
@@ -173,6 +173,12 @@
 			"revisionTime": "2017-01-13T09:48:12Z"
 		},
 		{
+			"checksumSHA1": "MNkKJyk2TazKMJYbal5wFHybpyA=",
+			"path": "github.com/mattn/go-runewidth",
+			"revision": "14207d285c6c197daabb5c9793d63e7af9ab2d50",
+			"revisionTime": "2017-02-01T02:35:40Z"
+		},
+		{
 			"checksumSHA1": "LAR/G/IY1GviHYkGAoi6kVXq1Jg=",
 			"path": "github.com/mitchellh/mapstructure",
 			"revision": "bfdb1a85537d60bc7e954e600c250219ea497417",
@@ -183,6 +189,12 @@
 			"path": "github.com/nullbio/inflect",
 			"revision": "2af46786269e56065f831bb1d5c1f2f17cbcefaf",
 			"revisionTime": "2016-09-02T15:44:25Z"
+		},
+		{
+			"checksumSHA1": "h+oCMj21PiQfIdBog0eyUtF1djs=",
+			"path": "github.com/olekukonko/tablewriter",
+			"revision": "febf2d34b54a69ce7530036c7503b1c9fbfdf0bb",
+			"revisionTime": "2017-01-28T05:05:32Z"
 		},
 		{
 			"checksumSHA1": "8Y05Pz7onrQPcVWW6JStSsYRh6E=",
@@ -207,6 +219,12 @@
 			"path": "github.com/robfig/cron",
 			"revision": "9585fd555638e77bba25f25db5c44b41f264aeb7",
 			"revisionTime": "2016-09-27T16:42:31Z"
+		},
+		{
+			"checksumSHA1": "zmC8/3V4ls53DJlNTKDZwPSC/dA=",
+			"path": "github.com/satori/go.uuid",
+			"revision": "b061729afc07e77a8aa4fad0a2fd840958f1942a",
+			"revisionTime": "2016-09-27T10:08:44Z"
 		},
 		{
 			"checksumSHA1": "lBehULzb2/kIK3wZ0gz2yNmHq9s=",

@@ -3,7 +3,6 @@ package commands
 import (
 	"fmt"
 	"log"
-	"reflect"
 	"strings"
 
 	"alex-j-butler.com/tf2-booking/util"
@@ -11,99 +10,234 @@ import (
 	"github.com/bwmarrin/discordgo"
 )
 
-type CommandFunction func(*discordgo.MessageCreate, string, []string)
+type CommandFunction func(*discordgo.MessageCreate, string, []string) bool
+type TriggerFunction func(*discordgo.MessageCreate, string)
 
-type CommandHandler struct {
-	function    CommandFunction
+type Command struct {
+	// Function to be called when this function is executed.
+	function CommandFunction
+
+	// Specifies the required permissions for the command to run.
 	permissions int
+
+	// Specifies whether this command responds to Direct Messages/Private chat messages.
+	respondToDM bool
+
+	// Subcommands that this command can call.
+	subcommands map[string]*Command
+}
+
+type Trigger struct {
+	// Function to be called when this trigger is executed.
+	function TriggerFunction
+
+	// Specifies the required permissions for the command to run.
+	permissions int
+
+	// Specifies whether this command responds to Direct Messages/Private chat messages.
 	respondToDM bool
 }
 
-type Command struct {
-	Prefix   string
-	Handlers map[string]*CommandHandler
-}
-
-func NewCommand(function CommandFunction) *CommandHandler {
-	return &CommandHandler{
+func NewCommand(function CommandFunction) *Command {
+	return &Command{
 		function:    function,
 		permissions: -1,
-		respondToDM: false,
+		respondToDM: true,
+		subcommands: make(map[string]*Command),
 	}
 }
 
-func (ch *CommandHandler) Permissions(permissions int) *CommandHandler {
-	ch.permissions = permissions
-	return ch
+func (c *Command) Permissions(permissions int) *Command {
+	c.permissions = permissions
+	return c
 }
 
-func (ch *CommandHandler) RespondToDM(respondToDM bool) *CommandHandler {
-	ch.respondToDM = respondToDM
-	return ch
+func (c *Command) RespondToDM(respondToDM bool) *Command {
+	c.respondToDM = respondToDM
+	return c
 }
 
-// New creates a new instance of the Command system
-// with the specified prefix.
-func New(prefix string) *Command {
-	return &Command{
-		Prefix:   prefix,
-		Handlers: make(map[string]*CommandHandler),
+func (c *Command) AddSubcommand(commandName string, command *Command) error {
+	commandName = strings.ToLower(commandName)
+	if _, ok := c.subcommands[commandName]; ok {
+		return fmt.Errorf("%s subcommand already exists", commandName)
 	}
+
+	c.subcommands[commandName] = command
+	return nil
 }
 
-// Add creates a new entry in the command handlers map.
-// First argument accepts a command handler implementing the type `CommandHandler`,
-// Second argument accepts a variable amount of strings specifying the commands to register.
-func (c *Command) Add(handler *CommandHandler, commands ...string) {
-	for _, command := range commands {
-		c.Handlers[command] = handler
+func (c *Command) RemoveSubcommand(commandName string) error {
+	commandName = strings.ToLower(commandName)
+	if _, ok := c.subcommands[commandName]; !ok {
+		return fmt.Errorf("%s subcommand does not exist", commandName)
 	}
+
+	// Delete the subcommand.
+	delete(c.subcommands, commandName)
+	return nil
 }
 
-// Remove deletes entries from the command handlers map.
-func (c *Command) Remove(commands ...string) {
-	for _, command := range commands {
-		delete(c.Handlers, command)
-	}
-}
-
-// Handle the incoming commands and dispatches them to the appropriate
-// command handler, after parsing them.
-func (c *Command) Handle(session *discordgo.Session, m *discordgo.MessageCreate, command string, permissions int) {
-	for str, handler := range c.Handlers {
-		if !strings.HasPrefix(command, c.Prefix) && c.Prefix != "" {
-			continue
+func (c *Command) handleCommand(session *discordgo.Session, message *discordgo.MessageCreate, channel *discordgo.Channel, userPermissions int, input string, args []string) {
+	// Call the handler function for our command.
+	if c.function != nil {
+		// If the handler function for our command returns true, then we shouldn't handle
+		// anything else here, otherwise we'll continue processing subcommands.
+		if c.function(message, input, args) {
+			return
 		}
+	}
 
-		handlerSplit := strings.Split(str, " ")
-		commandSplit := strings.Split(command[len(c.Prefix):], " ")
+	// If we're here, the handler function was either nil, or returned false informing us we should continue processing
+	// the subcommands.
+	if len(c.subcommands) > 0 && len(args) > 0 {
+		// Check if any subcommands are a match.
+		if command, ok := c.subcommands[strings.ToLower(args[0])]; ok {
+			input = fmt.Sprintf("%s %s", input, args[0])
+			args = args[1:]
 
-		if len(commandSplit) < len(handlerSplit) {
-			continue
-		}
-
-		if !handler.respondToDM {
-			channel, err := session.State.Channel(m.ChannelID)
-			if err != nil {
-				log.Println("Failed to lookup channel.", err)
+			if !command.respondToDM {
+				if channel.IsPrivate {
+					log.Println("Oh shit")
+					return
+				}
 			}
 
-			if channel.IsPrivate {
-				continue
+			if userPermissions&command.permissions != 0 || command.permissions == -1 {
+				command.handleCommand(session, message, channel, userPermissions, input, args)
+				return
 			}
+
+			User := &util.PatchUser{message.Author}
+			session.ChannelMessageSend(message.ChannelID, fmt.Sprintf("%s: You don't have permission for that command.", User.GetMention()))
+			return
 		}
+	}
+}
 
-		if reflect.DeepEqual(handlerSplit, commandSplit[:len(handlerSplit)]) {
-			log.Println(fmt.Sprintf("Permissions test: %d & %d = %d", permissions, handler.permissions, permissions&handler.permissions))
+func NewTrigger(function TriggerFunction) *Trigger {
+	return &Trigger{
+		function:    function,
+		permissions: -1,
+		respondToDM: true,
+	}
+}
 
-			if permissions&handler.permissions != 0 || handler.permissions == -1 {
-				handler.function(m, strings.Join(handlerSplit, " "), commandSplit[len(handlerSplit):])
-			} else {
-				User := &util.PatchUser{m.Author}
-				session.ChannelMessageSend(m.ChannelID, fmt.Sprintf("%s: You don't have permission for that command.", User.GetMention()))
+func (t *Trigger) Permissions(permissions int) *Trigger {
+	t.permissions = permissions
+	return t
+}
+
+func (t *Trigger) RespondToDM(respondToDM bool) *Trigger {
+	t.respondToDM = respondToDM
+	return t
+}
+
+type CommandSystem struct {
+	// Commands that the command system can handle.
+	commands map[string]*Command
+
+	// Triggers that the command system can handle.
+	triggers map[string]*Trigger
+}
+
+func NewCommandSystem() *CommandSystem {
+	return &CommandSystem{
+		commands: make(map[string]*Command),
+		triggers: make(map[string]*Trigger),
+	}
+}
+
+func (cs *CommandSystem) AddCommand(commandName string, command *Command) error {
+	commandName = strings.ToLower(commandName)
+	if _, ok := cs.commands[commandName]; ok {
+		return fmt.Errorf("%s command already exists", commandName)
+	}
+
+	cs.commands[commandName] = command
+	return nil
+}
+
+func (cs *CommandSystem) RemoveCommand(commandName string) error {
+	commandName = strings.ToLower(commandName)
+	if _, ok := cs.commands[commandName]; !ok {
+		return fmt.Errorf("%s command does not exist", commandName)
+	}
+
+	// Delete the command.
+	delete(cs.commands, commandName)
+	return nil
+}
+
+func (cs *CommandSystem) AddTrigger(triggerName string, trigger *Trigger) error {
+	triggerName = strings.ToLower(triggerName)
+	if _, ok := cs.triggers[triggerName]; ok {
+		return fmt.Errorf("%s trigger already exists", triggerName)
+	}
+
+	cs.triggers[triggerName] = trigger
+	return nil
+}
+
+func (cs *CommandSystem) RemoveTrigger(triggerName string) error {
+	triggerName = strings.ToLower(triggerName)
+	if _, ok := cs.triggers[triggerName]; !ok {
+		return fmt.Errorf("%s trigger does not exist", triggerName)
+	}
+
+	// Delete the trigger.
+	delete(cs.triggers, triggerName)
+	return nil
+}
+
+func (cs *CommandSystem) HandleCommand(session *discordgo.Session, message *discordgo.MessageCreate, channel *discordgo.Channel, userPermissions int, input string, args []string) {
+	input = args[0]
+
+	if len(cs.commands) > 0 && len(args) > 0 {
+		// Check if any commands are a match.
+		if command, ok := cs.commands[strings.ToLower(input)]; ok {
+			args = args[1:]
+
+			if !command.respondToDM {
+				if channel.IsPrivate {
+					log.Println("No!")
+					// I'm sorry :(
+					goto triggers
+				}
 			}
 
-			break
+			if userPermissions&command.permissions != 0 || command.permissions == -1 {
+				command.handleCommand(session, message, channel, userPermissions, input, args)
+				return
+			}
+
+			User := &util.PatchUser{message.Author}
+			session.ChannelMessageSend(message.ChannelID, fmt.Sprintf("%s: You don't have permission for that command.", User.GetMention()))
+			return
+		}
+	}
+
+triggers:
+	if len(cs.triggers) > 0 {
+		// Check if any triggers are a match.
+		if trigger, ok := cs.triggers[strings.ToLower(message.Content)]; ok {
+
+			if !trigger.respondToDM {
+				if channel.IsPrivate {
+					goto triggers
+				}
+			}
+
+			if userPermissions&trigger.permissions != 0 || trigger.permissions == -1 {
+				// Call the trigger function.
+				trigger.function(message, message.Content)
+				return
+			}
+
+			User := &util.PatchUser{message.Author}
+			session.ChannelMessageSend(message.ChannelID, fmt.Sprintf("%s: You don't have permission for that command.", User.GetMention()))
+
+			return
 		}
 	}
 }

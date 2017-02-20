@@ -1,8 +1,0 @@
-- name: Server Name 1
-  path: /home/example/server1
-  address: 127.0.0.1:27015
-  session_name: server_name1
-- name: Server Name 2
-  path: /home/example/server2
-  address: 127.0.0.1:27016
-  session_name: server_name2
