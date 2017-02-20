@@ -3,47 +3,387 @@ package main
 import (
 	"fmt"
 	"log"
-	"sort"
-	"strings"
 	"time"
 
-	"bytes"
-
+	"alex-j-butler.com/tf2-booking/config"
 	"alex-j-butler.com/tf2-booking/globals"
 	"alex-j-butler.com/tf2-booking/servers"
 	"alex-j-butler.com/tf2-booking/util"
 	"alex-j-butler.com/tf2-booking/wait"
 	"github.com/bwmarrin/discordgo"
 	"github.com/google/go-github/github"
-	"github.com/olekukonko/tablewriter"
-	uuid "github.com/satori/go.uuid"
 )
 
-// SynchroniseServers is the command handler function for the command
-// that synchronises all the locally cached servers from the Redis database.
-func SynchroniseServers(message *discordgo.MessageCreate, input string, args []string) bool {
-	User := &util.PatchUser{message.Author}
-
-	// Properly reloads all available servers from the Redis store, and attempts to update the status text.
-	ReloadServers()
-	UpdateGameString()
-
-	Session.ChannelMessageSend(message.ChannelID, fmt.Sprintf("%s: Synchronised all servers.", User.GetMention()))
-
-	// We've handled everything we need to.
-	return true
+func sendServerDetails(channelID string, serv *servers.Server, serverPassword, rconPassword string) {
+	Session.ChannelMessageSendEmbed(
+		channelID,
+		"**Here are the details for your booked server:**",
+		&discordgo.MessageEmbed{
+			Color: 12763842,
+			Type:  "rich",
+			Fields: []*discordgo.MessageEmbedField{
+				&discordgo.MessageEmbedField{
+					Name:   "Server Address",
+					Value:  fmt.Sprintf("`%s`", serv.Address),
+					Inline: true,
+				},
+				&discordgo.MessageEmbedField{
+					Name:   "Server Password",
+					Value:  fmt.Sprintf("`%s`", serverPassword),
+					Inline: true,
+				},
+				&discordgo.MessageEmbedField{
+					Name:   "RCON Password",
+					Value:  fmt.Sprintf("`%s`", rconPassword),
+					Inline: true,
+				},
+			},
+		},
+	)
+	Session.ChannelMessageSendEmbed(
+		channelID,
+		"",
+		&discordgo.MessageEmbed{
+			Color: 321378,
+			Type:  "rich",
+			Fields: []*discordgo.MessageEmbedField{
+				&discordgo.MessageEmbedField{
+					Name:   "Connect String",
+					Value:  fmt.Sprintf("`connect %s; password %s; rcon_password %s`", serv.Address, serverPassword, rconPassword),
+					Inline: false,
+				},
+				&discordgo.MessageEmbedField{
+					Name:   "STV String",
+					Value:  fmt.Sprintf("`connect %s`", serv.STVAddress),
+					Inline: false,
+				},
+			},
+		},
+	)
+	Session.ChannelMessageSendEmbed(
+		channelID,
+		"",
+		&discordgo.MessageEmbed{
+			Color: 12763842,
+			Type:  "rich",
+			Author: &discordgo.MessageEmbedAuthor{
+				Name:    ChooseRandomTip(),
+				IconURL: "https://tf2-au.qixalite.com/stv/help_icon.png",
+			},
+		},
+	)
 }
 
-// PrintStats is the command handler function that prints the stats of all the currently booked servers
-// as well as providing an overview of the number of hours each server has been booked in the last 7 days.
-func PrintStats(m *discordgo.MessageCreate, input string, args []string) bool {
+func DebugPrint(m *discordgo.MessageCreate, command string, args []string) {
+	User := &util.PatchUser{m.Author}
+
+	for i, server := range servers.Servers {
+		// Synchronise the server from Redis, to get information for existing servers.
+		err := server.Synchronise(globals.RedisClient)
+		if err != nil {
+			panic(err)
+		}
+
+		// Put the modified server back.
+		servers.Servers[i] = server
+	}
+
+	Session.ChannelMessageSend(m.ChannelID, fmt.Sprintf("%s: Synchronised all servers.", User.GetMention()))
+}
+
+// BookServer command handler
+// Called when a user types the 'book' command into the Discord channel.
+// This function checks whether the user has a server booked, if not,
+// it books a new server, preventing it from being used by another user,
+// sets up the RCON password & Server Password and finally starts the TF2 server.
+func BookServer(m *discordgo.MessageCreate, command string, args []string) {
+	User := &util.PatchUser{m.Author}
+
+	bookingInfo, err := GetDefaultValue.Run(globals.RedisClient, []string{fmt.Sprintf("user.%s", m.Author.ID)}, nil).Result()
+	if err != nil {
+		// Send a message to let the user know an error occurred.
+		Session.ChannelMessageSend(m.ChannelID, fmt.Sprintf("%s: Oops, looked like an error has occurred. Please contact an admin for assistance.", User.GetMention()))
+		return
+	}
+
+	if len(bookingInfo.(string)) != 0 {
+		// Send a message to let the user know they've already booked a server.
+		Session.ChannelMessageSend(m.ChannelID, fmt.Sprintf("%s: You've already booked a server. Type `unbook` to return the server.", User.GetMention()))
+		return
+	}
+
+	// Get the next available server.
+	Serv := servers.GetAvailableServer(servers.Servers)
+	// TODO: Maybe the server should be synched now?
+
+	if Serv != nil {
+		// Book the server.
+		RCONPassword, ServerPassword, err := Serv.Book(m.Author, config.Conf.Booking.Duration.Duration)
+		if err != nil {
+			Session.ChannelMessageSend(m.ChannelID, fmt.Sprintf("%s: Something went wrong while trying to book your server, please try again later.", User.GetMention()))
+			log.Println(fmt.Sprintf("Failed to book server \"%s\" from \"%s\":", Serv.Name, m.Author.ID), err)
+		} else {
+			// Start the server.
+			go func(Serv *servers.Server, m *discordgo.MessageCreate) {
+				err := Serv.Start()
+
+				if err != nil {
+					UserChannel, _ := Session.UserChannelCreate(m.Author.ID)
+					Session.ChannelMessageSend(
+						UserChannel.ID,
+						fmt.Sprintf(
+							"Uh oh! The server failed to start, contact an admin for further information.",
+						),
+					)
+
+					// Reset the user's booked state.
+					if err := globals.RedisClient.Set(fmt.Sprintf("user.%s", m.Author.ID), "", 0).Err(); err != nil {
+						log.Println("Redis error:", err)
+						log.Println("Failed to set user information for user:", m.Author.ID)
+						return
+					}
+
+					UpdateGameString()
+
+					log.Println(fmt.Sprintf("Failed to start server \"%s\" from \"%s\"", Serv.Name, m.Author.ID))
+				}
+			}(Serv, m)
+
+			// Send message to public channel, without server details.
+			Session.ChannelMessageSend(m.ChannelID, fmt.Sprintf("%s: Server details have been sent via private message.", User.GetMention()))
+
+			// Create the private DM channel, and then send the server details (and a small tip).
+			UserChannel, _ := Session.UserChannelCreate(m.Author.ID)
+			sendServerDetails(UserChannel.ID, Serv, ServerPassword, RCONPassword)
+
+			// Add the user's booked state.
+			if err := globals.RedisClient.Set(fmt.Sprintf("user.%s", m.Author.ID), Serv.SessionName, 0).Err(); err != nil {
+				log.Println("Redis error:", err)
+				log.Println("Failed to set user information for user:", m.Author.ID)
+				return
+			}
+
+			UpdateGameString()
+
+			log.Println(fmt.Sprintf("Booked server \"%s\" from \"%s\"", Serv.Name, m.Author.ID))
+		}
+	} else {
+		Session.ChannelMessageSend(m.ChannelID, fmt.Sprintf("%s: No servers are currently available.", User.GetMention()))
+	}
+}
+
+// UnbookServer command handler
+// Called when a user types the 'unbook' command into the Discord channel.
+// This function checks whether the user has a server booked, if so,
+// it unbooks it, allowing it for use by another user, and shutting down
+// the TF2 server.
+func UnbookServer(m *discordgo.MessageCreate, command string, args []string) {
+	User := &util.PatchUser{m.Author}
+
+	bookingInfo, err := GetDefaultValue.Run(globals.RedisClient, []string{fmt.Sprintf("user.%s", m.Author.ID)}, nil).Result()
+	if err != nil {
+		// Send a message to let the user know an error occurred.
+		Session.ChannelMessageSend(m.ChannelID, fmt.Sprintf("%s: Oops, looked like an error has occurred. Please contact an admin for assistance.", User.GetMention()))
+		return
+	}
+	bookingInfoStr := bookingInfo.(string)
+
+	if len(bookingInfoStr) == 0 {
+		// Send a message to let the user know they do not have a server booked.
+		Session.ChannelMessageSend(m.ChannelID, fmt.Sprintf("%s: You haven't booked a server. Type `book` to book a server.", User.GetMention()))
+		return
+	}
+
+	Serv, err := servers.GetServerBySessionName(servers.Servers, bookingInfoStr)
+
+	if err == nil && Serv != nil {
+		// Stop the server.
+		go func(Serv *servers.Server, m *discordgo.MessageCreate) {
+			err := Serv.Stop()
+
+			if err != nil {
+				UserChannel, _ := Session.UserChannelCreate(m.Author.ID)
+				Session.ChannelMessageSend(
+					UserChannel.ID,
+					fmt.Sprintf(
+						"Uh oh! The server failed to stop, contact an admin for further information, or leave us to handle it.",
+					),
+				)
+			}
+		}(Serv, m)
+
+		// Remove the user's booked state.
+		if err := globals.RedisClient.Set(fmt.Sprintf("user.%s", m.Author.ID), "", 0).Err(); err != nil {
+			log.Println("Redis error:", err)
+			log.Println("Failed to set user information for user:", m.Author.ID)
+			return
+		}
+
+		// Unbook the server.
+		Serv.Unbook()
+
+		// Upload STV demos
+		STVMessage, err := Serv.UploadSTV()
+
+		// Send 'returned' message.
+		Session.ChannelMessageSend(m.ChannelID, fmt.Sprintf("%s: Server returned.", User.GetMention()))
+
+		// Send 'stv' message, if it uploaded successfully.
+		if err == nil {
+			Session.ChannelMessageSend(m.ChannelID, fmt.Sprintf("%s: %s", User.GetMention(), STVMessage))
+		}
+
+		UpdateGameString()
+
+		log.Println(fmt.Sprintf("Unbooked server \"%s\" from \"%s\"", Serv.Name, m.Author.ID))
+	} else {
+		Session.ChannelMessageSend(m.ChannelID, fmt.Sprintf("%s: You haven't booked a server. Type `book` to book a server.", User.GetMention()))
+
+		// We're in an invalid state, reset back to normal.
+		if err := globals.RedisClient.Set(fmt.Sprintf("user.%s", m.Author.ID), "", 0).Err(); err != nil {
+			log.Println("Redis error:", err)
+			log.Println("Failed to set user information for user:", m.Author.ID)
+			return
+		}
+
+		return
+	}
+}
+
+// ExtendServer command handler
+// Called when a user types the 'extend' command into the Discord channel.
+// This function checks whether the user has a server booked out, if so,
+// it will extend the booking by adding time onto the servers return time.
+func ExtendServer(m *discordgo.MessageCreate, command string, args []string) {
+	User := &util.PatchUser{m.Author}
+
+	bookingInfo, err := GetDefaultValue.Run(globals.RedisClient, []string{fmt.Sprintf("user.%s", m.Author.ID)}, nil).Result()
+	if err != nil {
+		// Send a message to let the user know an error occurred.
+		Session.ChannelMessageSend(m.ChannelID, fmt.Sprintf("%s: Oops, looked like an error has occurred. Please contact an admin for assistance.", User.GetMention()))
+		return
+	}
+	bookingInfoStr := bookingInfo.(string)
+
+	if len(bookingInfoStr) == 0 {
+		// Send a message to let the user know they do not have a server booked.
+		Session.ChannelMessageSend(m.ChannelID, fmt.Sprintf("%s: You haven't booked a server. Type `book` to book a server.", User.GetMention()))
+		return
+	}
+
+	Serv, err := servers.GetServerBySessionName(servers.Servers, bookingInfoStr)
+
+	if err == nil && Serv != nil {
+		// Extend the booking.
+		Serv.ExtendBooking(config.Conf.Booking.ExtendDuration.Duration)
+
+		// Notify server of successful operation.
+		Serv.SendCommand(
+			fmt.Sprintf(
+				"say @%s: Your booking has been extended by %s.",
+				m.Author.Username,
+				util.ToHuman(&config.Conf.Booking.ExtendDuration.Duration),
+			),
+		)
+
+		// Notify Discord channel of successful operation.
+		Session.ChannelMessageSend(
+			m.ChannelID,
+			fmt.Sprintf(
+				"%s: Your booking has been extended by %s.",
+				User.GetMention(),
+				util.ToHuman(&config.Conf.Booking.ExtendDuration.Duration),
+			),
+		)
+	} else {
+		// Notify Discord channel of failed operation.
+		Session.ChannelMessageSend(m.ChannelID, fmt.Sprintf("%s: You haven't booked a server. Type `book` to book a server.", User.GetMention()))
+
+		// If the program execution reaches here, the state of the users & user-servers map
+		// is invalid and should be reset to the 'unbooked' state.
+		if err := globals.RedisClient.Set(fmt.Sprintf("user.%s", m.Author.ID), "", 0).Err(); err != nil {
+			log.Println("Redis error:", err)
+			log.Println("Failed to set user information for user:", m.Author.ID)
+			return
+		}
+
+		return
+	}
+}
+
+func SendPassword(m *discordgo.MessageCreate, command string, args []string) {
+	User := &util.PatchUser{m.Author}
+
+	bookingInfo, err := GetDefaultValue.Run(globals.RedisClient, []string{fmt.Sprintf("user.%s", m.Author.ID)}, nil).Result()
+	if err != nil {
+		// Send a message to let the user know an error occurred.
+		Session.ChannelMessageSend(m.ChannelID, fmt.Sprintf("%s: Oops, looked like an error has occurred. Please contact an admin for assistance.", User.GetMention()))
+		return
+	}
+	bookingInfoStr := bookingInfo.(string)
+
+	if len(bookingInfoStr) == 0 {
+		// Send a message to let the user know they do not have a server booked.
+		Session.ChannelMessageSend(m.ChannelID, fmt.Sprintf("%s: You haven't booked a server. Type `book` to book a server.", User.GetMention()))
+		return
+	}
+
+	Serv, err := servers.GetServerBySessionName(servers.Servers, bookingInfoStr)
+
+	if err == nil && Serv != nil {
+		serverPassword, err := Serv.GetCurrentPassword()
+		if err != nil {
+			Session.ChannelMessageSend(
+				m.ChannelID,
+				fmt.Sprintf(
+					"%s: We failed to retrieve your server password.",
+					User.GetMention(),
+				),
+			)
+
+			return
+		}
+
+		// Send message to public channel, without server details.
+		Session.ChannelMessageSend(m.ChannelID, fmt.Sprintf("%s: Server password have been sent via private message.", User.GetMention()))
+
+		// Send message to private DM, with server details.
+		UserChannel, _ := Session.UserChannelCreate(m.Author.ID)
+		Session.ChannelMessageSend(
+			UserChannel.ID,
+			fmt.Sprintf(
+				"Here is your server details:\n\tServer address: %s\n\tPassword: %s\n\tConnect string: `connect %s; password %s`",
+				Serv.Address,
+				serverPassword,
+				Serv.Address,
+				serverPassword,
+			),
+		)
+	} else {
+		// Notify Discord channel of failed operation.
+		Session.ChannelMessageSend(m.ChannelID, fmt.Sprintf("%s: You haven't booked a server. Type `book` to book a server.", User.GetMention()))
+
+		// If the program execution reaches here, the state of the users & user-servers map
+		// is invalid and should be reset to the 'unbooked' state.
+		if err := globals.RedisClient.Set(fmt.Sprintf("user.%s", m.Author.ID), "", 0).Err(); err != nil {
+			log.Println("Redis error:", err)
+			log.Println("Failed to set user information for user:", m.Author.ID)
+			return
+		}
+
+		return
+	}
+}
+
+func PrintStats(m *discordgo.MessageCreate, command string, args []string) {
 	User := &util.PatchUser{m.Author}
 
 	servs := servers.GetBookedServers(servers.Servers)
 	message := "Server stats:"
 	count := 0
 
-	for _, server := range servs {
+	for i := 0; i < len(servs); i++ {
+		server := servs[i]
 		if server != nil {
 			bookerID := server.GetBooker()
 			bookerUser, err := Session.User(bookerID)
@@ -75,7 +415,7 @@ func PrintStats(m *discordgo.MessageCreate, input string, args []string) bool {
 	if err != nil {
 		log.Println("Prepare error:", err)
 		Session.ChannelMessageSend(m.ChannelID, fmt.Sprintf("%s: %s", User.GetMention(), "Something went wrong retrieving server history!"))
-		return true
+		return
 	}
 
 	rows, err := stmt.Query("7 days")
@@ -83,7 +423,7 @@ func PrintStats(m *discordgo.MessageCreate, input string, args []string) bool {
 	if err != nil {
 		log.Println("Query error:", err)
 		Session.ChannelMessageSend(m.ChannelID, fmt.Sprintf("%s: %s", User.GetMention(), "Something went wrong retrieving server history!"))
-		return true
+		return
 	}
 
 	// Get the db query time.
@@ -99,271 +439,56 @@ func PrintStats(m *discordgo.MessageCreate, input string, args []string) bool {
 	}
 
 	Session.ChannelMessageSend(m.ChannelID, fmt.Sprintf("%s: %s\nQuery took %s", User.GetMention(), message, dbqueryTimeElapsed))
-
-	// We've handled everything we need to.
-	return true
 }
 
-// AddLocalServer is the command handler for the '-b add local' command, that creates the
-// a new local server and saves it to Redis.
-func AddLocalServer(message *discordgo.MessageCreate, input string, args []string) bool {
-	User := &util.PatchUser{message.Author}
+func Update(m *discordgo.MessageCreate, command string, args []string) {
+	User := &util.PatchUser{m.Author}
 
-	// Do not even ask what in the hell is going on here.
-	// This is to allow spaces in the 'name' argument.
-	firstArg := args[0]
-	if len(args) > 4 {
-		if strings.HasPrefix(firstArg, "\"") {
-			firstArg = firstArg[1:]
-			deleted := 0
-
-			// Iterate over the arguments.
-			for k, arg := range args {
-				if k == 0 {
-					continue
-				}
-
-				// Delete from the slice.
-				j := k - deleted
-				args = args[:j+copy(args[j:], args[j+1:])]
-				deleted++
-
-				if strings.HasSuffix(arg, "\"") {
-					firstArg = fmt.Sprintf("%s %s", firstArg, arg[:len(arg)-1])
-					break
-				} else {
-					firstArg = fmt.Sprintf("%s %s", firstArg, arg)
-				}
-			}
-		}
+	if len(args) <= 0 {
+		// Send usage.
+		Session.ChannelMessageSend(m.ChannelID, fmt.Sprintf("%s: Usage: `update <release tag>`", User.GetMention()))
+		return
 	}
 
-	if len(args) >= 4 {
-		// Generate UUID for the server.
-		serverUUID := uuid.NewV4()
+	// Create a GitHub API client.
+	client := github.NewClient(nil)
+	// Tag name
+	tagName := args[0]
 
-		// Get server details from command.
-		name := firstArg
-		path := args[1]
-		address := args[2]
-		stvAddress := args[3]
-
-		// Create server struct.
-		server := servers.Server{
-			UUID:       serverUUID.String(),
-			Name:       name,
-			Type:       "local",
-			Path:       path,
-			Address:    address,
-			STVAddress: stvAddress,
-
-			// Servers are inactive until they are confirmed using the '-b confirm <uuid|name>' command.
-			Active: false,
-		}
-
-		// Add the server to our cached list of servers.
-		servers.Servers[serverUUID.String()] = &server
-
-		// Save the server to Redis.
-		server.Update(globals.RedisClient)
-
-		// Send success message.
-		Session.ChannelMessageSend(message.ChannelID, fmt.Sprintf("%s: Added local server: %s", User.GetMention(), serverUUID.String()))
-	} else {
-		// Print usage.
-		Session.ChannelMessageSend(message.ChannelID, fmt.Sprintf("%s: Invalid command, usage: '-b add local <name> <path> <address> <stv address>'", User.GetMention()))
-	}
-
-	// We've handled everything we need to.
-	return true
-}
-
-func AddRemoteServer(message *discordgo.MessageCreate, input string, args []string) bool {
-	User := &util.PatchUser{message.Author}
-	Session.ChannelMessageSend(message.ChannelID, fmt.Sprintf("%s: Not yet implemented.", User.GetMention()))
-
-	// We've handled everything we need to.
-	return true
-}
-
-func ConfirmServer(message *discordgo.MessageCreate, input string, args []string) bool {
-	User := &util.PatchUser{message.Author}
-
-	if len(args) == 1 {
-		// Is the argument passed in a UUID or a server name?
-		isUUID := util.IsUUID4(args[0])
-
-		var server *servers.Server
-		var err error
-
-		if isUUID {
-			// Nice and simple - UUID's are unique to a server.
-			server, err = servers.GetServerByUUID(servers.Servers, args[0])
-		} else {
-			// This should later be renamed to GetServersByName, and will return a slice of servers that match
-			// since server names do not need to be unique.
-			// If more than one server is found in this situation, we should reply and tell them that the name is ambiguous (and provide the appropriate commands for every possible server).
-			server, err = servers.GetServerByName(servers.Servers, args[0])
-		}
-
-		if err != nil {
-			// Yo, what. We can't find that server.
-			Session.ChannelMessageSend(message.ChannelID, fmt.Sprintf("%s: Server was not found.", User.GetMention()))
-			return true
-		}
-
-		// Activate that server & save it in Redis.
-		server.Active = true
-		err = server.Update(globals.RedisClient)
-		if err != nil {
-			// Redis error, oh no!
-			Session.ChannelMessageSend(message.ChannelID, fmt.Sprintf("%s: Server could not be saved.", User.GetMention()))
-			return true
-		}
-
-		// Send a message.
-		Session.ChannelMessageSend(message.ChannelID, fmt.Sprintf("%s: Server '%s' was successfully activated!", User.GetMention(), server.Name))
-	} else {
-		// Print usage.
-		Session.ChannelMessageSend(message.ChannelID, fmt.Sprintf("%s: Invalid command, usage: '-b confirm <uuid|name>'", User.GetMention()))
-	}
-
-	// We've handled everything we need to.
-	return true
-}
-
-func DeleteServer(message *discordgo.MessageCreate, input string, args []string) bool {
-	User := &util.PatchUser{message.Author}
-
-	// Is the argument passed in a UUID or a server name?
-	isUUID := util.IsUUID4(args[0])
-
-	var server *servers.Server
-	var err error
-
-	if isUUID {
-		// Nice and simple - UUID's are unique to a server.
-		server, err = servers.GetServerByUUID(servers.Servers, args[0])
-	} else {
-		// This should later be renamed to GetServersByName, and will return a slice of servers that match
-		// since server names do not need to be unique.
-		// If more than one server is found in this situation, we should reply and tell them that the name is ambiguous (and provide the appropriate commands for every possible server).
-		server, err = servers.GetServerByName(servers.Servers, args[0])
-	}
-
+	// Get release by tag.
+	release, _, err := client.Repositories.GetReleaseByTag("alex-j-butler", "tf2-booking", tagName)
 	if err != nil {
-		// Yo, what. We can't find that server.
-		Session.ChannelMessageSend(message.ChannelID, fmt.Sprintf("%s: Server was not found.", User.GetMention()))
-		return true
+		// Send error message.
+		Session.ChannelMessageSend(m.ChannelID, fmt.Sprintf("%s: Failed to retrieve release.", User.GetMention()))
+		return
 	}
 
-	// Delete the server in Redis.
-	err = globals.RedisClient.Del(fmt.Sprintf("server.%s", server.UUID)).Err()
+	asset, err := util.GetReleaseAsset(release.Assets, "tf2-booking-amd64")
 	if err != nil {
-		// Error deleting the server in Redis.
-		Session.ChannelMessageSend(message.ChannelID, fmt.Sprintf("%s: Server could not be deleted.", User.GetMention()))
-		return true
+		// Send error message.
+		Session.ChannelMessageSend(m.ChannelID, fmt.Sprintf("%s: Failed to retrieve release asset.", User.GetMention()))
+		return
 	}
 
-	// Delete the server.
-	delete(servers.Servers, server.UUID)
+	//
+	Session.ChannelMessageSend(m.ChannelID, fmt.Sprintf("%s: Starting update to release %s", User.GetMention(), *release.TagName))
 
-	// Send a message.
-	Session.ChannelMessageSend(message.ChannelID, fmt.Sprintf("%s: Server '%s' was successfully deleted!", User.GetMention(), server.Name))
+	go func(asset github.ReleaseAsset) {
+		// Update the executable.
+		UpdateExecutable(*asset.BrowserDownloadURL)
 
-	// We've handled everything we need to.
-	return true
+		// Send the success notification.
+		Session.ChannelMessageSend(m.ChannelID, fmt.Sprintf("%s: Updated `tf2-booking` & restarting now.", User.GetMention()))
+
+		// Annnnnd, exit.
+		wait.Exit()
+	}(asset)
 }
 
-func ListServers(message *discordgo.MessageCreate, input string, args []string) bool {
-	User := &util.PatchUser{message.Author}
+func Exit(m *discordgo.MessageCreate, command string, args []string) {
+	User := &util.PatchUser{m.Author}
 
-	serverSlice := servers.ServersToSlice(servers.Servers)
-	sort.Sort(serverSlice)
-
-	var data [][]string
-	var buf bytes.Buffer
-
-	for _, server := range serverSlice {
-		data = append(data, []string{
-			server.UUID,
-			server.Name,
-			server.Type,
-			server.Address,
-			server.STVAddress,
-			fmt.Sprintf("%t", server.Active),
-		})
-	}
-
-	table := tablewriter.NewWriter(&buf)
-	table.SetHeader(
-		[]string{
-			"UUID",
-			"Name",
-			"Type",
-			"Address",
-			"STV Address",
-			"Active",
-		},
-	)
-	table.SetBorders(tablewriter.Border{Left: true, Top: false, Right: true, Bottom: false})
-	table.SetCenterSeparator("|")
-	table.AppendBulk(data)
-	table.Render()
-
-	Session.ChannelMessageSend(message.ChannelID, fmt.Sprintf("%s: Servers:\n```%s```", User.GetMention(), buf.String()))
-
-	// We've handled everything we need to.
-	return true
-}
-
-func Update(message *discordgo.MessageCreate, input string, args []string) bool {
-	User := &util.PatchUser{message.Author}
-
-	if len(args) == 1 {
-		// Create a GitHub API client.
-		client := github.NewClient(nil)
-		// Tag name
-		tagName := args[0]
-
-		// Get release by tag.
-		release, _, err := client.Repositories.GetReleaseByTag("alex-j-butler", "tf2-booking", tagName)
-		if err != nil {
-			// Send error message.
-			Session.ChannelMessageSend(message.ChannelID, fmt.Sprintf("%s: Failed to retrieve release.", User.GetMention()))
-			return true
-		}
-
-		asset, err := util.GetReleaseAsset(release.Assets, "tf2-booking-amd64")
-		if err != nil {
-			// Send error message.
-			Session.ChannelMessageSend(message.ChannelID, fmt.Sprintf("%s: Failed to retrieve release asset.", User.GetMention()))
-			return true
-		}
-
-		Session.ChannelMessageSend(message.ChannelID, fmt.Sprintf("%s: Starting update to release %s", User.GetMention(), *release.TagName))
-
-		go func(asset github.ReleaseAsset, message *discordgo.MessageCreate) {
-			// Update the executable.
-			UpdateExecutable(*asset.BrowserDownloadURL)
-
-			// Send the success notification.
-			Session.ChannelMessageSend(message.ChannelID, fmt.Sprintf("%s: Updated `tf2-booking` & restarting now.", User.GetMention()))
-
-			// Annnnnd, exit.
-			wait.Exit()
-		}(asset, message)
-	}
-
-	return true
-}
-
-func Exit(message *discordgo.MessageCreate, input string, args []string) bool {
-	User := &util.PatchUser{message.Author}
-
-	Session.ChannelMessageSend(message.ChannelID, fmt.Sprintf("%s: Shutting down `tf2-booking`.", User.GetMention()))
+	Session.ChannelMessageSend(m.ChannelID, fmt.Sprintf("%s: Shutting down `tf2-booking`.", User.GetMention()))
 
 	wait.Exit()
-
-	return true
 }

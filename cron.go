@@ -11,22 +11,22 @@ import (
 	"alex-j-butler.com/tf2-booking/servers"
 	"alex-j-butler.com/tf2-booking/util"
 
-	"strings"
-
 	"github.com/kidoman/go-steam"
 )
 
 // Check if any servers are ready to be unbooked by the automatic timeout after 4 hours.
 func CheckUnbookServers() {
 	// Iterate through servers.
-	for _, Serv := range servers.Servers {
+	for i := 0; i < len(servers.Servers); i++ {
+		Serv := &servers.Servers[i]
+
 		// Don't need to do anything if this server isn't booked.
-		if Serv.IsBooked() {
+		if Serv.IsAvailable() {
 			return
 		}
 
 		// Send the timelimit warning notification, if required.
-		if !Serv.IsBooked() && !Serv.SentWarning && (Serv.ReturnDate.Add(config.Conf.Booking.WarningDuration.Duration)).Before(time.Now()) {
+		if !Serv.IsAvailable() && !Serv.SentWarning && (Serv.ReturnDate.Add(config.Conf.Booking.WarningDuration.Duration)).Before(time.Now()) {
 			// Only allow this message to be sent once.
 			Serv.SentWarning = true
 
@@ -45,7 +45,7 @@ func CheckUnbookServers() {
 
 		// TODO: Move this to the configuration file?
 		maxIdleMinutes := 15
-		if !Serv.IsBooked() && !Serv.SentIdleWarning && (maxIdleMinutes-Serv.IdleMinutes) <= config.Conf.Booking.IdleWarningDuration {
+		if !Serv.IsAvailable() && !Serv.SentIdleWarning && (maxIdleMinutes-Serv.IdleMinutes) <= config.Conf.Booking.IdleWarningDuration {
 			// Only allow this message to be sent once.
 			Serv.SentIdleWarning = true
 
@@ -70,7 +70,7 @@ func CheckUnbookServers() {
 		}
 
 		// Check if their server is past the return date.
-		if !Serv.IsBooked() && Serv.ReturnDate.Before(time.Now()) {
+		if !Serv.IsAvailable() && Serv.ReturnDate.Before(time.Now()) {
 			UserID := Serv.GetBooker()
 			UserMention := Serv.GetBookerMention()
 
@@ -105,8 +105,10 @@ func CheckUnbookServers() {
 
 func CheckIdleMinutes() {
 	// Iterate through servers.
-	for _, Serv := range servers.Servers {
-		if !Serv.IsBooked() {
+	for i := 0; i < len(servers.Servers); i++ {
+		Serv := &servers.Servers[i]
+
+		if !Serv.IsAvailable() {
 			go func(s *servers.Server) {
 				server, err := steam.Connect(s.Address)
 				if err != nil {
@@ -174,11 +176,12 @@ func CheckIdleMinutes() {
 	}
 }
 
-func Cron10Seconds() {
-	// Iterate over the servers.
-	for _, Serv := range servers.Servers {
-		if !Serv.IsBooked() {
-			// Do all statistics related stuff in a Goroutine.
+func CheckStats() {
+	// Iterate through servers.
+	for i := 0; i < len(servers.Servers); i++ {
+		Serv := &servers.Servers[i]
+
+		if !Serv.IsAvailable() {
 			go func(s *servers.Server) {
 				stats, err := Serv.SendRCONCommand("stats")
 
@@ -204,7 +207,7 @@ func Cron10Seconds() {
 				}
 
 				tickrate := 1000.0 / 15.0
-				if math.Abs(float64(s.TickRate)-tickrate) > 5.0 && Serv.NextPerformanceWarning.Before(time.Now()) {
+				if math.Abs(float64(s.TickRate)-tickrate) > 3.0 && Serv.NextPerformanceWarning.Before(time.Now()) {
 					// Only allow this message to be sent once.
 					Serv.NextPerformanceWarning = time.Now().Add(5 * time.Minute)
 
@@ -222,41 +225,6 @@ func Cron10Seconds() {
 				}
 
 				s.Update(globals.RedisClient)
-			}(Serv)
-
-			// TF2Center/TF2Stadium checking.
-			// Here, we want to get the tags of the server, and check if they contain the words 'TF2Center' or 'TF2Stadium', and if they do
-			// we want to send a message to the default channel letting the user know that they're using a Qixalite server for a lobby,
-			// and they should ensure they get 2 people in the server, otherwise the server will unbook in 15 minutes, which cannot be extended using
-			// the 'extend' command.
-			go func(s *servers.Server) {
-
-				// Query the server for tags.
-				server, err := steam.Connect(Serv.Address)
-				if err != nil {
-					log.Println(fmt.Sprintf("Failed to connect to server \"%s\":", s.Name), err)
-					return
-				}
-
-				resp, err := server.Info()
-				if err != nil {
-					log.Println(fmt.Sprintf("Failed to connect to server \"%s\":", s.Name), err)
-					return
-				}
-
-				// Check for matches of 'tf2center' or 'tf2stadium' in the tags.
-				lowercase := strings.ToLower(resp.Keywords)
-				if strings.Contains(lowercase, "tf2center") || strings.Contains(lowercase, "tf2stadium") {
-					// Send the lobby warning.
-					if !Serv.SentLobbyWarning {
-						// Don't allow this message again.
-						Serv.SentLobbyWarning = true
-
-						// Send a warning message.
-						Session.ChannelMessageSend(config.Conf.Discord.DefaultChannel, fmt.Sprintf("%s: We noticed you're running a TF2Center lobby, make sure you have 2 people on the server, otherwise your server will unbook after 15 minutes! If you need to get the password after it's been changed, type `send password` into this channel and we'll send the updated password.", Serv.BookerMention))
-					}
-				}
-
 			}(Serv)
 		}
 	}

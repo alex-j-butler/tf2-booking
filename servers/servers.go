@@ -2,40 +2,36 @@ package servers
 
 import (
 	"errors"
+	"io/ioutil"
+	"log"
 	"math"
-	"strings"
+
+	yaml "gopkg.in/yaml.v2"
 )
 
-type ServersSlice []*Server
-
-func (s ServersSlice) Len() int {
-	return len(s)
-}
-
-func (s ServersSlice) Swap(i, j int) {
-	s[i], s[j] = s[j], s[i]
-}
-
-func (s ServersSlice) Less(i, j int) bool {
-	return s[i].Name < s[j].Name
-}
-
-var Servers map[string]*Server
+var Servers []Server
 
 func InitialiseServers() {
-	Servers = make(map[string]*Server)
+	configuration, _ := ioutil.ReadFile("./servers.yml")
+	err := yaml.Unmarshal(configuration, &Servers)
+
+	if err != nil {
+		log.Println("Failed to initialise server configuration:", err)
+	}
 }
 
-func GetAvailableServer(serverList map[string]*Server) *Server {
+func GetAvailableServer(serverList []Server) *Server {
 	var bestServer *Server
 	var bestDiff float64
 	servers := GetAvailableServers(serverList)
 
 	// Higher than the maximum a TF2 tickrate can differ.
 	bestDiff = 4096.0
-	for _, v := range servers {
-		if diff := math.Abs(float64(v.TickRate - 66.6666)); diff < bestDiff {
-			bestServer = v
+	for i := 0; i < len(servers); i++ {
+		server := servers[i]
+
+		if diff := math.Abs(float64(server.TickRate - 66.6666)); diff < bestDiff {
+			bestServer = server
 			bestDiff = diff
 		}
 	}
@@ -43,73 +39,42 @@ func GetAvailableServer(serverList map[string]*Server) *Server {
 	return bestServer
 }
 
-func GetAvailableServers(serverList map[string]*Server) map[string]*Server {
-	servers := make(map[string]*Server)
-	for k, v := range serverList {
-		if v.IsAvailable() {
-			servers[k] = v
+func GetAvailableServers(serverList []Server) []*Server {
+	servers := make([]*Server, 0, len(serverList))
+	for i := 0; i < len(serverList); i++ {
+		if serverList[i].IsAvailable() {
+			servers = append(servers, &serverList[i])
 		}
 	}
 	return servers
 }
 
-// GetBookedServers returns a map of the servers that are currently booked out by
-// users. This may include servers that are unavailable, but are currently booked.
-func GetBookedServers(serverList map[string]*Server) map[string]*Server {
-	servers := make(map[string]*Server)
-	for k, v := range serverList {
-		if !v.IsBooked() {
-			servers[k] = v
+func GetBookedServers(serverList []Server) []*Server {
+	servers := make([]*Server, 0, len(serverList))
+	for i := 0; i < len(serverList); i++ {
+		if !serverList[i].IsAvailable() {
+			servers = append(servers, &serverList[i])
 		}
 	}
 	return servers
 }
 
-func GetServerByUUID(serverList map[string]*Server, uuid string) (*Server, error) {
-	for k, v := range serverList {
-		if strings.EqualFold(v.UUID, uuid) {
-			return serverList[k], nil
+func GetServerByAddress(serverList []Server, address string) (*Server, error) {
+	for i := 0; i < len(serverList); i++ {
+		if serverList[i].Address == address {
+			return &serverList[i], nil
 		}
 	}
 
 	return nil, errors.New("Server not found.")
 }
 
-func GetServerByName(serverList map[string]*Server, name string) (*Server, error) {
-	for k, v := range serverList {
-		if strings.EqualFold(v.Name, name) {
-			return serverList[k], nil
+func GetServerBySessionName(serverList []Server, sessionName string) (*Server, error) {
+	for i := 0; i < len(serverList); i++ {
+		if serverList[i].SessionName == sessionName {
+			return &serverList[i], nil
 		}
 	}
 
 	return nil, errors.New("Server not found.")
-}
-
-func GetServerByAddress(serverList map[string]*Server, address string) (*Server, error) {
-	for k, v := range serverList {
-		if v.Address == address {
-			return serverList[k], nil
-		}
-	}
-
-	return nil, errors.New("Server not found.")
-}
-
-func GetServerBySessionName(serverList map[string]*Server, sessionName string) (*Server, error) {
-	for k, v := range serverList {
-		if v.SessionName == sessionName {
-			return serverList[k], nil
-		}
-	}
-
-	return nil, errors.New("Server not found.")
-}
-
-func ServersToSlice(serverList map[string]*Server) ServersSlice {
-	servers := make(ServersSlice, 0, len(serverList))
-	for _, server := range serverList {
-		servers = append(servers, server)
-	}
-
-	return servers
 }
