@@ -86,14 +86,14 @@ func RunServer(ctx *cli.Context) {
 	db, err := sql.Open("postgres", config.Conf.Database.DSN)
 	if err != nil {
 		log.Println("Database error:", err)
-		// os.Exit(1)
+		os.Exit(1)
 	}
 	globals.DB = db
 
 	// Ping the database to make sure we're properly connected.
 	if err := globals.DB.Ping(); err != nil {
 		log.Println("Database error:", err)
-		// os.Exit(1)
+		os.Exit(1)
 	}
 
 	// Setup the Redis client
