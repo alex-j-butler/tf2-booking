@@ -157,6 +157,8 @@ func (s *Server) IsAvailable() bool {
 // IsBooked returns whether the server is currently booked out by a user.
 // Note: A server may be booked, but still be unavailable (as reported by IsAvailable), in this case, a server should be unbooked properly,
 // but should not allow any future bookings.
+// TODO: THIS MAKES NO SENSE, FIX THE NAME TO IsUnbooked, OR CHANGE IT TO ACTUALLY RETURN TRUE IF THE SERVER IS BOOKED.
+// 		 ^^^^					^^^^						^^^^					^^^^				^^^^
 func (s *Server) IsBooked() bool {
 	return !s.Booked
 }
