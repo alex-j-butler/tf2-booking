@@ -112,7 +112,7 @@ func AddLocalServer(message *discordgo.MessageCreate, input string, args []strin
 	// Do not even ask what in the hell is going on here.
 	// This is to allow spaces in the 'name' argument.
 	firstArg := args[0]
-	if len(args) > 4 {
+	if len(args) > 5 {
 		if strings.HasPrefix(firstArg, "\"") {
 			firstArg = firstArg[1:]
 			deleted := 0
@@ -138,24 +138,26 @@ func AddLocalServer(message *discordgo.MessageCreate, input string, args []strin
 		}
 	}
 
-	if len(args) >= 4 {
+	if len(args) >= 5 {
 		// Generate UUID for the server.
 		serverUUID := uuid.NewV4()
 
 		// Get server details from command.
 		name := firstArg
 		path := args[1]
-		address := args[2]
-		stvAddress := args[3]
+		sessionName := args[2]
+		address := args[3]
+		stvAddress := args[4]
 
 		// Create server struct.
 		server := servers.Server{
-			UUID:       serverUUID.String(),
-			Name:       name,
-			Type:       "local",
-			Path:       path,
-			Address:    address,
-			STVAddress: stvAddress,
+			UUID:        serverUUID.String(),
+			Name:        name,
+			Type:        "local",
+			Path:        path,
+			SessionName: sessionName,
+			Address:     address,
+			STVAddress:  stvAddress,
 
 			// Servers are inactive until they are confirmed using the '-b confirm <uuid|name>' command.
 			Active: false,
@@ -171,7 +173,7 @@ func AddLocalServer(message *discordgo.MessageCreate, input string, args []strin
 		Session.ChannelMessageSend(message.ChannelID, fmt.Sprintf("%s: Added local server: %s", User.GetMention(), serverUUID.String()))
 	} else {
 		// Print usage.
-		Session.ChannelMessageSend(message.ChannelID, fmt.Sprintf("%s: Invalid command, usage: '-b add local <name> <path> <address> <stv address>'", User.GetMention()))
+		Session.ChannelMessageSend(message.ChannelID, fmt.Sprintf("%s: Invalid command, usage: '-b add local <name> <path> <session name> <address> <stv address>'", User.GetMention()))
 	}
 
 	// We've handled everything we need to.
