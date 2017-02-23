@@ -38,6 +38,7 @@ var BotID string
 // UserReportTimeouts maps user's steamids to the time after which they can report again.
 var UserReportTimeouts map[string]time.Time
 
+// Redis script to retrieve a key, and if that key does not exist, then set a default value.
 var GetDefaultValue *redis.Script
 
 // Command system
@@ -73,10 +74,12 @@ func main() {
 	app.Run(os.Args)
 }
 
+// Migrate is the subcommand handler that migrates the database to the latest migration.
 func Migrate(ctx *cli.Context) {
 	log.Println("Error: Migrate is currently unimplemented")
 }
 
+// RunServer is the subcommand handler that starts the TF2 Booking server.
 func RunServer(ctx *cli.Context) {
 	servers.InitialiseServers()
 	SetupCron()
@@ -334,6 +337,8 @@ func MessageCreate(s *discordgo.Session, m *discordgo.MessageCreate) {
 	Command.Handle(Session, m, strings.ToLower(m.Content), Permissions)
 }
 
+// IngameMessageCreate handler for the ingame TF2 log handler.
+// Called when a message is sent in any TF2 server that is logging to the remote logging server.
 func IngameMessageCreate(lh *loghandler.LogHandler, server *servers.Server, event *loghandler.SayEvent) {
 	log.Println(fmt.Sprintf("Received command from '%s' on server '%s': %s", event.Username, server.Name, event.Message))
 	IngameCommand.Handle(ingame.CommandInfo{SayEvent: *event, Server: server}, event.Message, 0)
@@ -351,6 +356,7 @@ func SetupCron() {
 	c.Start()
 }
 
+// DeleteMessage deletes the specified Discord message after a certain duration has passed.
 func DeleteMessage(channelID string, messageID string, duration time.Duration) error {
 	time.Sleep(duration)
 	return Session.ChannelMessageDelete(channelID, messageID)
