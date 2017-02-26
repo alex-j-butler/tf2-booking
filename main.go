@@ -16,7 +16,6 @@ import (
 	"alex-j-butler.com/tf2-booking/commands/ingame/loghandler"
 	"alex-j-butler.com/tf2-booking/config"
 	"alex-j-butler.com/tf2-booking/globals"
-	"alex-j-butler.com/tf2-booking/retry"
 	"alex-j-butler.com/tf2-booking/servers"
 	"alex-j-butler.com/tf2-booking/util"
 	"alex-j-butler.com/tf2-booking/wait"
@@ -86,18 +85,32 @@ func RunServer(ctx *cli.Context) {
 	SetupCron()
 
 	// Connect to the PostgreSQL database.
-	db, err := openDatabase()
+	db, err := sql.Open("postgres", config.Conf.Database.DSN)
 	if err != nil {
-		log.Println("failed to open database connection:", err)
+		log.Println("Database error:", err)
+		os.Exit(1)
 	}
 	globals.DB = db
+
+	// Ping the database to make sure we're properly connected.
+	if err := globals.DB.Ping(); err != nil {
+		log.Println("Database error:", err)
+		os.Exit(1)
+	}
 
 	// Setup the Redis client
 	// and PING it to make sure we properly connected
 	// and can issue commands to it.
-	client, err := openRedis()
+	client := redis.NewClient(&redis.Options{
+		Addr:     config.Conf.Redis.Address,
+		Password: config.Conf.Redis.Password,
+		DB:       config.Conf.Redis.DB,
+	})
+
+	_, err = client.Ping().Result()
 	if err != nil {
-		log.Println("failed to open redis connection:", err)
+		// Application won't work without a Redis connection.
+		log.Println("Redis error:", err)
 		os.Exit(1)
 	}
 	globals.RedisClient = client
