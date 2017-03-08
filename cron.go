@@ -208,8 +208,15 @@ func Cron10Seconds() {
 					// Only allow this message to be sent once.
 					Serv.NextPerformanceWarning = time.Now().Add(5 * time.Minute)
 
-					// The 'var' of the server is too high, notify the server.
-					Serv.SendCommand("say The server may be performing poorly, type '!report server' if the server is lagging.")
+					// The 'var' of the server is too high, notify admins.
+					message := fmt.Sprintf(
+						"The server `%s` may be performing poorly. Check the ensure the server is not lagging.",
+						s.Name,
+					)
+					for _, notificationUser := range config.Conf.Discord.NotificationUsers {
+						UserChannel, _ := Session.UserChannelCreate(notificationUser)
+						Session.ChannelMessageSend(UserChannel.ID, message)
+					}
 				}
 
 				s.Update(globals.RedisClient)
