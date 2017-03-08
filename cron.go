@@ -210,8 +210,10 @@ func Cron10Seconds() {
 
 					// The 'var' of the server is too high, notify admins.
 					message := fmt.Sprintf(
-						"The server `%s` may be performing poorly. Check the ensure the server is not lagging.",
+						"The server `%s` may be performing poorly (tickrate %f, var %f). Check the ensure the server is not lagging.",
 						s.Name,
+						s.TickRate,
+						math.Abs(float64(s.TickRate)-tickrate),
 					)
 					for _, notificationUser := range config.Conf.Discord.NotificationUsers {
 						UserChannel, _ := Session.UserChannelCreate(notificationUser)
