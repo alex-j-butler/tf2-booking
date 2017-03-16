@@ -34,6 +34,10 @@ type Server struct {
 	// Whether this server has been sent the idle unbooking warning.
 	SentIdleWarning bool
 
+	// Whether this server has been sent the TF2Center/TF2Stadium lobby warning message,
+	// informing them that they need 2 players on the server to prevent idle unbooking.
+	SentLobbyWarning bool
+
 	// Timestamp indicating when the server is to be returned.
 	ReturnDate time.Time
 
@@ -337,6 +341,7 @@ func (s *Server) Book(user *discordgo.User, duration time.Duration) (string, str
 	s.NextPerformanceWarning = time.Now().Add(5 * time.Minute)
 	s.SentWarning = false
 	s.SentIdleWarning = false
+	s.SentLobbyWarning = false
 	s.IdleMinutes = 0
 	s.ErrorMinutes = 0
 
@@ -354,6 +359,7 @@ func (s *Server) Book(user *discordgo.User, duration time.Duration) (string, str
 		s.NextPerformanceWarning = time.Time{}
 		s.SentWarning = false
 		s.SentIdleWarning = false
+		s.SentLobbyWarning = false
 		s.IdleMinutes = 0
 		s.ErrorMinutes = 0
 
@@ -385,6 +391,7 @@ func (s *Server) Unbook() error {
 	s.NextPerformanceWarning = time.Time{}
 	s.SentWarning = false
 	s.SentIdleWarning = false
+	s.SentLobbyWarning = false
 	s.IdleMinutes = 0
 	s.ErrorMinutes = 0
 

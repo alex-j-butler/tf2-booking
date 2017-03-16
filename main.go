@@ -345,7 +345,9 @@ func SetupCron() {
 	c = cron.New()
 	c.AddFunc("*/1 * * * *", CheckUnbookServers)
 	c.AddFunc("0 * * * *", CheckIdleMinutes)
-	c.AddFunc("*/10 * * * *", CheckStats)
+
+	c.AddFunc("@every 10s", Cron10Seconds)
+
 	c.Start()
 }
 
