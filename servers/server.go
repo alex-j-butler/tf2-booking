@@ -408,10 +408,11 @@ func (s *Server) UploadSTV() (string, error) {
 		"sh",
 		"-c",
 		fmt.Sprintf(
-			"cd %s; %s/%s",
+			"cd %s; %s/%s %s",
 			s.Path,
 			s.Path,
 			config.Conf.Booking.UploadSTVCommand,
+			s.Booker,
 		),
 	)
 	stdout, _ := process.StdoutPipe()
