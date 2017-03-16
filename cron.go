@@ -178,7 +178,7 @@ func CheckIdleMinutes() {
 	}
 }
 
-func CheckStats() {
+func Cron10Seconds() {
 	// Iterate through servers.
 	for i := 0; i < len(servers.Servers); i++ {
 		Serv := &servers.Servers[i]
