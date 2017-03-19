@@ -35,3 +35,12 @@ deploy:
     on:
       branch: master
       appveyor_repo_tag: true
+  - provider: S3
+    access_key_id:
+      secure: 07hUHU6kelq2cFMv7lJHGKoXQN/AskP/o23x/Huca2I=
+    secret_access_key:
+      secure: eWnZws38G9bUaDKLREBaTiRD8RcBvrfAOIfCNBneVpG/aul5Wzly6PTxuSg/Y3b+
+    bucket: qixalite-releases
+    region: ap-southeast-2
+    folder: tf2-booking
+    artifact: amd64, i386
