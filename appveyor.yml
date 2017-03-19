@@ -1,4 +1,4 @@
-version: 1.1.{build}
+version: 3.0.{build}
 
 skip_tags: true
 clone_folder: C:\Gopath\src\alex-j-butler.com\tf2-booking
@@ -42,5 +42,5 @@ deploy:
       secure: eWnZws38G9bUaDKLREBaTiRD8RcBvrfAOIfCNBneVpG/aul5Wzly6PTxuSg/Y3b+
     bucket: qixalite-releases
     region: ap-southeast-2
-    folder: tf2-booking
+    folder: tf2-booking/$(appveyor_build_version)
     artifact: amd64, i386
