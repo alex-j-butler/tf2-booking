@@ -4,11 +4,8 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"io/ioutil"
 	"log"
-	"os/exec"
 	"regexp"
-	"strings"
 	"time"
 
 	"alex-j-butler.com/tf2-booking/config"
@@ -22,6 +19,9 @@ import (
 )
 
 type Server struct {
+	// Interface implementation to use to run this server.
+	Runner ServerRunner
+
 	Name        string `json:"name" yaml:"name"`
 	Path        string `json:"path" yaml:"path"`
 	Address     string `json:"address" yaml:"address"`
@@ -171,85 +171,29 @@ func (s *Server) GetCurrentPassword() (string, error) {
 //  string - Server password
 //  error - Error of a failed setup, or nil if none
 func (s *Server) Setup() (string, string, error) {
-	// Retrieve the RCON password & server password.
-	process := exec.Command(
-		"sh",
-		"-c",
-		fmt.Sprintf(
-			"cd %s; %s/%s",
-			s.Path,
-			s.Path,
-			config.Conf.Booking.SetupCommand,
-		),
-	)
-	stdout, _ := process.StdoutPipe()
-	stderr, _ := process.StderrPipe()
-
-	var err error
-	err = process.Start()
-
-	if err != nil {
-		log.Println("Failed to setup server:", err)
-		return "", "", errors.New("Your server could not be setup")
-	}
-
-	stdoutBytes, _ := ioutil.ReadAll(stdout)
-	stderrBytes, _ := ioutil.ReadAll(stderr)
-
-	err = process.Wait()
-
-	if err != nil {
-		log.Println("Failed to setup server:", err)
-		return "", "", errors.New("Your server could not be setup")
-	}
-
 	// Reset the warning notification so that it can be sent again.
 	s.SentWarning = false
 
-	// Trim passwords.
-	RCONPassword := strings.TrimSpace(string(stdoutBytes))
-	ServerPassword := strings.TrimSpace(string(stderrBytes))
+	// Run the setup function from the runner implementation.
+	rconPassword, srvPassword, err := s.Runner.Setup(s)
 
 	// Cache the RCON password, since it can't be changed by the user.
-	s.RCONPassword = RCONPassword
+	s.RCONPassword = rconPassword
 
 	// Update the server.
 	s.Update(globals.RedisClient)
 
-	return RCONPassword, ServerPassword, nil
+	return rconPassword, srvPassword, err
 }
 
 // Start the server using a bash script.
 // Returns:
 //  error - Error of a failed start, or nil if none
 func (s *Server) Start() error {
-	process := exec.Command(
-		"sh",
-		"-c",
-		fmt.Sprintf(
-			"cd %s; %s/%s",
-			s.Path,
-			s.Path,
-			config.Conf.Booking.StartCommand,
-		),
-	)
+	// Run the start function from the runner implementation.
+	err := s.Runner.Start(s)
 
-	var err error
-	err = process.Start()
-
-	if err != nil {
-		log.Println("Process failed to start:", err)
-		return errors.New("Your server could not be started")
-	}
-
-	err = process.Wait()
-
-	if err != nil {
-		log.Println("Process failed to wait:", err)
-		return errors.New("Your server could not be started")
-	}
-
-	return nil
+	return err
 }
 
 func (s *Server) Stop() error {
@@ -257,33 +201,10 @@ func (s *Server) Stop() error {
 	KickCommand := fmt.Sprintf("tv_stop; kickall \"%s\"", config.Conf.Booking.KickMessage)
 	s.SendCommand(KickCommand)
 
-	process := exec.Command(
-		"sh",
-		"-c",
-		fmt.Sprintf(
-			"cd %s; %s/%s",
-			s.Path,
-			s.Path,
-			config.Conf.Booking.StopCommand,
-		),
-	)
+	// Run the stop function from the runner implementation.
+	err := s.Runner.Stop(s)
 
-	var err error
-	err = process.Start()
-
-	if err != nil {
-		log.Println("Process failed to start:", err)
-		return errors.New("Your server could not be stopped")
-	}
-
-	err = process.Wait()
-
-	if err != nil {
-		log.Println("Process failed to wait:", err)
-		return errors.New("Your server could not be stopped")
-	}
-
-	return nil
+	return err
 }
 
 func (s *Server) Book(user *discordgo.User, duration time.Duration) (string, string, error) {
@@ -410,54 +331,12 @@ func (s *Server) ExtendBooking(amount time.Duration) {
 }
 
 func (s *Server) UploadSTV() (string, error) {
-	// Run upload STV demo script.
-	process := exec.Command(
-		"sh",
-		"-c",
-		fmt.Sprintf(
-			"cd %s; %s/%s %s",
-			s.Path,
-			s.Path,
-			config.Conf.Booking.UploadSTVCommand,
-			s.Booker,
-		),
-	)
-	stdout, _ := process.StdoutPipe()
-
-	var err error
-	err = process.Start()
-
-	if err != nil {
-		log.Println("Failed to upload STV:", err)
-		return "", errors.New("Your server failed to upload STV")
-	}
-
-	stdoutBytes, _ := ioutil.ReadAll(stdout)
-
-	err = process.Wait()
-
-	if err != nil {
-		log.Println("Failed to upload STV:", err)
-		return "", errors.New("Your server failed to upload STV")
-	}
-
-	Files := strings.Split(strings.TrimSpace(string(stdoutBytes)), "\n")
-	for i := 0; i < len(Files); i++ {
-		Files[i] = strings.TrimSpace(Files[i])
-	}
-
-	var demos []models.Demo
+	// Run the uploadSTV function from the runner implementation.
+	demos, err := s.Runner.UploadSTV(s)
 
 	Message := "STV Demo(s) uploaded:"
-	for i := 0; i < len(Files); i++ {
-		Message = fmt.Sprintf("%s\n\t%s", Message, Files[i])
-
-		// Create the demo model.
-		var demo models.Demo
-		demo.UploadedTime = null.TimeFrom(time.Now())
-		demo.URL = Files[i]
-
-		demos = append(demos, demo)
+	for i := 0; i < len(demos); i++ {
+		Message = fmt.Sprintf("%s\n\t%s", Message, demos[i].URL)
 	}
 
 	// Grab the current booking.
@@ -483,24 +362,10 @@ func (s *Server) UploadSTV() (string, error) {
 }
 
 func (s *Server) SendCommand(command string) error {
-	process := exec.Command("tmux", "send-keys", "-t", s.SessionName, "C-m", command, "C-m")
+	// Run the SendCommand function from the runner implementation.
+	err := s.Runner.SendCommand(s, command)
 
-	var err error
-	err = process.Start()
-
-	if err != nil {
-		log.Println("Failed to send command:", err)
-		return errors.New("Your server failed to respond to commands")
-	}
-
-	err = process.Wait()
-
-	if err != nil {
-		log.Println("Failed to send command:", err)
-		return errors.New("Your server failed to respond to commands")
-	}
-
-	return nil
+	return err
 }
 
 func (s *Server) SendRCONCommand(command string) (string, error) {
