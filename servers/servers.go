@@ -9,7 +9,7 @@ import (
 	yaml "gopkg.in/yaml.v2"
 )
 
-var Servers []Server
+var Servers []*Server
 
 func InitialiseServers() {
 	configuration, _ := ioutil.ReadFile("./servers.yml")
@@ -20,7 +20,7 @@ func InitialiseServers() {
 	}
 }
 
-func GetAvailableServer(serverList []Server) *Server {
+func GetAvailableServer(serverList []*Server) *Server {
 	var bestServer *Server
 	var bestDiff float64
 	servers := GetAvailableServers(serverList)
@@ -39,40 +39,40 @@ func GetAvailableServer(serverList []Server) *Server {
 	return bestServer
 }
 
-func GetAvailableServers(serverList []Server) []*Server {
+func GetAvailableServers(serverList []*Server) []*Server {
 	servers := make([]*Server, 0, len(serverList))
 	for i := 0; i < len(serverList); i++ {
 		if serverList[i].IsAvailable() {
-			servers = append(servers, &serverList[i])
+			servers = append(servers, serverList[i])
 		}
 	}
 	return servers
 }
 
-func GetBookedServers(serverList []Server) []*Server {
+func GetBookedServers(serverList []*Server) []*Server {
 	servers := make([]*Server, 0, len(serverList))
 	for i := 0; i < len(serverList); i++ {
 		if !serverList[i].IsAvailable() {
-			servers = append(servers, &serverList[i])
+			servers = append(servers, serverList[i])
 		}
 	}
 	return servers
 }
 
-func GetServerByAddress(serverList []Server, address string) (*Server, error) {
+func GetServerByAddress(serverList []*Server, address string) (*Server, error) {
 	for i := 0; i < len(serverList); i++ {
 		if serverList[i].Address == address {
-			return &serverList[i], nil
+			return serverList[i], nil
 		}
 	}
 
 	return nil, errors.New("Server not found.")
 }
 
-func GetServerBySessionName(serverList []Server, sessionName string) (*Server, error) {
+func GetServerBySessionName(serverList []*Server, sessionName string) (*Server, error) {
 	for i := 0; i < len(serverList); i++ {
 		if serverList[i].SessionName == sessionName {
-			return &serverList[i], nil
+			return serverList[i], nil
 		}
 	}
 

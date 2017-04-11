@@ -20,7 +20,7 @@ import (
 func CheckUnbookServers() {
 	// Iterate through servers.
 	for i := 0; i < len(servers.Servers); i++ {
-		Serv := &servers.Servers[i]
+		Serv := servers.Servers[i]
 
 		// Don't need to do anything if this server isn't booked.
 		if Serv.IsAvailable() {
@@ -108,7 +108,7 @@ func CheckUnbookServers() {
 func CheckIdleMinutes() {
 	// Iterate through servers.
 	for i := 0; i < len(servers.Servers); i++ {
-		Serv := &servers.Servers[i]
+		Serv := servers.Servers[i]
 
 		if !Serv.IsAvailable() {
 			go func(s *servers.Server) {
@@ -181,7 +181,7 @@ func CheckIdleMinutes() {
 func Cron10Seconds() {
 	// Iterate through servers.
 	for i := 0; i < len(servers.Servers); i++ {
-		Serv := &servers.Servers[i]
+		Serv := servers.Servers[i]
 
 		if !Serv.IsAvailable() {
 			go func(s *servers.Server) {
