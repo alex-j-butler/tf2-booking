@@ -20,15 +20,7 @@ import (
 type ScriptServerRunner struct {
 }
 
-func (s ScriptServerRunner) Supports(feature Feature) bool {
-	// Script runner does not support server command responses.
-	if feature == ServerCommandResponse {
-		return true
-	}
-
-	return false
-}
-
+// Setup the server by running the 'book server' bash script.
 func (s ScriptServerRunner) Setup(server *Server) (rconPassword string, srvPassword string, err error) {
 	// Retrieve the RCON password & server password.
 	process := exec.Command(
@@ -41,9 +33,12 @@ func (s ScriptServerRunner) Setup(server *Server) (rconPassword string, srvPassw
 			config.Conf.Booking.SetupCommand,
 		),
 	)
+
+	// Create pipes for stdout & stderr.
 	stdout, _ := process.StdoutPipe()
 	stderr, _ := process.StderrPipe()
 
+	// Start the process.
 	err = process.Start()
 
 	if err != nil {
@@ -51,9 +46,11 @@ func (s ScriptServerRunner) Setup(server *Server) (rconPassword string, srvPassw
 		return "", "", errors.New("Your server could not be setup")
 	}
 
+	// Read stdout & stderr.
 	stdoutBytes, _ := ioutil.ReadAll(stdout)
 	stderrBytes, _ := ioutil.ReadAll(stderr)
 
+	// Wait for the process to complete.
 	err = process.Wait()
 
 	if err != nil {
