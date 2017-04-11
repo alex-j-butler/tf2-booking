@@ -18,9 +18,12 @@ import (
 	redis "gopkg.in/redis.v5"
 )
 
+// DefaultRunner is the default server runner.
+var DefaultRunner = ScriptServerRunner{}
+
 type Server struct {
 	// Interface implementation to use to run this server.
-	Runner ServerRunner
+	Runner ServerRunner `json:"-"`
 
 	Name        string `json:"name" yaml:"name"`
 	Path        string `json:"path" yaml:"path"`
@@ -74,6 +77,13 @@ type Server struct {
 
 	// ErrorMinutes is the number of minutes the server has been in an errored state for.
 	ErrorMinutes int
+}
+
+// Init sets the default runner if it hasn't already been set.
+func (s *Server) Init() {
+	if s.Runner == nil {
+		s.Runner = DefaultRunner
+	}
 }
 
 // Update performs an update of the server into the specified Redis client.
@@ -330,14 +340,20 @@ func (s *Server) ExtendBooking(amount time.Duration) {
 	s.Update(globals.RedisClient)
 }
 
+func (s *Server) generateSTVReply(demos []models.Demo) string {
+	message := "STV Demo(s) uploaded:"
+	for i := 0; i < len(demos); i++ {
+		message = fmt.Sprintf("%s\n\t%s", message, demos[i].URL)
+	}
+
+	return message
+}
+
 func (s *Server) UploadSTV() (string, error) {
 	// Run the uploadSTV function from the runner implementation.
 	demos, err := s.Runner.UploadSTV(s)
 
-	Message := "STV Demo(s) uploaded:"
-	for i := 0; i < len(demos); i++ {
-		Message = fmt.Sprintf("%s\n\t%s", Message, demos[i].URL)
-	}
+	message := s.generateSTVReply(demos)
 
 	// Grab the current booking.
 	booking, err := models.FindBooking(globals.DB, s.BookingID)
@@ -358,7 +374,7 @@ func (s *Server) UploadSTV() (string, error) {
 		return "", errors.New("Server record could not be updated")
 	}
 
-	return Message, nil
+	return message, nil
 }
 
 func (s *Server) SendCommand(command string) error {
