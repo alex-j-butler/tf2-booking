@@ -206,6 +206,9 @@ func (s *Server) Start() error {
 	return err
 }
 
+// Stop the server using a bash script.
+// Returns:
+// 	error - Error of a failed stop, or nil if none
 func (s *Server) Stop() error {
 	// Stop the STV recording and kick all players cleanly.
 	KickCommand := fmt.Sprintf("tv_stop; kickall \"%s\"", config.Conf.Booking.KickMessage)
@@ -264,17 +267,7 @@ func (s *Server) Book(user *discordgo.User, duration time.Duration) (string, str
 	defer s.Update(globals.RedisClient)
 
 	// Set the server variables.
-	s.ReturnDate = time.Now().Add(duration)
-	s.Booked = true
-	s.BookedDate = time.Now()
-	s.Booker = user.ID
-	s.BookerMention = fmt.Sprintf("<@%s>", user.ID)
-	s.NextPerformanceWarning = time.Now().Add(5 * time.Minute)
-	s.SentWarning = false
-	s.SentIdleWarning = false
-	s.SentLobbyWarning = false
-	s.IdleMinutes = 0
-	s.ErrorMinutes = 0
+	s.SetServerVars(duration, user.ID)
 
 	// Setup the server.
 	RCONPassword, ServerPassword, err := s.Setup()
@@ -282,22 +275,40 @@ func (s *Server) Book(user *discordgo.User, duration time.Duration) (string, str
 	if err != nil {
 		// Reset the server variables so that
 		// the booking bot correctly unbooks the server in case of an error.
-		s.ReturnDate = time.Time{}
-		s.Booked = false
-		s.BookedDate = time.Time{}
-		s.Booker = ""
-		s.BookerMention = ""
-		s.NextPerformanceWarning = time.Time{}
-		s.SentWarning = false
-		s.SentIdleWarning = false
-		s.SentLobbyWarning = false
-		s.IdleMinutes = 0
-		s.ErrorMinutes = 0
+		s.ResetServerVars()
 
 		return "", "", err
 	}
 
 	return RCONPassword, ServerPassword, err
+}
+
+func (s *Server) SetServerVars(duration time.Duration, userID string) {
+	s.ReturnDate = time.Now().Add(duration)
+	s.Booked = true
+	s.BookedDate = time.Now()
+	s.Booker = userID
+	s.BookerMention = fmt.Sprintf("<@%s>", userID)
+	s.NextPerformanceWarning = time.Now().Add(5 * time.Minute)
+	s.SentWarning = false
+	s.SentIdleWarning = false
+	s.SentLobbyWarning = false
+	s.IdleMinutes = 0
+	s.ErrorMinutes = 0
+}
+
+func (s *Server) ResetServerVars() {
+	s.ReturnDate = time.Time{}
+	s.Booked = false
+	s.BookedDate = time.Time{}
+	s.Booker = ""
+	s.BookerMention = ""
+	s.NextPerformanceWarning = time.Time{}
+	s.SentWarning = false
+	s.SentIdleWarning = false
+	s.SentLobbyWarning = false
+	s.IdleMinutes = 0
+	s.ErrorMinutes = 0
 }
 
 func (s *Server) Unbook() error {
@@ -313,18 +324,8 @@ func (s *Server) Unbook() error {
 	booking.UnbookedTime = null.TimeFrom(time.Now())
 	booking.Update(globals.DB)
 
-	// Set the server variables.
-	s.ReturnDate = time.Time{}
-	s.Booked = false
-	s.BookedDate = time.Time{}
-	s.Booker = ""
-	s.BookerMention = ""
-	s.NextPerformanceWarning = time.Time{}
-	s.SentWarning = false
-	s.SentIdleWarning = false
-	s.SentLobbyWarning = false
-	s.IdleMinutes = 0
-	s.ErrorMinutes = 0
+	// Reset server variables.
+	s.ResetServerVars()
 
 	// Update the server in Redis.
 	s.Update(globals.RedisClient)
