@@ -170,8 +170,8 @@ func RunServer(ctx *cli.Context) {
 	// Register the commands and their command handlers.
 	Command = commands.New("")
 	Command.Add(
-		commands.NewCommand(DebugPrint),
-		"debug",
+		commands.NewCommand(SyncServers),
+		"sync",
 	)
 	Command.Add(
 		commands.NewCommand(BookServer),

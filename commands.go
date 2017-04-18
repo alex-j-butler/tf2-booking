@@ -74,7 +74,7 @@ func sendServerDetails(channelID string, serv *servers.Server, serverPassword, r
 	)
 }
 
-func DebugPrint(m *discordgo.MessageCreate, command string, args []string) {
+func SyncServers(m *discordgo.MessageCreate, command string, args []string) {
 	User := &util.PatchUser{m.Author}
 
 	for i, server := range servers.Servers {
