@@ -11,6 +11,7 @@ import (
 
 	redis "gopkg.in/redis.v5"
 
+	"alex-j-butler.com/tf2-booking/booking_api"
 	"alex-j-butler.com/tf2-booking/commands"
 	"alex-j-butler.com/tf2-booking/commands/ingame"
 	"alex-j-butler.com/tf2-booking/commands/ingame/loghandler"
@@ -71,7 +72,15 @@ func main() {
 		},
 	}
 
-	app.Run(os.Args)
+	// app.Run(os.Args)
+
+	client := booking_api.New("http://168.1.12.98:8082")
+	server, err := client.NextServer("bookable")
+	if err != nil {
+		log.Println("next error:", err)
+	} else {
+		log.Println("server:", server)
+	}
 }
 
 // Migrate is the subcommand handler that migrates the database to the latest migration.
