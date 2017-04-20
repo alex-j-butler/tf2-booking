@@ -27,3 +27,27 @@ type ErrorResponse struct {
 type NextResponse struct {
 	Server
 }
+
+type ListAllResponse struct {
+	Servers          []Server `json:"servers"`
+	ServersAvailable int      `json:"servers_available"`
+}
+
+type StartServerReq struct {
+	Name string `json:"name"`
+}
+
+type StopServerReq struct {
+	Name string `json:"name"`
+}
+
+type SetPasswordReq struct {
+	Name           string `json:"name"`
+	RCONPassword   string `json:"rcon_password"`
+	ServerPassword string `json:"server_password"`
+}
+
+type SendCommandReq struct {
+	Name    string `json:"name"`
+	Command string `json:"command"`
+}
