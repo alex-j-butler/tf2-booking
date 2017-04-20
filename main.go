@@ -2,7 +2,6 @@ package main
 
 import (
 	"database/sql"
-	"encoding/json"
 	"fmt"
 	"log"
 	"os"
@@ -11,6 +10,7 @@ import (
 
 	redis "gopkg.in/redis.v5"
 
+	"alex-j-butler.com/tf2-booking/booking_api"
 	"alex-j-butler.com/tf2-booking/commands"
 	"alex-j-butler.com/tf2-booking/commands/ingame"
 	"alex-j-butler.com/tf2-booking/commands/ingame/loghandler"
@@ -44,6 +44,8 @@ var GetDefaultValue *redis.Script
 // Command system
 var Command *commands.Command
 var IngameCommand *ingame.Command
+
+var pool servers.ServerPool
 
 // MessageCreateFunc stores the function that deletes the MessageCreate Discord event handler.
 // This is a fix for the bot receiving messages twice.
@@ -81,7 +83,14 @@ func Migrate(ctx *cli.Context) {
 
 // RunServer is the subcommand handler that starts the TF2 Booking server.
 func RunServer(ctx *cli.Context) {
-	servers.InitialiseServers()
+	// Initialise the server pool.
+	pool = &servers.APIServerPool{Tag: config.Conf.Booking.Tag, APIClient: booking_api.New(config.Conf.Booking.BaseURL)}
+	err := pool.Initialise()
+	if err != nil {
+		log.Println(err)
+		return
+	}
+
 	SetupCron()
 
 	// Connect to the PostgreSQL database.
@@ -114,32 +123,6 @@ func RunServer(ctx *cli.Context) {
 		os.Exit(1)
 	}
 	globals.RedisClient = client
-
-	// When the booking bot starts, we need to insert all the servers that we know about
-	// that do not currently exist in Redis (which is done through the SETNX Redis command),
-	// after which, it will synchronise all of the servers from Redis.
-	for i, server := range servers.Servers {
-		// Serialise the server as a JSON string.
-		serialised, err := json.Marshal(server)
-		if err != nil {
-			panic(err)
-		}
-
-		// Attempt to add the server.
-		err = client.SetNX(fmt.Sprintf("server.%s", server.SessionName), serialised, 0).Err()
-		if err != nil {
-			panic(err)
-		}
-
-		// Synchronise the server from Redis, to get information for existing servers.
-		err = server.Synchronise(globals.RedisClient)
-		if err != nil {
-			panic(err)
-		}
-
-		// Put the modified server back.
-		servers.Servers[i] = server
-	}
 
 	// Create Redis scripts.
 	// Check if the user has already booked a server out.

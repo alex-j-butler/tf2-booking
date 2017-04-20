@@ -10,6 +10,8 @@ import (
 )
 
 type Config struct {
+
+	// Settings for the Discord bot
 	Discord struct {
 		Token          string `yaml:"token"`
 		DefaultChannel string `yaml:"default_channel"`
@@ -19,23 +21,31 @@ type Config struct {
 		NotificationUsers  []string `yaml:"notification_users"`
 	} `yaml:"discord"`
 
+	// Settings for the UDP log handling server
 	LogServer struct {
 		LogAddress       string `yaml:"log_address"`
 		LogAddressRemote string `yaml:"log_address_remote"`
 		LogPort          int    `yaml:"log_port"`
 	} `yaml:"log_server"`
 
+	// Settings for the bookings
 	Booking struct {
 		Duration            util.DurationUtil `yaml:"duration"`
 		ExtendDuration      util.DurationUtil `yaml:"extend_duration"`
 		WarningDuration     util.DurationUtil `yaml:"warning_duration"`
 		IdleWarningDuration int               `yaml:"idle_warning_duration"`
 
-		KickMessage      string `yaml:"kick_message"`
+		KickMessage string `yaml:"kick_message"`
+
+		// Settings used for Bash server runner.
 		SetupCommand     string `yaml:"setup_command"`
 		StartCommand     string `yaml:"start_command"`
 		StopCommand      string `yaml:"stop_command"`
 		UploadSTVCommand string `yaml:"upload_stv_command"`
+
+		// Settings used for the server API server runner.
+		Tag     string `yaml:"tag"`
+		BaseURL string `yaml:"base_url"`
 
 		MaxIdleMinutes int `yaml:"max_idle_minutes"`
 		MinPlayers     int `yaml:"min_players"`

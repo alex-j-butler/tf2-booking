@@ -86,6 +86,34 @@ func (s *Server) Init() {
 	}
 }
 
+func (s *Server) SetServerVars(duration time.Duration, userID string) {
+	s.ReturnDate = time.Now().Add(duration)
+	s.Booked = true
+	s.BookedDate = time.Now()
+	s.Booker = userID
+	s.BookerMention = fmt.Sprintf("<@%s>", userID)
+	s.NextPerformanceWarning = time.Now().Add(5 * time.Minute)
+	s.SentWarning = false
+	s.SentIdleWarning = false
+	s.SentLobbyWarning = false
+	s.IdleMinutes = 0
+	s.ErrorMinutes = 0
+}
+
+func (s *Server) ResetServerVars() {
+	s.ReturnDate = time.Time{}
+	s.Booked = false
+	s.BookedDate = time.Time{}
+	s.Booker = ""
+	s.BookerMention = ""
+	s.NextPerformanceWarning = time.Time{}
+	s.SentWarning = false
+	s.SentIdleWarning = false
+	s.SentLobbyWarning = false
+	s.IdleMinutes = 0
+	s.ErrorMinutes = 0
+}
+
 // Update performs an update of the server into the specified Redis client.
 func (s *Server) Update(redisClient *redis.Client) error {
 	// Serialise the server as JSON.
@@ -123,7 +151,7 @@ func (s *Server) Synchronise(redisClient *redis.Client) error {
 // Currently a server is available for booking if it is not being booked by another user,
 // in the future, this could be extended to block servers from being used (for example, if they are down).
 func (s *Server) IsAvailable() bool {
-	return !s.Booked
+	return !s.Booked && s.Runner.IsAvailable(s)
 }
 
 // BEGIN Deprecated
@@ -283,38 +311,13 @@ func (s *Server) Book(user *discordgo.User, duration time.Duration) (string, str
 	return RCONPassword, ServerPassword, err
 }
 
-func (s *Server) SetServerVars(duration time.Duration, userID string) {
-	s.ReturnDate = time.Now().Add(duration)
-	s.Booked = true
-	s.BookedDate = time.Now()
-	s.Booker = userID
-	s.BookerMention = fmt.Sprintf("<@%s>", userID)
-	s.NextPerformanceWarning = time.Now().Add(5 * time.Minute)
-	s.SentWarning = false
-	s.SentIdleWarning = false
-	s.SentLobbyWarning = false
-	s.IdleMinutes = 0
-	s.ErrorMinutes = 0
-}
-
-func (s *Server) ResetServerVars() {
-	s.ReturnDate = time.Time{}
-	s.Booked = false
-	s.BookedDate = time.Time{}
-	s.Booker = ""
-	s.BookerMention = ""
-	s.NextPerformanceWarning = time.Time{}
-	s.SentWarning = false
-	s.SentIdleWarning = false
-	s.SentLobbyWarning = false
-	s.IdleMinutes = 0
-	s.ErrorMinutes = 0
-}
-
 func (s *Server) Unbook() error {
 	if s.Booked == false {
 		return errors.New("Server is not booked")
 	}
+
+	// Reset server variables.
+	s.ResetServerVars()
 
 	booking, err := models.FindBooking(globals.DB, s.BookingID)
 	if err != nil {
@@ -323,9 +326,6 @@ func (s *Server) Unbook() error {
 
 	booking.UnbookedTime = null.TimeFrom(time.Now())
 	booking.Update(globals.DB)
-
-	// Reset server variables.
-	s.ResetServerVars()
 
 	// Update the server in Redis.
 	s.Update(globals.RedisClient)

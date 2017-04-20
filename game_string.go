@@ -2,8 +2,6 @@ package main
 
 import (
 	"fmt"
-
-	"alex-j-butler.com/tf2-booking/servers"
 )
 
 func GetGameString(num int) string {
@@ -17,11 +15,11 @@ func GetGameString(num int) string {
 }
 
 func UpdateGameString() error {
-	availableServers := len(servers.GetAvailableServers(servers.Servers))
+	availableServers := len(pool.GetAvailableServers())
 
 	if availableServers == 0 {
 		return Session.UpdateStatus(1, GetGameString(availableServers))
-	} else {
-		return Session.UpdateStatus(0, GetGameString(availableServers))
 	}
+
+	return Session.UpdateStatus(0, GetGameString(availableServers))
 }
