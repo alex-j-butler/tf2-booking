@@ -2,7 +2,6 @@ package main
 
 import (
 	"database/sql"
-	"encoding/json"
 	"fmt"
 	"log"
 	"os"
@@ -46,6 +45,8 @@ var GetDefaultValue *redis.Script
 var Command *commands.Command
 var IngameCommand *ingame.Command
 
+var pool servers.ServerPool
+
 // MessageCreateFunc stores the function that deletes the MessageCreate Discord event handler.
 // This is a fix for the bot receiving messages twice.
 // When the Discord client times out, it reconnects, calling the 'OnGuildReady' event again, which adds a new MessageCreate handler, without removing the old one.
@@ -72,15 +73,7 @@ func main() {
 		},
 	}
 
-	// app.Run(os.Args)
-
-	client := booking_api.New("http://168.1.12.98:8082")
-	server, err := client.NextServer("bookable")
-	if err != nil {
-		log.Println("next error:", err)
-	} else {
-		log.Println("server:", server)
-	}
+	app.Run(os.Args)
 }
 
 // Migrate is the subcommand handler that migrates the database to the latest migration.
@@ -90,7 +83,14 @@ func Migrate(ctx *cli.Context) {
 
 // RunServer is the subcommand handler that starts the TF2 Booking server.
 func RunServer(ctx *cli.Context) {
-	servers.InitialiseServers()
+	// servers.InitialiseServers()
+	pool = &servers.APIServerPool{Tag: "bookable", APIClient: booking_api.New("http://168.1.12.98:8082")}
+	err := pool.Initialise()
+	if err != nil {
+		log.Println(err)
+		return
+	}
+
 	SetupCron()
 
 	// Connect to the PostgreSQL database.
@@ -123,32 +123,6 @@ func RunServer(ctx *cli.Context) {
 		os.Exit(1)
 	}
 	globals.RedisClient = client
-
-	// When the booking bot starts, we need to insert all the servers that we know about
-	// that do not currently exist in Redis (which is done through the SETNX Redis command),
-	// after which, it will synchronise all of the servers from Redis.
-	for i, server := range servers.Servers {
-		// Serialise the server as a JSON string.
-		serialised, err := json.Marshal(server)
-		if err != nil {
-			panic(err)
-		}
-
-		// Attempt to add the server.
-		err = client.SetNX(fmt.Sprintf("server.%s", server.SessionName), serialised, 0).Err()
-		if err != nil {
-			panic(err)
-		}
-
-		// Synchronise the server from Redis, to get information for existing servers.
-		err = server.Synchronise(globals.RedisClient)
-		if err != nil {
-			panic(err)
-		}
-
-		// Put the modified server back.
-		servers.Servers[i] = server
-	}
 
 	// Create Redis scripts.
 	// Check if the user has already booked a server out.

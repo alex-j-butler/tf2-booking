@@ -113,8 +113,7 @@ func BookServer(m *discordgo.MessageCreate, command string, args []string) {
 	}
 
 	// Get the next available server.
-	Serv := servers.GetAvailableServer(servers.Servers)
-	// TODO: Maybe the server should be synched now?
+	Serv := pool.GetAvailableServer()
 
 	if Serv != nil {
 		// Book the server.
@@ -135,6 +134,7 @@ func BookServer(m *discordgo.MessageCreate, command string, args []string) {
 							"Uh oh! The server failed to start, contact an admin for further information.",
 						),
 					)
+					log.Println("Failed to book server:", err)
 
 					// Reset the user's booked state.
 					if err := globals.RedisClient.Set(fmt.Sprintf("user.%s", m.Author.ID), "", 0).Err(); err != nil {
@@ -194,7 +194,7 @@ func UnbookServer(m *discordgo.MessageCreate, command string, args []string) {
 		return
 	}
 
-	Serv, err := servers.GetServerBySessionName(servers.Servers, bookingInfoStr)
+	Serv, err := pool.GetServerBySessionName(bookingInfoStr)
 
 	if err == nil && Serv != nil {
 		// Stop the server.
@@ -271,7 +271,7 @@ func ExtendServer(m *discordgo.MessageCreate, command string, args []string) {
 		return
 	}
 
-	Serv, err := servers.GetServerBySessionName(servers.Servers, bookingInfoStr)
+	Serv, err := pool.GetServerBySessionName(bookingInfoStr)
 
 	if err == nil && Serv != nil {
 		// Extend the booking.
@@ -328,7 +328,7 @@ func SendPassword(m *discordgo.MessageCreate, command string, args []string) {
 		return
 	}
 
-	Serv, err := servers.GetServerBySessionName(servers.Servers, bookingInfoStr)
+	Serv, err := pool.GetServerBySessionName(bookingInfoStr)
 
 	if err == nil && Serv != nil {
 		serverPassword, err := Serv.GetCurrentPassword()
@@ -378,7 +378,8 @@ func SendPassword(m *discordgo.MessageCreate, command string, args []string) {
 func PrintStats(m *discordgo.MessageCreate, command string, args []string) {
 	User := &util.PatchUser{m.Author}
 
-	servs := servers.GetBookedServers(servers.Servers)
+	servs := pool.GetBookedServers()
+	allServers := pool.GetServers()
 	message := "Server stats:"
 	count := 0
 
@@ -400,14 +401,13 @@ func PrintStats(m *discordgo.MessageCreate, command string, args []string) {
 		}
 	}
 
-	message = fmt.Sprintf("%s\n\n%d out of %d servers booked", message, count, len(servers.Servers))
+	message = fmt.Sprintf("%s\n\n%d out of %d servers booked", message, count, len(allServers))
 
 	if count == 0 {
 		message = "No servers are currently booked."
 	}
 
-	// This command seems to be taking a long time, so for debugging, we'll see how long this SQL query takes
-	// to run.
+	// This command seems to be taking a long time, so for debugging, we'll see how long this SQL query takes to run.
 	dbqueryStartTime := time.Now()
 
 	stmt, err := globals.DB.Prepare("SELECT server_name, sum(age(unbooked_time, booked_time)) FROM bookings WHERE booked_time > (current_date - $1::interval) GROUP BY server_name ORDER BY server_name ASC;")
