@@ -83,8 +83,8 @@ func Migrate(ctx *cli.Context) {
 
 // RunServer is the subcommand handler that starts the TF2 Booking server.
 func RunServer(ctx *cli.Context) {
-	// servers.InitialiseServers()
-	pool = &servers.APIServerPool{Tag: "bookable", APIClient: booking_api.New("http://168.1.12.98:8082")}
+	// Initialise the server pool.
+	pool = &servers.APIServerPool{Tag: config.Conf.Booking.Tag, APIClient: booking_api.New(config.Conf.Booking.BaseURL)}
 	err := pool.Initialise()
 	if err != nil {
 		log.Println(err)
