@@ -4,11 +4,8 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"io/ioutil"
 	"log"
-	"os/exec"
 	"regexp"
-	"strings"
 	"time"
 
 	"alex-j-butler.com/tf2-booking/config"
@@ -21,7 +18,13 @@ import (
 	redis "gopkg.in/redis.v5"
 )
 
+// DefaultRunner is the default server runner.
+var DefaultRunner = ScriptServerRunner{}
+
 type Server struct {
+	// Interface implementation to use to run this server.
+	Runner ServerRunner `json:"-"`
+
 	Name        string `json:"name" yaml:"name"`
 	Path        string `json:"path" yaml:"path"`
 	Address     string `json:"address" yaml:"address"`
@@ -76,6 +79,41 @@ type Server struct {
 	ErrorMinutes int
 }
 
+// Init sets the default runner if it hasn't already been set.
+func (s *Server) Init() {
+	if s.Runner == nil {
+		s.Runner = DefaultRunner
+	}
+}
+
+func (s *Server) SetServerVars(duration time.Duration, userID string) {
+	s.ReturnDate = time.Now().Add(duration)
+	s.Booked = true
+	s.BookedDate = time.Now()
+	s.Booker = userID
+	s.BookerMention = fmt.Sprintf("<@%s>", userID)
+	s.NextPerformanceWarning = time.Now().Add(5 * time.Minute)
+	s.SentWarning = false
+	s.SentIdleWarning = false
+	s.SentLobbyWarning = false
+	s.IdleMinutes = 0
+	s.ErrorMinutes = 0
+}
+
+func (s *Server) ResetServerVars() {
+	s.ReturnDate = time.Time{}
+	s.Booked = false
+	s.BookedDate = time.Time{}
+	s.Booker = ""
+	s.BookerMention = ""
+	s.NextPerformanceWarning = time.Time{}
+	s.SentWarning = false
+	s.SentIdleWarning = false
+	s.SentLobbyWarning = false
+	s.IdleMinutes = 0
+	s.ErrorMinutes = 0
+}
+
 // Update performs an update of the server into the specified Redis client.
 func (s *Server) Update(redisClient *redis.Client) error {
 	// Serialise the server as JSON.
@@ -113,7 +151,7 @@ func (s *Server) Synchronise(redisClient *redis.Client) error {
 // Currently a server is available for booking if it is not being booked by another user,
 // in the future, this could be extended to block servers from being used (for example, if they are down).
 func (s *Server) IsAvailable() bool {
-	return !s.Booked
+	return !s.Booked && s.Runner.IsAvailable(s)
 }
 
 // BEGIN Deprecated
@@ -171,119 +209,43 @@ func (s *Server) GetCurrentPassword() (string, error) {
 //  string - Server password
 //  error - Error of a failed setup, or nil if none
 func (s *Server) Setup() (string, string, error) {
-	// Retrieve the RCON password & server password.
-	process := exec.Command(
-		"sh",
-		"-c",
-		fmt.Sprintf(
-			"cd %s; %s/%s",
-			s.Path,
-			s.Path,
-			config.Conf.Booking.SetupCommand,
-		),
-	)
-	stdout, _ := process.StdoutPipe()
-	stderr, _ := process.StderrPipe()
-
-	var err error
-	err = process.Start()
-
-	if err != nil {
-		log.Println("Failed to setup server:", err)
-		return "", "", errors.New("Your server could not be setup")
-	}
-
-	stdoutBytes, _ := ioutil.ReadAll(stdout)
-	stderrBytes, _ := ioutil.ReadAll(stderr)
-
-	err = process.Wait()
-
-	if err != nil {
-		log.Println("Failed to setup server:", err)
-		return "", "", errors.New("Your server could not be setup")
-	}
-
 	// Reset the warning notification so that it can be sent again.
 	s.SentWarning = false
 
-	// Trim passwords.
-	RCONPassword := strings.TrimSpace(string(stdoutBytes))
-	ServerPassword := strings.TrimSpace(string(stderrBytes))
+	// Run the setup function from the runner implementation.
+	rconPassword, srvPassword, err := s.Runner.Setup(s)
 
 	// Cache the RCON password, since it can't be changed by the user.
-	s.RCONPassword = RCONPassword
+	s.RCONPassword = rconPassword
 
 	// Update the server.
 	s.Update(globals.RedisClient)
 
-	return RCONPassword, ServerPassword, nil
+	return rconPassword, srvPassword, err
 }
 
 // Start the server using a bash script.
 // Returns:
 //  error - Error of a failed start, or nil if none
 func (s *Server) Start() error {
-	process := exec.Command(
-		"sh",
-		"-c",
-		fmt.Sprintf(
-			"cd %s; %s/%s",
-			s.Path,
-			s.Path,
-			config.Conf.Booking.StartCommand,
-		),
-	)
+	// Run the start function from the runner implementation.
+	err := s.Runner.Start(s)
 
-	var err error
-	err = process.Start()
-
-	if err != nil {
-		log.Println("Process failed to start:", err)
-		return errors.New("Your server could not be started")
-	}
-
-	err = process.Wait()
-
-	if err != nil {
-		log.Println("Process failed to wait:", err)
-		return errors.New("Your server could not be started")
-	}
-
-	return nil
+	return err
 }
 
+// Stop the server using a bash script.
+// Returns:
+// 	error - Error of a failed stop, or nil if none
 func (s *Server) Stop() error {
 	// Stop the STV recording and kick all players cleanly.
 	KickCommand := fmt.Sprintf("tv_stop; kickall \"%s\"", config.Conf.Booking.KickMessage)
 	s.SendCommand(KickCommand)
 
-	process := exec.Command(
-		"sh",
-		"-c",
-		fmt.Sprintf(
-			"cd %s; %s/%s",
-			s.Path,
-			s.Path,
-			config.Conf.Booking.StopCommand,
-		),
-	)
+	// Run the stop function from the runner implementation.
+	err := s.Runner.Stop(s)
 
-	var err error
-	err = process.Start()
-
-	if err != nil {
-		log.Println("Process failed to start:", err)
-		return errors.New("Your server could not be stopped")
-	}
-
-	err = process.Wait()
-
-	if err != nil {
-		log.Println("Process failed to wait:", err)
-		return errors.New("Your server could not be stopped")
-	}
-
-	return nil
+	return err
 }
 
 func (s *Server) Book(user *discordgo.User, duration time.Duration) (string, string, error) {
@@ -333,17 +295,7 @@ func (s *Server) Book(user *discordgo.User, duration time.Duration) (string, str
 	defer s.Update(globals.RedisClient)
 
 	// Set the server variables.
-	s.ReturnDate = time.Now().Add(duration)
-	s.Booked = true
-	s.BookedDate = time.Now()
-	s.Booker = user.ID
-	s.BookerMention = fmt.Sprintf("<@%s>", user.ID)
-	s.NextPerformanceWarning = time.Now().Add(5 * time.Minute)
-	s.SentWarning = false
-	s.SentIdleWarning = false
-	s.SentLobbyWarning = false
-	s.IdleMinutes = 0
-	s.ErrorMinutes = 0
+	s.SetServerVars(duration, user.ID)
 
 	// Setup the server.
 	RCONPassword, ServerPassword, err := s.Setup()
@@ -351,17 +303,7 @@ func (s *Server) Book(user *discordgo.User, duration time.Duration) (string, str
 	if err != nil {
 		// Reset the server variables so that
 		// the booking bot correctly unbooks the server in case of an error.
-		s.ReturnDate = time.Time{}
-		s.Booked = false
-		s.BookedDate = time.Time{}
-		s.Booker = ""
-		s.BookerMention = ""
-		s.NextPerformanceWarning = time.Time{}
-		s.SentWarning = false
-		s.SentIdleWarning = false
-		s.SentLobbyWarning = false
-		s.IdleMinutes = 0
-		s.ErrorMinutes = 0
+		s.ResetServerVars()
 
 		return "", "", err
 	}
@@ -374,6 +316,9 @@ func (s *Server) Unbook() error {
 		return errors.New("Server is not booked")
 	}
 
+	// Reset server variables.
+	s.ResetServerVars()
+
 	booking, err := models.FindBooking(globals.DB, s.BookingID)
 	if err != nil {
 		return errors.New("Server record could not be updated")
@@ -381,19 +326,6 @@ func (s *Server) Unbook() error {
 
 	booking.UnbookedTime = null.TimeFrom(time.Now())
 	booking.Update(globals.DB)
-
-	// Set the server variables.
-	s.ReturnDate = time.Time{}
-	s.Booked = false
-	s.BookedDate = time.Time{}
-	s.Booker = ""
-	s.BookerMention = ""
-	s.NextPerformanceWarning = time.Time{}
-	s.SentWarning = false
-	s.SentIdleWarning = false
-	s.SentLobbyWarning = false
-	s.IdleMinutes = 0
-	s.ErrorMinutes = 0
 
 	// Update the server in Redis.
 	s.Update(globals.RedisClient)
@@ -409,56 +341,20 @@ func (s *Server) ExtendBooking(amount time.Duration) {
 	s.Update(globals.RedisClient)
 }
 
+func (s *Server) generateSTVReply(demos []models.Demo) string {
+	message := "STV Demo(s) uploaded:"
+	for i := 0; i < len(demos); i++ {
+		message = fmt.Sprintf("%s\n\t%s", message, demos[i].URL)
+	}
+
+	return message
+}
+
 func (s *Server) UploadSTV() (string, error) {
-	// Run upload STV demo script.
-	process := exec.Command(
-		"sh",
-		"-c",
-		fmt.Sprintf(
-			"cd %s; %s/%s %s",
-			s.Path,
-			s.Path,
-			config.Conf.Booking.UploadSTVCommand,
-			s.Booker,
-		),
-	)
-	stdout, _ := process.StdoutPipe()
+	// Run the uploadSTV function from the runner implementation.
+	demos, err := s.Runner.UploadSTV(s)
 
-	var err error
-	err = process.Start()
-
-	if err != nil {
-		log.Println("Failed to upload STV:", err)
-		return "", errors.New("Your server failed to upload STV")
-	}
-
-	stdoutBytes, _ := ioutil.ReadAll(stdout)
-
-	err = process.Wait()
-
-	if err != nil {
-		log.Println("Failed to upload STV:", err)
-		return "", errors.New("Your server failed to upload STV")
-	}
-
-	Files := strings.Split(strings.TrimSpace(string(stdoutBytes)), "\n")
-	for i := 0; i < len(Files); i++ {
-		Files[i] = strings.TrimSpace(Files[i])
-	}
-
-	var demos []models.Demo
-
-	Message := "STV Demo(s) uploaded:"
-	for i := 0; i < len(Files); i++ {
-		Message = fmt.Sprintf("%s\n\t%s", Message, Files[i])
-
-		// Create the demo model.
-		var demo models.Demo
-		demo.UploadedTime = null.TimeFrom(time.Now())
-		demo.URL = Files[i]
-
-		demos = append(demos, demo)
-	}
+	message := s.generateSTVReply(demos)
 
 	// Grab the current booking.
 	booking, err := models.FindBooking(globals.DB, s.BookingID)
@@ -479,28 +375,14 @@ func (s *Server) UploadSTV() (string, error) {
 		return "", errors.New("Server record could not be updated")
 	}
 
-	return Message, nil
+	return message, nil
 }
 
 func (s *Server) SendCommand(command string) error {
-	process := exec.Command("tmux", "send-keys", "-t", s.SessionName, "C-m", command, "C-m")
+	// Run the SendCommand function from the runner implementation.
+	err := s.Runner.SendCommand(s, command)
 
-	var err error
-	err = process.Start()
-
-	if err != nil {
-		log.Println("Failed to send command:", err)
-		return errors.New("Your server failed to respond to commands")
-	}
-
-	err = process.Wait()
-
-	if err != nil {
-		log.Println("Failed to send command:", err)
-		return errors.New("Your server failed to respond to commands")
-	}
-
-	return nil
+	return err
 }
 
 func (s *Server) SendRCONCommand(command string) (string, error) {
