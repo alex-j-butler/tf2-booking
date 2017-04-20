@@ -186,3 +186,7 @@ func (s ScriptServerRunner) SendCommand(server *Server, command string) (err err
 
 	return
 }
+
+func (s ScriptServerRunner) IsAvailable(server *Server) bool {
+	return true
+}
