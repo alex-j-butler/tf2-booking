@@ -10,4 +10,5 @@ type ServerRunner interface {
 	SendCommand(server *Server, command string) (err error)
 
 	IsAvailable(server *Server) bool
+	IsBooked(server *Server) bool
 }

@@ -78,10 +78,21 @@ func (b BookingAPIServerRunner) SendCommand(server *Server, command string) erro
 }
 
 func (b BookingAPIServerRunner) IsAvailable(server *Server) bool {
+	// Attempt to request the server information, if it fails, the server is unavailable.
+	_, err := b.APIClient.GetServer(server.Name)
+	if err != nil {
+		// Unavailable!
+		return false
+	}
+
+	return true
+}
+
+func (b BookingAPIServerRunner) IsBooked(server *Server) bool {
 	apiServer, err := b.APIClient.GetServer(server.Name)
 	if err != nil {
 		return false
 	}
 
-	return !apiServer.Running
+	return apiServer.Running
 }

@@ -190,3 +190,7 @@ func (s ScriptServerRunner) SendCommand(server *Server, command string) (err err
 func (s ScriptServerRunner) IsAvailable(server *Server) bool {
 	return true
 }
+
+func (s ScriptServerRunner) IsBooked(server *Server) bool {
+	return true
+}

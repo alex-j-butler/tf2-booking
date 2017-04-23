@@ -17,7 +17,7 @@ func HandleQueryError(s *servers.Server, err error) {
 	if s.ErrorMinutes >= config.Conf.Booking.ErrorThreshold {
 		var message string
 		bookerName := "Unknown"
-		if !s.IsAvailable() {
+		if !s.IsBooked() && s.Available() {
 			u, err := Session.User(s.GetBooker())
 			if err == nil {
 				bookerName = u.Username

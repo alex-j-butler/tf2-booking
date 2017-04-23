@@ -147,11 +147,15 @@ func (s *Server) Synchronise(redisClient *redis.Client) error {
 	return nil
 }
 
-// IsAvailable returns whether the server is currently available for booking.
-// Currently a server is available for booking if it is not being booked by another user,
-// in the future, this could be extended to block servers from being used (for example, if they are down).
-func (s *Server) IsAvailable() bool {
-	return !s.Booked && s.Runner.IsAvailable(s)
+// Available returns whether the server is currently bookable,
+// or whether it's experiencing an error that would prevent it from being successfully booked.
+func (s *Server) Available() bool {
+	return s.Runner.IsAvailable(s)
+}
+
+// IsBooked returns whether the server is currently booked
+func (s *Server) IsBooked() bool {
+	return s.Booked && s.Runner.IsBooked(s)
 }
 
 // BEGIN Deprecated

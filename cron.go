@@ -21,7 +21,7 @@ func CheckUnbookServers() {
 	// Iterate through servers.
 	for _, Serv := range pool.GetBookedServers() {
 		// Send the timelimit warning notification, if required.
-		if !Serv.IsAvailable() && !Serv.SentWarning && (Serv.ReturnDate.Add(config.Conf.Booking.WarningDuration.Duration)).Before(time.Now()) {
+		if !Serv.SentWarning && (Serv.ReturnDate.Add(config.Conf.Booking.WarningDuration.Duration)).Before(time.Now()) {
 			// Only allow this message to be sent once.
 			Serv.SentWarning = true
 
@@ -40,7 +40,7 @@ func CheckUnbookServers() {
 
 		// TODO: Move this to the configuration file?
 		maxIdleMinutes := 15
-		if !Serv.IsAvailable() && !Serv.SentIdleWarning && (maxIdleMinutes-Serv.IdleMinutes) <= config.Conf.Booking.IdleWarningDuration {
+		if !Serv.SentIdleWarning && (maxIdleMinutes-Serv.IdleMinutes) <= config.Conf.Booking.IdleWarningDuration {
 			// Only allow this message to be sent once.
 			Serv.SentIdleWarning = true
 
@@ -65,7 +65,7 @@ func CheckUnbookServers() {
 		}
 
 		// Check if their server is past the return date.
-		if !Serv.IsAvailable() && Serv.ReturnDate.Before(time.Now()) {
+		if Serv.ReturnDate.Before(time.Now()) {
 			UserID := Serv.GetBooker()
 			UserMention := Serv.GetBookerMention()
 

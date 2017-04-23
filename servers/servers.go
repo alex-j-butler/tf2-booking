@@ -47,7 +47,7 @@ func GetAvailableServer(serverList []*Server) *Server {
 func GetAvailableServers(serverList []*Server) []*Server {
 	servers := make([]*Server, 0, len(serverList))
 	for i := 0; i < len(serverList); i++ {
-		if serverList[i].IsAvailable() {
+		if !serverList[i].IsBooked() && serverList[i].Available() {
 			servers = append(servers, serverList[i])
 		}
 	}
@@ -57,7 +57,7 @@ func GetAvailableServers(serverList []*Server) []*Server {
 func GetBookedServers(serverList []*Server) []*Server {
 	servers := make([]*Server, 0, len(serverList))
 	for i := 0; i < len(serverList); i++ {
-		if !serverList[i].IsAvailable() {
+		if serverList[i].IsBooked() && serverList[i].Available() {
 			servers = append(servers, serverList[i])
 		}
 	}

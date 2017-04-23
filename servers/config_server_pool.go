@@ -59,7 +59,7 @@ func (csp *ConfigServerPool) GetAvailableServer() *Server {
 func (csp *ConfigServerPool) GetAvailableServers() []*Server {
 	servers := make([]*Server, 0, len(csp.Servers))
 	for _, server := range csp.Servers {
-		if server.IsAvailable() {
+		if !server.IsBooked() && server.Available() {
 			servers = append(servers, server)
 		}
 	}
@@ -70,7 +70,7 @@ func (csp *ConfigServerPool) GetAvailableServers() []*Server {
 func (csp *ConfigServerPool) GetBookedServers() []*Server {
 	servers := make([]*Server, 0, len(csp.Servers))
 	for _, server := range csp.Servers {
-		if !server.IsAvailable() {
+		if server.IsBooked() && server.Available() {
 			servers = append(servers, server)
 		}
 	}
