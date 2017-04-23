@@ -171,21 +171,31 @@ func RunServer(ctx *cli.Context) {
 		"debug",
 	)
 	Command.Add(
+		commands.NewCommand(Help),
+		"help",
+		"/help",
+	)
+	Command.Add(
 		commands.NewCommand(BookServer),
 		"book",
+		"/book",
 	)
 	Command.Add(
 		commands.NewCommand(UnbookServer),
 		"return",
 		"unbook",
+		"/return",
+		"/unbook",
 	)
 	Command.Add(
 		commands.NewCommand(ExtendServer),
 		"extend",
+		"/extend",
 	)
 	Command.Add(
 		commands.NewCommand(SendPassword),
 		"send password",
+		"/string",
 	)
 	Command.Add(
 		commands.NewCommand(PrintStats).

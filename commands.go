@@ -91,6 +91,21 @@ func DebugPrint(m *discordgo.MessageCreate, command string, args []string) {
 	Session.ChannelMessageSend(m.ChannelID, fmt.Sprintf("%s: Synchronised all servers.", User.GetMention()))
 }
 
+func Help(m *discordgo.MessageCreate, command string, args []string) {
+	User := &util.PatchUser{m.Author}
+
+	helpMessage := `book            - Book a new server
+unbook          - Unbook your current server
+send password   - Send the updated server details
+help            - Display the help message (you're reading it!)
+
+For help, ping @Alex#4240 in this channel.
+
+Note: Ozfortress booking commands also are accepted by this bot.`
+
+	Session.ChannelMessageSend(m.ChannelID, fmt.Sprintf("%s: **Qixalite Bookable Help**:```%s```", User.GetMention(), helpMessage))
+}
+
 // BookServer command handler
 // Called when a user types the 'book' command into the Discord channel.
 // This function checks whether the user has a server booked, if not,
