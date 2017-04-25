@@ -3,7 +3,6 @@ package main
 import (
 	"fmt"
 	"log"
-	"math"
 	"time"
 
 	"alex-j-butler.com/tf2-booking/config"
@@ -184,51 +183,6 @@ func Cron10Seconds() {
 		Serv := &servers.Servers[i]
 
 		if !Serv.IsAvailable() {
-			go func(s *servers.Server) {
-				stats, err := Serv.SendRCONCommand("stats")
-
-				if err != nil {
-					log.Println("Stats query error:", err)
-					return
-				}
-
-				// log.Println("Stats query: ", stats)
-				st, err := util.ParseStats(stats)
-				if err != nil {
-					log.Println("Stats parse error:", err)
-					return
-				}
-
-				// Calculate new average.
-				if s.TickRateMeasurements == 0 || s.TickRateMeasurements > 20 {
-					s.TickRate = st.FPS
-					s.TickRateMeasurements = 1
-				} else {
-					s.TickRate = ((s.TickRate*float32(s.TickRateMeasurements) + st.FPS) / float32(s.TickRateMeasurements+1))
-					s.TickRateMeasurements++
-				}
-
-				tickrate := 1000.0 / 15.0
-				if math.Abs(float64(s.TickRate)-tickrate) > 5.0 && Serv.NextPerformanceWarning.Before(time.Now()) {
-					// Only allow this message to be sent once.
-					Serv.NextPerformanceWarning = time.Now().Add(5 * time.Minute)
-
-					// The 'var' of the server is too high, notify admins.
-					message := fmt.Sprintf(
-						"The server `%s` may be performing poorly (tickrate %f, var %f). Check the ensure the server is not lagging.",
-						s.Name,
-						s.TickRate,
-						math.Abs(float64(s.TickRate)-tickrate),
-					)
-					for _, notificationUser := range config.Conf.Discord.NotificationUsers {
-						UserChannel, _ := Session.UserChannelCreate(notificationUser)
-						Session.ChannelMessageSend(UserChannel.ID, message)
-					}
-				}
-
-				s.Update(globals.RedisClient)
-			}(Serv)
-
 			// TF2Center/TF2Stadium checking.
 			// Here, we want to get the tags of the server, and check if they contain the words 'TF2Center' or 'TF2Stadium', and if they do
 			// we want to send a message to the default channel letting the user know that they're using a Qixalite server for a lobby,

@@ -4,7 +4,6 @@ import (
 	"errors"
 	"io/ioutil"
 	"log"
-	"math"
 
 	yaml "gopkg.in/yaml.v2"
 )
@@ -21,22 +20,12 @@ func InitialiseServers() {
 }
 
 func GetAvailableServer(serverList []Server) *Server {
-	var bestServer *Server
-	var bestDiff float64
 	servers := GetAvailableServers(serverList)
-
-	// Higher than the maximum a TF2 tickrate can differ.
-	bestDiff = 4096.0
-	for i := 0; i < len(servers); i++ {
-		server := servers[i]
-
-		if diff := math.Abs(float64(server.TickRate - 66.6666)); diff < bestDiff {
-			bestServer = server
-			bestDiff = diff
-		}
+	if len(servers) > 0 {
+		return servers[0]
 	}
 
-	return bestServer
+	return nil
 }
 
 func GetAvailableServers(serverList []Server) []*Server {

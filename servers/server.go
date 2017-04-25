@@ -45,15 +45,6 @@ type Server struct {
 	// If this RCON password is invalid, the server can send a tmux command to reset it.
 	RCONPassword string
 
-	// Average tick rate reported by the server.
-	TickRate float32
-
-	// Number of tick rate measurements (used internally for calculating a new average).
-	TickRateMeasurements int
-
-	// Time that the next performance warning will occur.
-	NextPerformanceWarning time.Time
-
 	// Specifies whether the server is currently booked.
 	Booked bool
 
@@ -338,7 +329,6 @@ func (s *Server) Book(user *discordgo.User, duration time.Duration) (string, str
 	s.BookedDate = time.Now()
 	s.Booker = user.ID
 	s.BookerMention = fmt.Sprintf("<@%s>", user.ID)
-	s.NextPerformanceWarning = time.Now().Add(5 * time.Minute)
 	s.SentWarning = false
 	s.SentIdleWarning = false
 	s.SentLobbyWarning = false
@@ -356,7 +346,6 @@ func (s *Server) Book(user *discordgo.User, duration time.Duration) (string, str
 		s.BookedDate = time.Time{}
 		s.Booker = ""
 		s.BookerMention = ""
-		s.NextPerformanceWarning = time.Time{}
 		s.SentWarning = false
 		s.SentIdleWarning = false
 		s.SentLobbyWarning = false
@@ -388,7 +377,6 @@ func (s *Server) Unbook() error {
 	s.BookedDate = time.Time{}
 	s.Booker = ""
 	s.BookerMention = ""
-	s.NextPerformanceWarning = time.Time{}
 	s.SentWarning = false
 	s.SentIdleWarning = false
 	s.SentLobbyWarning = false

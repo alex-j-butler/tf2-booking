@@ -410,7 +410,7 @@ func PrintStats(m *discordgo.MessageCreate, command string, args []string) {
 				username = bookerUser.Username
 			}
 
-			message = fmt.Sprintf("%s\n\t%s (Booked by %s): %f", message, server.Name, username, server.TickRate)
+			message = fmt.Sprintf("%s\n\t%s (Booked by %s)", message, server.Name, username)
 			count++
 		}
 	}
