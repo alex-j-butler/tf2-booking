@@ -5,6 +5,8 @@ import (
 	"log"
 	"time"
 
+	"bytes"
+
 	"alex-j-butler.com/tf2-booking/config"
 	"alex-j-butler.com/tf2-booking/globals"
 	"alex-j-butler.com/tf2-booking/servers"
@@ -12,6 +14,7 @@ import (
 	"alex-j-butler.com/tf2-booking/wait"
 	"github.com/bwmarrin/discordgo"
 	"github.com/google/go-github/github"
+	"github.com/olekukonko/tablewriter"
 )
 
 func sendServerDetails(channelID string, serv *servers.Server, serverPassword, rconPassword string) {
@@ -390,36 +393,57 @@ func SendPassword(m *discordgo.MessageCreate, command string, args []string) {
 	}
 }
 
+func getServerStatusString(server *servers.Server) string {
+	if server.IsAvailable() {
+		return "Running"
+	}
+	return "Stopped"
+}
+
 func PrintStats(m *discordgo.MessageCreate, command string, args []string) {
 	User := &util.PatchUser{m.Author}
 
-	servs := servers.GetBookedServers(servers.Servers)
+	// servs := servers.GetBookedServers(servers.Servers)
+	servs := servers.Servers
 	message := "Server stats:"
 	count := 0
 
-	for i := 0; i < len(servs); i++ {
-		server := servs[i]
-		if server != nil {
-			bookerID := server.GetBooker()
-			bookerUser, err := Session.User(bookerID)
+	data := make([][]string, 0, len(servs))
+	for _, serv := range servs {
+		data = append(data, []string{serv.Name, getServerStatusString(&serv), "", "", serv.Booker})
+	}
 
-			var username string
-			if err != nil {
-				username = "Unknown"
-			} else {
-				username = bookerUser.Username
+	var buf bytes.Buffer
+	table := tablewriter.NewWriter(&buf)
+	table.SetHeader([]string{"Server name", "Status", "Time left", "Booker name", "Booker ID"})
+	table.SetBorders(tablewriter.Border{Left: true, Top: false, Right: true, Bottom: false})
+	table.SetCenterSeparator("|")
+	table.SetAutoFormatHeaders(false)
+	table.AppendBulk(data)
+	table.Render()
+
+	/*
+		for i := 0; i < len(servs); i++ {
+			server := servs[i]
+			if server != nil {
+				bookerID := server.GetBooker()
+				bookerUser, err := Session.User(bookerID)
+
+				var username string
+				if err != nil {
+					username = "Unknown"
+				} else {
+					username = bookerUser.Username
+				}
+
+				message = fmt.Sprintf("%s\n\t%s (Booked by %s)", message, server.Name, username)
+				count++
 			}
-
-			message = fmt.Sprintf("%s\n\t%s (Booked by %s)", message, server.Name, username)
-			count++
 		}
-	}
+	*/
 
+	message = fmt.Sprintf("%s\n```%s```", message, buf.String())
 	message = fmt.Sprintf("%s\n\n%d out of %d servers booked", message, count, len(servers.Servers))
-
-	if count == 0 {
-		message = "No servers are currently booked."
-	}
 
 	// This command seems to be taking a long time, so for debugging, we'll see how long this SQL query takes
 	// to run.

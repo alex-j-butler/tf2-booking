@@ -185,6 +185,12 @@
 			"revisionTime": "2016-09-02T15:44:25Z"
 		},
 		{
+			"checksumSHA1": "Pc8xXumeXymW7wNgN5lNW8RG9kU=",
+			"path": "github.com/olekukonko/tablewriter",
+			"revision": "febf2d34b54a69ce7530036c7503b1c9fbfdf0bb",
+			"revisionTime": "2017-01-28T05:05:32Z"
+		},
+		{
 			"checksumSHA1": "8Y05Pz7onrQPcVWW6JStSsYRh6E=",
 			"path": "github.com/pelletier/go-buffruneio",
 			"revision": "df1e16fde7fc330a0ca68167c23bf7ed6ac31d6d",
