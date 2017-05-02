@@ -394,7 +394,7 @@ func SendPassword(m *discordgo.MessageCreate, command string, args []string) {
 }
 
 func getServerStatusString(server *servers.Server) string {
-	if server.IsAvailable() {
+	if !server.IsAvailable() {
 		return "Running"
 	}
 	return "Stopped"
