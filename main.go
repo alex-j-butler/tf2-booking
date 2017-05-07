@@ -176,6 +176,13 @@ func RunServer(ctx *cli.Context) {
 		"/help",
 	)
 	Command.Add(
+		commands.NewCommand(DemoLink),
+		"demo",
+		"demos",
+		"/demo",
+		"/demos"
+	)
+	Command.Add(
 		commands.NewCommand(BookServer),
 		"book",
 		"/book",

@@ -100,6 +100,7 @@ func Help(m *discordgo.MessageCreate, command string, args []string) {
 	helpMessage := `book            - Book a new server
 unbook          - Unbook your current server
 send password   - Send the updated server details
+demos           - Send the link to the uploaded demos (soon!)
 help            - Display the help message (you're reading it!)
 
 For help, ping @Alex#4240 in this channel.
@@ -107,6 +108,15 @@ For help, ping @Alex#4240 in this channel.
 Note: Ozfortress booking commands also are accepted by this bot.`
 
 	Session.ChannelMessageSend(m.ChannelID, fmt.Sprintf("%s: **Qixalite Bookable Help**:```%s```", User.GetMention(), helpMessage))
+}
+
+// DemoLink command handler.
+// Called when the user types the 'demo' command into the Discord channel.
+// This function should send them the link to the Qixalite demo store.
+func DemoLink(m *discordgo.MessageCreate, command string, args []string) {
+	User := &util.PatchUser{m.Author}
+
+	Session.ChannelMessageSend(m.ChannelID, fmt.Sprintf("%s: Soon, my child.", User.GetMention()))
 }
 
 // BookServer command handler
