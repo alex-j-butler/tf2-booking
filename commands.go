@@ -70,8 +70,7 @@ func sendServerDetails(channelID string, serv *servers.Server, serverPassword, r
 			Color: 12763842,
 			Type:  "rich",
 			Author: &discordgo.MessageEmbedAuthor{
-				Name:    ChooseRandomTip(),
-				IconURL: "https://tf2-au.qixalite.com/stv/help_icon.png",
+				Name: ChooseRandomTip(),
 			},
 		},
 	)
