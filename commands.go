@@ -116,7 +116,7 @@ Note: Ozfortress booking commands also are accepted by this bot.`
 func DemoLink(m *discordgo.MessageCreate, command string, args []string) {
 	User := &util.PatchUser{m.Author}
 
-	Session.ChannelMessageSend(m.ChannelID, fmt.Sprintf("%s: Soon, my child.", User.GetMention()))
+	Session.ChannelMessageSend(m.ChannelID, fmt.Sprintf("%s: https://stv.qixalite.com/", User.GetMention()))
 }
 
 // BookServer command handler

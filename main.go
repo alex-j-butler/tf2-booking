@@ -180,7 +180,7 @@ func RunServer(ctx *cli.Context) {
 		"demo",
 		"demos",
 		"/demo",
-		"/demos"
+		"/demos",
 	)
 	Command.Add(
 		commands.NewCommand(BookServer),
