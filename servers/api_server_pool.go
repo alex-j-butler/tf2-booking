@@ -1,13 +1,25 @@
 package servers
 
 import (
+	"context"
 	"errors"
 	"fmt"
+	"log"
 	"math"
 	"path"
 
 	"alex-j-butler.com/tf2-booking/booking_api"
 )
+
+var (
+	contextUser = contextKey("user")
+)
+
+type contextKey string
+
+func (c contextKey) String() string {
+	return "servers ctxkey " + string(c)
+}
 
 // APIServerPool is a server pool that is loaded from the booking API.
 type APIServerPool struct {
@@ -18,6 +30,10 @@ type APIServerPool struct {
 
 func (asp *APIServerPool) Initialise() error {
 	asp.CachedServers = make(map[string]*Server)
+	err := asp.updateCache()
+	if err != nil {
+		log.Println("APIServerPool UpdateCache:", err)
+	}
 
 	return nil
 }
@@ -64,7 +80,9 @@ func (asp *APIServerPool) updateCache() error {
 	// a booking server.
 	for _, apiServer := range apiServers {
 		// Check if we've seen this server before, and get the server it's mapped to.
-		if _, ok := asp.CachedServers[apiServer.Name]; !ok {
+		if _, ok := asp.CachedServers[apiServer.UUID]; !ok {
+			ctx := context.Background()
+
 			server := &Server{
 				Name:         apiServer.Name,
 				Path:         path.Dir(apiServer.Executable),
@@ -72,10 +90,11 @@ func (asp *APIServerPool) updateCache() error {
 				STVAddress:   fmt.Sprintf("%s:%d", apiServer.IPAddress, apiServer.STVPort),
 				SessionName:  apiServer.Name,
 				RCONPassword: apiServer.RCONPassword,
+				Context:      context.WithValue(ctx, contextUser, apiServer.UUID),
 			}
 			// server.Init()
 			server.Runner = &BookingAPIServerRunner{APIClient: asp.APIClient}
-			asp.CachedServers[apiServer.Name] = server
+			asp.CachedServers[apiServer.UUID] = server
 		}
 	}
 

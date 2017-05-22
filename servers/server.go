@@ -1,6 +1,7 @@
 package servers
 
 import (
+	"context"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -77,6 +78,9 @@ type Server struct {
 
 	// ErrorMinutes is the number of minutes the server has been in an errored state for.
 	ErrorMinutes int
+
+	// Context for storing additional information (such as a UUID).
+	Context context.Context
 }
 
 // Init sets the default runner if it hasn't already been set.
@@ -84,6 +88,7 @@ func (s *Server) Init() {
 	if s.Runner == nil {
 		s.Runner = DefaultRunner
 	}
+	s.Context = context.Background()
 }
 
 func (s *Server) SetServerVars(duration time.Duration, userID string) {
@@ -418,4 +423,9 @@ func (s *Server) SendRCONCommand(command string) (string, error) {
 	}
 
 	return output, nil
+}
+
+// Console queries the server for the latest console lines.
+func (s *Server) Console() ([]string, error) {
+	return s.Runner.Console(s)
 }

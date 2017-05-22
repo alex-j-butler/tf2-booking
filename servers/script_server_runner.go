@@ -187,6 +187,10 @@ func (s ScriptServerRunner) SendCommand(server *Server, command string) (err err
 	return
 }
 
+func (s ScriptServerRunner) Console(server *Server) (consoleLines []string, err error) {
+	return []string{"WARNING! Implement Console in ScriptServerRunner!"}, nil
+}
+
 func (s ScriptServerRunner) IsAvailable(server *Server) bool {
 	return true
 }
