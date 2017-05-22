@@ -65,20 +65,9 @@ func main() {
 			Usage:   "run the server",
 			Action:  RunServer,
 		},
-		{
-			Name:    "migrate",
-			Aliases: []string{"m"},
-			Usage:   "migrate the database",
-			Action:  Migrate,
-		},
 	}
 
 	app.Run(os.Args)
-}
-
-// Migrate is the subcommand handler that migrates the database to the latest migration.
-func Migrate(ctx *cli.Context) {
-	log.Println("Error: Migrate is currently unimplemented")
 }
 
 // RunServer is the subcommand handler that starts the TF2 Booking server.
