@@ -46,7 +46,7 @@ func (b BookingAPIServerRunner) Setup(server *Server) (rconPassword string, srvP
 	srvPassword = b.generatePassword()
 
 	// Retrieve the API server instance from the API client.
-	apiServer, err := b.APIClient.GetServer(server.Context.Value(contextUser).(string))
+	apiServer, err := b.APIClient.GetServer(server.Context.Value(contextUUID).(string))
 	if err != nil {
 		return "", "", err
 	}
@@ -59,7 +59,7 @@ func (b BookingAPIServerRunner) Setup(server *Server) (rconPassword string, srvP
 
 func (b BookingAPIServerRunner) Start(server *Server) error {
 	// Retrieve the API server instance from the API client.
-	apiServer, err := b.APIClient.GetServer(server.Context.Value(contextUser).(string))
+	apiServer, err := b.APIClient.GetServer(server.Context.Value(contextUUID).(string))
 	if err != nil {
 		return err
 	}
@@ -72,7 +72,7 @@ func (b BookingAPIServerRunner) Start(server *Server) error {
 
 func (b BookingAPIServerRunner) Stop(server *Server) error {
 	// Retrieve the API server instance from the API client.
-	apiServer, err := b.APIClient.GetServer(server.Context.Value(contextUser).(string))
+	apiServer, err := b.APIClient.GetServer(server.Context.Value(contextUUID).(string))
 	if err != nil {
 		return err
 	}
@@ -93,7 +93,7 @@ func (b BookingAPIServerRunner) UploadSTV(server *Server) ([]models.Demo, error)
 
 func (b BookingAPIServerRunner) SendCommand(server *Server, command string) error {
 	// Retrieve the API server instance from the API client.
-	apiServer, err := b.APIClient.GetServer(server.Context.Value(contextUser).(string))
+	apiServer, err := b.APIClient.GetServer(server.Context.Value(contextUUID).(string))
 	if err != nil {
 		return err
 	}
@@ -106,7 +106,7 @@ func (b BookingAPIServerRunner) SendCommand(server *Server, command string) erro
 
 func (b BookingAPIServerRunner) Console(server *Server) ([]string, error) {
 	// Retrieve the API server instance from the API client.
-	apiServer, err := b.APIClient.GetServer(server.Context.Value(contextUser).(string))
+	apiServer, err := b.APIClient.GetServer(server.Context.Value(contextUUID).(string))
 	if err != nil {
 		return nil, err
 	}
@@ -117,7 +117,7 @@ func (b BookingAPIServerRunner) Console(server *Server) ([]string, error) {
 
 func (b BookingAPIServerRunner) IsAvailable(server *Server) bool {
 	// Attempt to request the server information, if it fails, the server is unavailable.
-	_, err := b.APIClient.GetServer(server.Context.Value(contextUser).(string))
+	_, err := b.APIClient.GetServer(server.Context.Value(contextUUID).(string))
 	if err != nil {
 		// Unavailable!
 		return false
@@ -127,7 +127,7 @@ func (b BookingAPIServerRunner) IsAvailable(server *Server) bool {
 }
 
 func (b BookingAPIServerRunner) IsBooked(server *Server) bool {
-	apiServer, err := b.APIClient.GetServer(server.Context.Value(contextUser).(string))
+	apiServer, err := b.APIClient.GetServer(server.Context.Value(contextUUID).(string))
 	if err != nil {
 		return false
 	}

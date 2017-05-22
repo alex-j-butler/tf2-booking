@@ -11,7 +11,7 @@ import (
 )
 
 var (
-	contextUser = contextKey("user")
+	contextUUID = contextKey("uuid")
 )
 
 type contextKey string
@@ -80,7 +80,7 @@ func (asp *APIServerPool) updateCache() error {
 				STVAddress:   fmt.Sprintf("%s:%d", apiServer.IPAddress, apiServer.STVPort),
 				SessionName:  apiServer.Name,
 				RCONPassword: apiServer.RCONPassword,
-				Context:      context.WithValue(ctx, contextUser, apiServer.UUID),
+				Context:      context.WithValue(ctx, contextUUID, apiServer.UUID),
 			}
 			// server.Init()
 			server.Runner = &BookingAPIServerRunner{APIClient: asp.APIClient}
