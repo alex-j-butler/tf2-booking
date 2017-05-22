@@ -5,7 +5,6 @@ import (
 	"errors"
 	"fmt"
 	"log"
-	"math"
 	"path"
 
 	"alex-j-butler.com/tf2-booking/booking_api"
@@ -53,21 +52,12 @@ func (asp *APIServerPool) GetServers() []*Server {
 }
 
 func (asp *APIServerPool) GetAvailableServer() *Server {
-	var bestServer *Server
-	var bestDiff float64
 	servers := asp.GetAvailableServers()
-
-	// Higher than the maximum a TF2 tickrate can differ.
-	bestDiff = 4096.0
-	for _, server := range servers {
-		if diff := math.Abs(float64(server.TickRate - 66.6666)); diff < bestDiff {
-			bestServer = server
-			bestDiff = diff
-		}
+	if len(servers) > 0 {
+		return servers[0]
 	}
 
-	// Return the best available server, may be nil if no servers are available.
-	return bestServer
+	return nil
 }
 
 func (asp *APIServerPool) updateCache() error {

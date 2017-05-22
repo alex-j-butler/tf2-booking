@@ -5,6 +5,8 @@ import (
 	"log"
 	"time"
 
+	"bytes"
+
 	"alex-j-butler.com/tf2-booking/config"
 	"alex-j-butler.com/tf2-booking/globals"
 	"alex-j-butler.com/tf2-booking/servers"
@@ -12,6 +14,7 @@ import (
 	"alex-j-butler.com/tf2-booking/wait"
 	"github.com/bwmarrin/discordgo"
 	"github.com/google/go-github/github"
+	"github.com/olekukonko/tablewriter"
 )
 
 func sendServerDetails(channelID string, serv *servers.Server, serverPassword, rconPassword string) {
@@ -89,6 +92,31 @@ func SyncServers(m *discordgo.MessageCreate, command string, args []string) {
 	}
 
 	Session.ChannelMessageSend(m.ChannelID, fmt.Sprintf("%s: Synchronised all servers.", User.GetMention()))
+}
+
+func Help(m *discordgo.MessageCreate, command string, args []string) {
+	User := &util.PatchUser{m.Author}
+
+	helpMessage := `book            - Book a new server
+unbook          - Unbook your current server
+send password   - Send the updated server details
+demos           - Send the link to the uploaded demos (soon!)
+help            - Display the help message (you're reading it!)
+
+For help, ping @Alex#4240 in this channel.
+
+Note: Ozfortress booking commands also are accepted by this bot.`
+
+	Session.ChannelMessageSend(m.ChannelID, fmt.Sprintf("%s: **Qixalite Bookable Help**:```%s```", User.GetMention(), helpMessage))
+}
+
+// DemoLink command handler.
+// Called when the user types the 'demo' command into the Discord channel.
+// This function should send them the link to the Qixalite demo store.
+func DemoLink(m *discordgo.MessageCreate, command string, args []string) {
+	User := &util.PatchUser{m.Author}
+
+	Session.ChannelMessageSend(m.ChannelID, fmt.Sprintf("%s: https://stv.qixalite.com/", User.GetMention()))
 }
 
 // BookServer command handler
@@ -375,33 +403,67 @@ func SendPassword(m *discordgo.MessageCreate, command string, args []string) {
 	}
 }
 
+func getServerStatusString(server *servers.Server) string {
+	if server.IsBooked() {
+		return "Running"
+	}
+	return "Stopped"
+}
+
 func PrintStats(m *discordgo.MessageCreate, command string, args []string) {
 	User := &util.PatchUser{m.Author}
 
-	servs := pool.GetBookedServers()
-	allServers := pool.GetServers()
+	servs := pool.GetServers()
 	message := "Server stats:"
 	count := 0
 
-	for i := 0; i < len(servs); i++ {
-		server := servs[i]
-		if server != nil {
-			bookerID := server.GetBooker()
-			bookerUser, err := Session.User(bookerID)
+	data := make([][]string, 0, len(servs))
+	for _, serv := range servs {
+		// Retrieve the name of the Discord user who booked the server. Uses empty string if no one has booked the server.
+		bookerID := serv.GetBooker()
+		bookerUser, err := Session.User(bookerID)
 
-			var username string
-			if err != nil {
-				username = "Unknown"
-			} else {
-				username = bookerUser.Username
-			}
-
-			message = fmt.Sprintf("%s\n\t%s (Booked by %s): %f", message, server.Name, username, server.TickRate)
-			count++
+		var username string
+		if err != nil {
+			username = ""
+		} else {
+			username = bookerUser.Username
 		}
+
+		data = append(data, []string{serv.Name, getServerStatusString(serv), "", username, serv.Booker})
 	}
 
-	message = fmt.Sprintf("%s\n\n%d out of %d servers booked", message, count, len(allServers))
+	var buf bytes.Buffer
+	table := tablewriter.NewWriter(&buf)
+	table.SetHeader([]string{"Server name", "Status", "Time left", "Booker name", "Booker ID"})
+	table.SetBorders(tablewriter.Border{Left: true, Top: false, Right: true, Bottom: false})
+	table.SetCenterSeparator("|")
+	table.SetAutoFormatHeaders(false)
+	table.AppendBulk(data)
+	table.Render()
+
+	/*
+		for i := 0; i < len(servs); i++ {
+			server := servs[i]
+			if server != nil {
+				bookerID := server.GetBooker()
+				bookerUser, err := Session.User(bookerID)
+
+				var username string
+				if err != nil {
+					username = "Unknown"
+				} else {
+					username = bookerUser.Username
+				}
+
+				message = fmt.Sprintf("%s\n\t%s (Booked by %s)", message, server.Name, username)
+				count++
+			}
+		}
+	*/
+
+	message = fmt.Sprintf("%s\n```%s```", message, buf.String())
+	message = fmt.Sprintf("%s\n\n%d out of %d servers booked", message, count, len(servers.Servers))
 
 	if count == 0 {
 		message = "No servers are currently booked."

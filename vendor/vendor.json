@@ -179,7 +179,7 @@
 			"revisionTime": "2017-02-01T02:35:40Z"
 		},
 		{
-			"checksumSHA1": "YTgVg6ylwLPnO8Sw2fDVMAt3n/E=",
+			"checksumSHA1": "LAR/G/IY1GviHYkGAoi6kVXq1Jg=",
 			"path": "github.com/mitchellh/mapstructure",
 			"revision": "bfdb1a85537d60bc7e954e600c250219ea497417",
 			"revisionTime": "2016-12-11T22:23:15Z"
@@ -197,7 +197,7 @@
 			"revisionTime": "2017-01-28T05:05:32Z"
 		},
 		{
-			"checksumSHA1": "p85wl+d5C+h6wD454NGR06jZ6pA=",
+			"checksumSHA1": "8Y05Pz7onrQPcVWW6JStSsYRh6E=",
 			"path": "github.com/pelletier/go-buffruneio",
 			"revision": "df1e16fde7fc330a0ca68167c23bf7ed6ac31d6d",
 			"revisionTime": "2016-01-24T19:35:03Z"

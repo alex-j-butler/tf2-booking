@@ -49,15 +49,6 @@ type Server struct {
 	// If this RCON password is invalid, the server can send a tmux command to reset it.
 	RCONPassword string
 
-	// Average tick rate reported by the server.
-	TickRate float32
-
-	// Number of tick rate measurements (used internally for calculating a new average).
-	TickRateMeasurements int
-
-	// Time that the next performance warning will occur.
-	NextPerformanceWarning time.Time
-
 	// Specifies whether the server is currently booked.
 	Booked bool
 
@@ -97,7 +88,6 @@ func (s *Server) SetServerVars(duration time.Duration, userID string) {
 	s.BookedDate = time.Now()
 	s.Booker = userID
 	s.BookerMention = fmt.Sprintf("<@%s>", userID)
-	s.NextPerformanceWarning = time.Now().Add(5 * time.Minute)
 	s.SentWarning = false
 	s.SentIdleWarning = false
 	s.SentLobbyWarning = false
@@ -111,7 +101,6 @@ func (s *Server) ResetServerVars() {
 	s.BookedDate = time.Time{}
 	s.Booker = ""
 	s.BookerMention = ""
-	s.NextPerformanceWarning = time.Time{}
 	s.SentWarning = false
 	s.SentIdleWarning = false
 	s.SentLobbyWarning = false
