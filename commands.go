@@ -413,6 +413,18 @@ func PrintStats(m *discordgo.MessageCreate, command string, args []string) {
 	User := &util.PatchUser{m.Author}
 
 	servs := pool.GetServers()
+	// Sync the servers from redis.
+	for i, server := range servs {
+		// Synchronise the server from Redis, to get information for existing servers.
+		err := server.Synchronise(globals.RedisClient)
+		if err != nil {
+			panic(err)
+		}
+
+		// Put the modified server back.
+		servs[i] = server
+	}
+
 	message := "Server stats:"
 	count := 0
 
