@@ -3,7 +3,6 @@
 package booking_api
 
 import (
-	"bytes"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -69,134 +68,6 @@ func (c BookingClient) GetServers() ([]Server, error) {
 		}
 		return []Server{}, errors.New(errResp.Message)
 	}
-}
-
-func (c BookingClient) StartServer(name string) error {
-	var buf bytes.Buffer
-	j := json.NewEncoder(&buf)
-	err := j.Encode(StartServerReq{Name: name})
-	if err != nil {
-		return err
-	}
-
-	req, _ := http.NewRequest(
-		"POST",
-		c.getAPIPath("v1", "servers", "start"),
-		&buf,
-	)
-
-	resp, err := c.client.Do(req)
-	if err != nil {
-		return nil
-	}
-
-	if resp.StatusCode == http.StatusOK {
-		return nil
-	}
-
-	var errResp ErrorResponse
-	jsonDecoder := json.NewDecoder(resp.Body)
-	err = jsonDecoder.Decode(&errResp)
-	if err != nil {
-		return err
-	}
-	return errors.New(errResp.Message)
-}
-
-func (c BookingClient) StopServer(name string) error {
-	var buf bytes.Buffer
-	j := json.NewEncoder(&buf)
-	err := j.Encode(StopServerReq{Name: name})
-	if err != nil {
-		return err
-	}
-
-	req, _ := http.NewRequest(
-		"POST",
-		c.getAPIPath("v1", "servers", "stop"),
-		&buf,
-	)
-
-	resp, err := c.client.Do(req)
-	if err != nil {
-		return nil
-	}
-
-	if resp.StatusCode == http.StatusOK {
-		return nil
-	}
-
-	var errResp ErrorResponse
-	jsonDecoder := json.NewDecoder(resp.Body)
-	err = jsonDecoder.Decode(&errResp)
-	if err != nil {
-		return err
-	}
-	return errors.New(errResp.Message)
-}
-
-func (c BookingClient) SetPassword(name string, rconPassword string, srvPassword string) error {
-	var buf bytes.Buffer
-	j := json.NewEncoder(&buf)
-	err := j.Encode(SetPasswordReq{Name: name, RCONPassword: rconPassword, ServerPassword: srvPassword})
-	if err != nil {
-		return err
-	}
-
-	req, _ := http.NewRequest(
-		"POST",
-		c.getAPIPath("v1", "servers", "setpassword"),
-		&buf,
-	)
-
-	resp, err := c.client.Do(req)
-	if err != nil {
-		return nil
-	}
-
-	if resp.StatusCode == http.StatusOK {
-		return nil
-	}
-
-	var errResp ErrorResponse
-	jsonDecoder := json.NewDecoder(resp.Body)
-	err = jsonDecoder.Decode(&errResp)
-	if err != nil {
-		return err
-	}
-	return errors.New(errResp.Message)
-}
-
-func (c BookingClient) SendCommand(name string, command string) error {
-	var buf bytes.Buffer
-	j := json.NewEncoder(&buf)
-	err := j.Encode(SendCommandReq{Name: name, Command: command})
-	if err != nil {
-		return err
-	}
-
-	req, _ := http.NewRequest(
-		"POST",
-		c.getAPIPath("v1", "servers", "sendcommand"),
-		&buf,
-	)
-
-	resp, err := c.client.Do(req)
-	if err != nil {
-		return nil
-	}
-
-	if resp.StatusCode == http.StatusOK {
-		return nil
-	}
-
-	var errResp ErrorResponse
-	jsonDecoder := json.NewDecoder(resp.Body)
-	err = jsonDecoder.Decode(&errResp)
-	if err != nil {
-		return err
-	}
-	return errors.New(errResp.Message)
 }
 
 func (c BookingClient) GetServersByTag(tag string) ([]Server, error) {
@@ -279,7 +150,7 @@ func (c BookingClient) NextServer(tag string) (Server, error) {
 	}
 }
 
-func (c BookingClient) GetServer(name string) (Server, error) {
+func (c BookingClient) GetServer(uuid string) (Server, error) {
 	req, _ := http.NewRequest(
 		"GET",
 		c.getAPIPath("v1", "servers", "list"),
@@ -287,7 +158,7 @@ func (c BookingClient) GetServer(name string) (Server, error) {
 	)
 
 	c.createQuery(req, map[string]string{
-		"name": name,
+		"uuid": uuid,
 	})
 
 	resp, err := c.client.Do(req)

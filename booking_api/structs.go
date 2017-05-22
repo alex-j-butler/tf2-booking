@@ -1,22 +1,5 @@
 package booking_api
 
-type Server struct {
-	Name string   `json:"name"`
-	Tags []string `json:"tags"`
-
-	IPAddress string `json:"ip_address"`
-	Port      int    `json:"port"`
-	STVPort   int    `json:"stv_port"`
-
-	ServerPassword string `json:"server_password"`
-	RCONPassword   string `json:"rcon_password"`
-
-	Executable string   `json:"executable"`
-	Options    []string `json:"options"`
-
-	Running bool `json:"running"`
-}
-
 type ErrorResponse struct {
 	Status  int    `json:"code"`
 	Message string `json:"message"`
@@ -33,21 +16,26 @@ type ListAllResponse struct {
 	ServersAvailable int      `json:"servers_available"`
 }
 
+type ConsoleServerResponse struct {
+	ConsoleLines []string `json:"console_lines"`
+	Lines        int      `json:"lines"`
+}
+
 type StartServerReq struct {
-	Name string `json:"name"`
+	UUID string `json:"uuid"`
 }
 
 type StopServerReq struct {
-	Name string `json:"name"`
+	UUID string `json:"uuid"`
 }
 
 type SetPasswordReq struct {
-	Name           string `json:"name"`
+	UUID           string `json:"uuid"`
 	RCONPassword   string `json:"rcon_password"`
 	ServerPassword string `json:"server_password"`
 }
 
 type SendCommandReq struct {
-	Name    string `json:"name"`
+	UUID    string `json:"uuid"`
 	Command string `json:"command"`
 }
