@@ -441,12 +441,12 @@ func PrintStats(m *discordgo.MessageCreate, command string, args []string) {
 			username = bookerUser.Username
 		}
 
-		data = append(data, []string{serv.Name, getServerStatusString(serv), "", username, serv.Booker})
+		data = append(data, []string{serv.Name, getServerStatusString(serv), serv.ReturnDate.String(), username, serv.Booker})
 	}
 
 	var buf bytes.Buffer
 	table := tablewriter.NewWriter(&buf)
-	table.SetHeader([]string{"Server name", "Status", "Time left", "Booker name", "Booker ID"})
+	table.SetHeader([]string{"Server name", "Status", "Unbook time", "Booker name", "Booker ID"})
 	table.SetBorders(tablewriter.Border{Left: true, Top: false, Right: true, Bottom: false})
 	table.SetCenterSeparator("|")
 	table.SetAutoFormatHeaders(false)
@@ -475,10 +475,6 @@ func PrintStats(m *discordgo.MessageCreate, command string, args []string) {
 
 	message = fmt.Sprintf("%s\n```%s```", message, buf.String())
 	message = fmt.Sprintf("%s\n\n%d out of %d servers booked", message, count, len(servers.Servers))
-
-	if count == 0 {
-		message = "No servers are currently booked."
-	}
 
 	// This command seems to be taking a long time, so for debugging, we'll see how long this SQL query takes to run.
 	dbqueryStartTime := time.Now()
