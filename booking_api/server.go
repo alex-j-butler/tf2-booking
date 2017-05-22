@@ -155,6 +155,41 @@ func (s *Server) SendCommand(client *BookingClient, command string) error {
 	return errors.New(errResp.Message)
 }
 
+func (s *Server) Update(client *BookingClient) (bool, error) {
+	var buf bytes.Buffer
+	j := json.NewEncoder(&buf)
+	err := j.Encode(UpdateReq{UUID: s.UUID})
+	if err != nil {
+		return false, err
+	}
+
+	req, _ := http.NewRequest(
+		"POST",
+		client.getAPIPath("v1", "servers", "update"),
+		&buf,
+	)
+
+	resp, err := client.client.Do(req)
+	if err != nil {
+		return false, err
+	}
+
+	if resp.StatusCode == http.StatusOK {
+		return true, nil
+	}
+	if resp.StatusCode == http.StatusAccepted {
+		return false, nil
+	}
+
+	var errResp ErrorResponse
+	jsonDecoder := json.NewDecoder(resp.Body)
+	err = jsonDecoder.Decode(&errResp)
+	if err != nil {
+		return false, err
+	}
+	return false, errors.New(errResp.Message)
+}
+
 func (s *Server) Console(client *BookingClient) ([]string, error) {
 	req, _ := http.NewRequest(
 		"GET",
