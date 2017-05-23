@@ -216,6 +216,8 @@ func (s *Server) UploadDemos(client *BookingClient) ([]string, error) {
 		if err != nil {
 			return []string{}, err
 		}
+
+		return uploadDemosResp.Demos, nil
 	}
 
 	var errResp ErrorResponse
