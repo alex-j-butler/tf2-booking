@@ -12,18 +12,19 @@ install:
   - C:\Gopath\bin\govendor sync
 
 build_script:
+  - set gitrevision=(git describe --always --long --dirty)
   - set GOOS=linux
   - set GOARCH=amd64
-  - C:\Gopath\bin\govendor build -o tf2-booking-amd64 -ldflags="-X main.version=$(git describe --always --long --dirty)"
+  - C:\Gopath\bin\govendor build -o tf2-booking-amd64 -ldflags="-X main.version=%gitrevision%"
   - set GOOS=linux
   - set GOARCH=386
-  - C:\Gopath\bin\govendor build -o tf2-booking-i386 -ldflags="-X main.version=$(git describe --always --long --dirty)"
+  - C:\Gopath\bin\govendor build -o tf2-booking-i386 -ldflags="-X main.version=%gitrevision%"
   - set GOOS=windows
   - set GOARCH=amd64
-  - C:\Gopath\bin\govendor build -o tf2-booking-win-amd64 -ldflags="-X main.version=$(git describe --always --long --dirty)"
+  - C:\Gopath\bin\govendor build -o tf2-booking-win-amd64 -ldflags="-X main.version=%gitrevision%"
   - set GOOS=windows
   - set GOARCH=386
-  - C:\Gopath\bin\govendor build -o tf2-booking-win-i386 -ldflags="-X main.version=$(git describe --always --long --dirty)"
+  - C:\Gopath\bin\govendor build -o tf2-booking-win-i386 -ldflags="-X main.version=%gitrevision%"
 
 artifacts:
   - path: tf2-booking-amd64
