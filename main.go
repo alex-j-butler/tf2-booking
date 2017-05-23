@@ -27,6 +27,8 @@ import (
 	_ "github.com/lib/pq"
 )
 
+var version = "unknown"
+
 var c *cron.Cron
 
 // Session is an instance of the Discord client.
@@ -196,6 +198,12 @@ func RunServer(ctx *cli.Context) {
 			Permissions(discordgo.PermissionManageServer).
 			RespondToDM(true),
 		"exit",
+	)
+	Command.Add(
+		commands.NewCommand(Version).
+			Permissions(discordgo.PermissionManageServer).
+			RespondToDM(true),
+		"version",
 	)
 
 	// Register the ingame commands and their command handlers.

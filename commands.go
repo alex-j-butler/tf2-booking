@@ -76,6 +76,11 @@ func sendServerDetails(channelID string, serv *servers.Server, serverPassword, r
 	)
 }
 
+func Version(m *discordgo.MessageCreate, command string, args []string) {
+	User := &util.PatchUser{m.Author}
+	Session.ChannelMessageSend(m.ChannelID, fmt.Sprintf("%s: `tf2-booking` running git revision `%s`", User.GetMention(), version))
+}
+
 func SyncServers(m *discordgo.MessageCreate, command string, args []string) {
 	User := &util.PatchUser{m.Author}
 
