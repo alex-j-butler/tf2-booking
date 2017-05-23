@@ -240,6 +240,8 @@ func (s *Server) Stop() error {
 	KickCommand := fmt.Sprintf("tv_stop; kickall \"%s\"", config.Conf.Booking.KickMessage)
 	s.SendCommand(KickCommand)
 
+	time.Sleep(1 * time.Second)
+
 	// Run the stop function from the runner implementation.
 	err := s.Runner.Stop(s)
 
