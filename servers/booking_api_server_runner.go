@@ -4,6 +4,8 @@ import (
 	"math/rand"
 	"time"
 
+	null "gopkg.in/nullbio/null.v6"
+
 	"alex-j-butler.com/tf2-booking/booking_api"
 	"alex-j-butler.com/tf2-booking/models"
 )
@@ -84,11 +86,24 @@ func (b BookingAPIServerRunner) Stop(server *Server) error {
 }
 
 func (b BookingAPIServerRunner) UploadSTV(server *Server) ([]models.Demo, error) {
-	return []models.Demo{
-		models.Demo{
-			URL: "WARNING! Implement UploadSTV in BookingAPIServerRunner!",
-		},
-	}, nil
+	// Retrieve the API server instance from the API client.
+	apiServer, err := b.APIClient.GetServer(server.Context.Value(contextUUID).(string))
+	if err != nil {
+		return nil, err
+	}
+
+	// Upload demos.
+	demoURLs, err := apiServer.UploadDemos(b.APIClient)
+	if err != nil {
+		return nil, err
+	}
+
+	demos := make([]models.Demo, 0, len(demoURLs))
+	for _, demoURL := range demoURLs {
+		demos = append(demos, models.Demo{UploadedTime: null.TimeFrom(time.Now()), URL: demoURL})
+	}
+
+	return demos, nil
 }
 
 func (b BookingAPIServerRunner) SendCommand(server *Server, command string) error {
