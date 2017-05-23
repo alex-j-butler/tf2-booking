@@ -351,6 +351,12 @@ func (s *Server) generateSTVReply(demos []models.Demo) string {
 func (s *Server) UploadSTV() (string, error) {
 	// Run the uploadSTV function from the runner implementation.
 	demos, err := s.Runner.UploadSTV(s)
+	if err != nil {
+		return "", err
+	}
+	if len(demos) == 0 {
+		return "", errors.New("No demos")
+	}
 
 	message := s.generateSTVReply(demos)
 
