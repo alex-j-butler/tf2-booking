@@ -190,6 +190,43 @@ func (s *Server) Update(client *BookingClient) (bool, error) {
 	return false, errors.New(errResp.Message)
 }
 
+func (s *Server) UploadDemos(client *BookingClient) ([]string, error) {
+	var buf bytes.Buffer
+	j := json.NewEncoder(&buf)
+	err := j.Encode(UploadDemosReq{UUID: s.UUID})
+	if err != nil {
+		return []string{}, err
+	}
+
+	req, _ := http.NewRequest(
+		"POST",
+		client.getAPIPath("v1", "servers", "uploaddemos"),
+		&buf,
+	)
+
+	resp, err := client.client.Do(req)
+	if err != nil {
+		return []string{}, err
+	}
+
+	if resp.StatusCode == http.StatusOK {
+		var uploadDemosResp UploadDemosResp
+		jsonDecoder := json.NewDecoder(resp.Body)
+		err = jsonDecoder.Decode(&uploadDemosResp)
+		if err != nil {
+			return []string{}, err
+		}
+	}
+
+	var errResp ErrorResponse
+	jsonDecoder := json.NewDecoder(resp.Body)
+	err = jsonDecoder.Decode(&errResp)
+	if err != nil {
+		return []string{}, err
+	}
+	return []string{}, errors.New(errResp.Message)
+}
+
 func (s *Server) Console(client *BookingClient) ([]string, error) {
 	req, _ := http.NewRequest(
 		"GET",

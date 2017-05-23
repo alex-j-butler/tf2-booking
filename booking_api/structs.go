@@ -43,3 +43,11 @@ type SendCommandReq struct {
 type UpdateReq struct {
 	UUID string `json:"uuid"`
 }
+
+type UploadDemosReq struct {
+	UUID string `json:"uuid"`
+}
+
+type UploadDemosResp struct {
+	Demos []string `json:"demos"`
+}
