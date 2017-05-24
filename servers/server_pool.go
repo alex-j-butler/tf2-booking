@@ -10,5 +10,6 @@ type ServerPool interface {
 	GetBookedServers() []*Server
 
 	GetServerByAddress(address string) (*Server, error)
-	GetServerBySessionName(sessionName string) (*Server, error)
+	GetServerByName(name string) (*Server, error)
+	GetServerByRedisName(redisName string) (*Server, error)
 }

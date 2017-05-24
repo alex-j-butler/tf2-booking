@@ -168,7 +168,7 @@ func (s ScriptServerRunner) UploadSTV(server *Server) (demos []models.Demo, err 
 }
 
 func (s ScriptServerRunner) SendCommand(server *Server, command string) (err error) {
-	process := exec.Command("tmux", "send-keys", "-t", server.SessionName, "C-m", command, "C-m")
+	process := exec.Command("tmux", "send-keys", "-t", server.GetRedisName(), "C-m", command, "C-m")
 
 	err = process.Start()
 

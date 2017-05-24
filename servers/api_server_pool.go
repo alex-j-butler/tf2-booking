@@ -78,7 +78,6 @@ func (asp *APIServerPool) updateCache() error {
 				Path:         path.Dir(apiServer.Executable),
 				Address:      fmt.Sprintf("%s:%d", apiServer.IPAddress, apiServer.Port),
 				STVAddress:   fmt.Sprintf("%s:%d", apiServer.IPAddress, apiServer.STVPort),
-				SessionName:  apiServer.Name,
 				RCONPassword: apiServer.RCONPassword,
 				Context:      context.WithValue(ctx, contextUUID, apiServer.UUID),
 			}
@@ -142,12 +141,25 @@ func (asp *APIServerPool) GetServerByAddress(address string) (*Server, error) {
 	return nil, errors.New("Server not found")
 }
 
-func (asp *APIServerPool) GetServerBySessionName(sessionName string) (*Server, error) {
+func (asp *APIServerPool) GetServerByName(name string) (*Server, error) {
 	// Update server cache.
 	asp.updateCache()
 
 	for _, server := range asp.CachedServers {
-		if server.SessionName == sessionName {
+		if server.Name == name {
+			return server, nil
+		}
+	}
+
+	return nil, errors.New("Server not found")
+}
+
+func (asp *APIServerPool) GetServerByRedisName(redisName string) (*Server, error) {
+	// Update server cache.
+	asp.updateCache()
+
+	for _, server := range asp.CachedServers {
+		if server.GetRedisName() == redisName {
 			return server, nil
 		}
 	}

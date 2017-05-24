@@ -30,9 +30,8 @@ func ReportServer(commandInfo ingame.CommandInfo, command string, args []string)
 
 	// Construct the message.
 	message := fmt.Sprintf(
-		"Server '%s' (%s) has been reported by '%s' (%s) with reason: '%s'",
+		"Server '%s' (%s) has been reported by '%s' with reason: '%s'",
 		commandInfo.Server.Name,
-		commandInfo.Server.SessionName,
 		commandInfo.Username,
 		steamID.GetCommunityURL(),
 		reason,

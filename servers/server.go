@@ -9,6 +9,8 @@ import (
 	"regexp"
 	"time"
 
+	"strings"
+
 	"alex-j-butler.com/tf2-booking/config"
 	"alex-j-butler.com/tf2-booking/globals"
 	"alex-j-butler.com/tf2-booking/models"
@@ -26,11 +28,11 @@ type Server struct {
 	// Interface implementation to use to run this server.
 	Runner ServerRunner `json:"-"`
 
-	Name        string `json:"name" yaml:"name"`
-	Path        string `json:"path" yaml:"path"`
-	Address     string `json:"address" yaml:"address"`
-	STVAddress  string `json:"stv_address" yaml:"stv_address"`
-	SessionName string `json:"session_name" yaml:"session_name"`
+	Name       string `json:"-" yaml:"name"`
+	Path       string `json:"-" yaml:"path"`
+	Address    string `json:"-" yaml:"address"`
+	STVAddress string `json:"-" yaml:"stv_address"`
+	// SessionName string `json:"-" yaml:"session_name"`
 
 	// Whether this server has been sent the unbooking warning.
 	SentWarning bool
@@ -42,9 +44,6 @@ type Server struct {
 	// informing them that they need 2 players on the server to prevent idle unbooking.
 	SentLobbyWarning bool
 
-	// Timestamp indicating when the server is to be returned.
-	ReturnDate time.Time
-
 	// Last known RCON password.
 	// If this RCON password is invalid, the server can send a tmux command to reset it.
 	RCONPassword string
@@ -54,6 +53,9 @@ type Server struct {
 
 	// Specifies when the server was booked.
 	BookedDate time.Time
+
+	// Timestamp indicating when the server is to be returned.
+	ReturnDate time.Time
 
 	// The ID of the Discord user who booked the server.
 	Booker string
@@ -108,17 +110,26 @@ func (s *Server) ResetServerVars() {
 	s.ErrorMinutes = 0
 }
 
+// GetRedisName returns the processed server name to be stored in Redis.
+func (s *Server) GetRedisName() string {
+	return strings.Replace(s.Name, " ", "_", -1)
+}
+
 // Update performs an update of the server into the specified Redis client.
 func (s *Server) Update(redisClient *redis.Client) error {
 	// Serialise the server as JSON.
 	serialised, err := json.Marshal(s)
 	if err != nil {
+		log.Println("marshal error:", err)
 		return err
 	}
 
+	log.Println("serialised:", string(serialised))
+
 	// Perform a SET command on the Redis client.
-	err = redisClient.Set(fmt.Sprintf("server.%s", s.SessionName), serialised, 0).Err()
+	err = redisClient.Set(fmt.Sprintf("server.%s", s.GetRedisName()), serialised, 0).Err()
 	if err != nil {
+		log.Println("redis error:", err)
 		return err
 	}
 
@@ -127,7 +138,7 @@ func (s *Server) Update(redisClient *redis.Client) error {
 
 // Synchronise performs a synchronise of the server, retrieving the server data from the specified Redis client.
 func (s *Server) Synchronise(redisClient *redis.Client) error {
-	result, err := redisClient.Get(fmt.Sprintf("server.%s", s.SessionName)).Result()
+	result, err := redisClient.Get(fmt.Sprintf("server.%s", s.GetRedisName())).Result()
 	if err != nil {
 		return err
 	}
@@ -240,6 +251,7 @@ func (s *Server) Stop() error {
 	KickCommand := fmt.Sprintf("tv_stop; kickall \"%s\"", config.Conf.Booking.KickMessage)
 	s.SendCommand(KickCommand)
 
+	// Wait 1 second to the kick command to properly kick everyone.
 	time.Sleep(1 * time.Second)
 
 	// Run the stop function from the runner implementation.

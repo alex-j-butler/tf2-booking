@@ -189,7 +189,7 @@ func BookServer(m *discordgo.MessageCreate, command string, args []string) {
 			sendServerDetails(UserChannel.ID, Serv, ServerPassword, RCONPassword)
 
 			// Add the user's booked state.
-			if err := globals.RedisClient.Set(fmt.Sprintf("user.%s", m.Author.ID), Serv.SessionName, 0).Err(); err != nil {
+			if err := globals.RedisClient.Set(fmt.Sprintf("user.%s", m.Author.ID), Serv.GetRedisName(), 0).Err(); err != nil {
 				log.Println("Redis error:", err)
 				log.Println("Failed to set user information for user:", m.Author.ID)
 				return
@@ -226,7 +226,7 @@ func UnbookServer(m *discordgo.MessageCreate, command string, args []string) {
 		return
 	}
 
-	Serv, err := pool.GetServerBySessionName(bookingInfoStr)
+	Serv, err := pool.GetServerByRedisName(bookingInfoStr)
 
 	if err == nil && Serv != nil {
 		// Stop the server.
@@ -303,7 +303,7 @@ func ExtendServer(m *discordgo.MessageCreate, command string, args []string) {
 		return
 	}
 
-	Serv, err := pool.GetServerBySessionName(bookingInfoStr)
+	Serv, err := pool.GetServerByRedisName(bookingInfoStr)
 
 	if err == nil && Serv != nil {
 		// Extend the booking.
@@ -360,7 +360,7 @@ func SendPassword(m *discordgo.MessageCreate, command string, args []string) {
 		return
 	}
 
-	Serv, err := pool.GetServerBySessionName(bookingInfoStr)
+	Serv, err := pool.GetServerByRedisName(bookingInfoStr)
 
 	if err == nil && Serv != nil {
 		serverPassword, err := Serv.GetCurrentPassword()
@@ -431,7 +431,6 @@ func PrintStats(m *discordgo.MessageCreate, command string, args []string) {
 	}
 
 	message := "Server stats:"
-	count := 0
 
 	data := make([][]string, 0, len(servs))
 	for _, serv := range servs {
@@ -479,7 +478,6 @@ func PrintStats(m *discordgo.MessageCreate, command string, args []string) {
 	*/
 
 	message = fmt.Sprintf("%s\n```%s```", message, buf.String())
-	message = fmt.Sprintf("%s\n\n%d out of %d servers booked", message, count, len(servers.Servers))
 
 	// This command seems to be taking a long time, so for debugging, we'll see how long this SQL query takes to run.
 	dbqueryStartTime := time.Now()

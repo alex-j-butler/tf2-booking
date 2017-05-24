@@ -78,9 +78,9 @@ func (csp *ConfigServerPool) GetServerByAddress(address string) (*Server, error)
 	return nil, errors.New("Server not found")
 }
 
-func (csp *ConfigServerPool) GetServerBySessionName(sessionName string) (*Server, error) {
+func (csp *ConfigServerPool) GetServerByName(name string) (*Server, error) {
 	for _, server := range csp.Servers {
-		if server.SessionName == sessionName {
+		if server.Name == name {
 			return server, nil
 		}
 	}

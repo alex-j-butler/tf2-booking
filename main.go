@@ -126,6 +126,11 @@ func RunServer(ctx *cli.Context) {
 		return value
 	`)
 
+	// Write servers to Redis.
+	for _, server := range pool.GetServers() {
+		server.Update(globals.RedisClient)
+	}
+
 	// Create the loghandler server
 	// and bind it to the appropriate address & port.
 	logs, err := loghandler.Dial(config.Conf.LogServer.LogAddress, config.Conf.LogServer.LogPort)
