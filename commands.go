@@ -435,7 +435,7 @@ func PrintStats(m *discordgo.MessageCreate, command string, args []string) {
 	data := make([][]string, 0, len(servs))
 	for _, serv := range servs {
 		// Retrieve the name of the Discord user who booked the server. Uses empty string if no one has booked the server.
-		bookerID := serv.GetBooker()
+		bookerID := serv.Booker
 		bookerUser, err := Session.User(bookerID)
 
 		var username string

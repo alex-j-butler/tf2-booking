@@ -124,8 +124,6 @@ func (s *Server) Update(redisClient *redis.Client) error {
 		return err
 	}
 
-	log.Println("serialised:", string(serialised))
-
 	// Perform a SET command on the Redis client.
 	err = redisClient.Set(fmt.Sprintf("server.%s", s.GetRedisName()), serialised, 0).Err()
 	if err != nil {
@@ -163,24 +161,6 @@ func (s *Server) IsBooked() bool {
 	return s.Booked && s.Runner.IsBooked(s)
 }
 
-// BEGIN Deprecated
-
-func (s *Server) GetBookedTime() time.Time {
-	return s.BookedDate
-}
-
-func (s *Server) GetBooker() string {
-	return s.Booker
-}
-
-func (s *Server) GetBookerMention() string {
-	return s.BookerMention
-}
-
-func (s *Server) GetIdleMinutes() int {
-	return s.IdleMinutes
-}
-
 func (s *Server) AddIdleMinute() {
 	s.IdleMinutes++
 
@@ -192,8 +172,6 @@ func (s *Server) ResetIdleMinutes() {
 
 	s.Update(globals.RedisClient)
 }
-
-// END Deprecated
 
 // GetCurrentPassword retrieves the current server password from the server.
 func (s *Server) GetCurrentPassword() (string, error) {

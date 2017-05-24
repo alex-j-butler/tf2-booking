@@ -55,7 +55,7 @@ func CheckUnbookServers() {
 				),
 			)
 
-			UserMention := Serv.GetBookerMention()
+			UserMention := Serv.BookerMention
 			// Send warning message in Discord.
 			Session.ChannelMessageSend(
 				config.Conf.Discord.DefaultChannel,
@@ -65,8 +65,8 @@ func CheckUnbookServers() {
 
 		// Check if their server is past the return date.
 		if Serv.ReturnDate.Before(time.Now()) {
-			UserID := Serv.GetBooker()
-			UserMention := Serv.GetBookerMention()
+			UserID := Serv.Booker
+			UserMention := Serv.BookerMention
 
 			// Remove the user's booked state.
 			if err := globals.RedisClient.Set(fmt.Sprintf("user.%s", UserID), "", 0).Err(); err != nil {
@@ -129,9 +129,9 @@ func CheckIdleMinutes() {
 				s.ResetIdleMinutes()
 			}
 
-			if s.GetIdleMinutes() >= config.Conf.Booking.MaxIdleMinutes {
-				UserID := s.GetBooker()
-				UserMention := s.GetBookerMention()
+			if s.IdleMinutes >= config.Conf.Booking.MaxIdleMinutes {
+				UserID := s.Booker
+				UserMention := s.BookerMention
 
 				// Reset the idle minutes.
 				s.ResetIdleMinutes()
