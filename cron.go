@@ -205,3 +205,10 @@ func Cron10Seconds() {
 		}
 	}
 }
+
+func Cron1Minute() {
+	err := UpdateGameString()
+	if err != nil {
+		log.Println("Failed to update game string:", err)
+	}
+}
