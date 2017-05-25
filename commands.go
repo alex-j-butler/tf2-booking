@@ -3,7 +3,6 @@ package main
 import (
 	"fmt"
 	"log"
-	"time"
 
 	"bytes"
 
@@ -458,60 +457,8 @@ func PrintStats(m *discordgo.MessageCreate, command string, args []string) {
 	table.AppendBulk(data)
 	table.Render()
 
-	/*
-		for i := 0; i < len(servs); i++ {
-			server := servs[i]
-			if server != nil {
-				bookerID := server.GetBooker()
-				bookerUser, err := Session.User(bookerID)
-
-				var username string
-				if err != nil {
-					username = "Unknown"
-				} else {
-					username = bookerUser.Username
-				}
-
-				message = fmt.Sprintf("%s\n\t%s (Booked by %s)", message, server.Name, username)
-				count++
-			}
-		}
-	*/
-
 	message = fmt.Sprintf("%s\n```%s```", message, buf.String())
-
-	// This command seems to be taking a long time, so for debugging, we'll see how long this SQL query takes to run.
-	dbqueryStartTime := time.Now()
-
-	stmt, err := globals.DB.Prepare("SELECT server_name, sum(age(unbooked_time, booked_time)) FROM bookings WHERE booked_time > (current_date - $1::interval) GROUP BY server_name ORDER BY server_name ASC;")
-	defer stmt.Close()
-	if err != nil {
-		log.Println("Prepare error:", err)
-		Session.ChannelMessageSend(m.ChannelID, fmt.Sprintf("%s: %s", User.GetMention(), "Something went wrong retrieving server history!"))
-		return
-	}
-
-	rows, err := stmt.Query("7 days")
-	defer rows.Close()
-	if err != nil {
-		log.Println("Query error:", err)
-		Session.ChannelMessageSend(m.ChannelID, fmt.Sprintf("%s: %s", User.GetMention(), "Something went wrong retrieving server history!"))
-		return
-	}
-
-	// Get the db query time.
-	dbqueryTimeElapsed := time.Since(dbqueryStartTime)
-
-	message = fmt.Sprintf("%s\n\n%s", message, "7 day history:")
-
-	var serverName string
-	var duration string
-	for rows.Next() {
-		rows.Scan(&serverName, &duration)
-		message = fmt.Sprintf("%s\n\t%s: %s", message, serverName, duration)
-	}
-
-	Session.ChannelMessageSend(m.ChannelID, fmt.Sprintf("%s: %s\nQuery took %s", User.GetMention(), message, dbqueryTimeElapsed))
+	Session.ChannelMessageSend(m.ChannelID, fmt.Sprintf("%s: %s", User.GetMention(), message))
 }
 
 func Update(m *discordgo.MessageCreate, command string, args []string) {
