@@ -423,7 +423,8 @@ func PrintStats(m *discordgo.MessageCreate, command string, args []string) {
 		// Synchronise the server from Redis, to get information for existing servers.
 		err := server.Synchronise(globals.RedisClient)
 		if err != nil {
-			panic(err)
+			log.Println("Server", server.Name, "failed to Redis sync")
+			continue
 		}
 
 		// Put the modified server back.
