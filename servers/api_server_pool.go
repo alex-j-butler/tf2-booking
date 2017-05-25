@@ -120,7 +120,7 @@ func (asp *APIServerPool) GetBookedServers() []*Server {
 	// a booking server.
 	for _, server := range asp.CachedServers {
 		// Server is unavailable if it's already running.
-		if server.IsBooked() && server.Available() {
+		if server.IsBooked() {
 			servers = append(servers, server)
 		}
 	}
