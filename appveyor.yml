@@ -12,7 +12,7 @@ install:
   - C:\Gopath\bin\govendor sync
 
 build_script:
-  - set gitrevision=(git describe --always --long --dirty)
+  - for /f %%i in ('git describe --always --long --dirty') do set gitrevision=%%i
   - set GOOS=linux
   - set GOARCH=amd64
   - C:\Gopath\bin\govendor build -o tf2-booking-amd64 -ldflags="-X main.version=%gitrevision%"
