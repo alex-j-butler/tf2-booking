@@ -17,11 +17,6 @@ func InitialiseServers() {
 	if err != nil {
 		log.Println("Failed to initialise server configuration:", err)
 	}
-
-	// Use the default server runner for all servers.
-	for _, server := range Servers {
-		server.Init()
-	}
 }
 
 func GetAvailableServer(serverList []*Server) *Server {
@@ -65,7 +60,7 @@ func GetServerByAddress(serverList []*Server, address string) (*Server, error) {
 
 func GetServerBySessionName(serverList []*Server, sessionName string) (*Server, error) {
 	for i := 0; i < len(serverList); i++ {
-		if serverList[i].GetRedisName() == sessionName {
+		if serverList[i].UUID == sessionName {
 			return serverList[i], nil
 		}
 	}

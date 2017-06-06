@@ -11,5 +11,5 @@ type ServerPool interface {
 
 	GetServerByAddress(address string) (*Server, error)
 	GetServerByName(name string) (*Server, error)
-	GetServerByRedisName(redisName string) (*Server, error)
+	GetServerByUUID(uuid string) (*Server, error)
 }

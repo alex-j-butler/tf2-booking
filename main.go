@@ -10,7 +10,6 @@ import (
 
 	redis "gopkg.in/redis.v5"
 
-	"alex-j-butler.com/tf2-booking/booking_api"
 	"alex-j-butler.com/tf2-booking/commands"
 	"alex-j-butler.com/tf2-booking/commands/ingame"
 	"alex-j-butler.com/tf2-booking/commands/ingame/loghandler"
@@ -20,6 +19,7 @@ import (
 	"alex-j-butler.com/tf2-booking/util"
 	"alex-j-butler.com/tf2-booking/wait"
 
+	"github.com/Qixalite/booking-api/client"
 	"github.com/bwmarrin/discordgo"
 	"github.com/robfig/cron"
 
@@ -74,8 +74,14 @@ func main() {
 
 // RunServer is the subcommand handler that starts the TF2 Booking server.
 func RunServer(ctx *cli.Context) {
+	// Create the Booking client.
+	bookingClient := client.New(
+		config.Conf.Booking.APIAddress,
+		config.Conf.Booking.APIPort,
+	)
+
 	// Initialise the server pool.
-	pool = &servers.APIServerPool{Tag: config.Conf.Booking.Tag, APIClient: booking_api.New(config.Conf.Booking.BaseURL)}
+	pool = &servers.APIServerPool{Tag: config.Conf.Booking.Tag, APIClient: bookingClient}
 	err := pool.Initialise()
 	if err != nil {
 		log.Println(err)
@@ -87,15 +93,13 @@ func RunServer(ctx *cli.Context) {
 	// Connect to the PostgreSQL database.
 	db, err := sql.Open("postgres", config.Conf.Database.DSN)
 	if err != nil {
-		log.Println("Database error:", err)
-		os.Exit(1)
+		log.Fatalln("Database connection failed:", err)
 	}
 	globals.DB = db
 
 	// Ping the database to make sure we're properly connected.
 	if err := globals.DB.Ping(); err != nil {
-		log.Println("Database error:", err)
-		os.Exit(1)
+		log.Fatalln("Database ping failed:", err)
 	}
 
 	// Setup the Redis client
@@ -110,8 +114,7 @@ func RunServer(ctx *cli.Context) {
 	_, err = client.Ping().Result()
 	if err != nil {
 		// Application won't work without a Redis connection.
-		log.Println("Redis error:", err)
-		os.Exit(1)
+		log.Fatalln("Redis ping failed:", err)
 	}
 	globals.RedisClient = client
 
@@ -126,9 +129,13 @@ func RunServer(ctx *cli.Context) {
 		return value
 	`)
 
-	// Write servers to Redis.
+	// Attempt to update all our servers (that we just got from the server pool) with the information from Redis.
+	// If no Redis entry exists, update Redis with the default server information.
 	for _, server := range pool.GetServers() {
-		server.Update(globals.RedisClient)
+		err := server.Synchronise(globals.RedisClient)
+		if err != nil {
+			server.Update(globals.RedisClient)
+		}
 	}
 
 	// Create the loghandler server
@@ -138,7 +145,7 @@ func RunServer(ctx *cli.Context) {
 		// Loghandler server couldn't bind properly.
 		// Not a problem, results in ingame commands not being received by the
 		// booking bot.
-		log.Println("LogHandler failed to bind:", err)
+		log.Println("LogHandler bind failed:", err)
 		log.Println("NOTE: This will disable ingame commands from functioning correctly.")
 	} else {
 		log.Println(fmt.Sprintf("LogHandler listening on %s:%d", logs.Address, logs.Port))
@@ -228,7 +235,7 @@ func RunServer(ctx *cli.Context) {
 	// Create the Discord client from the bot token in the configuration.
 	dg, err := discordgo.New(fmt.Sprintf("Bot %s", config.Conf.Discord.Token))
 	if err != nil {
-		log.Println("Failed to create Discord session:", err)
+		log.Println("Discord session creation failed:", err)
 		return
 	}
 
@@ -239,7 +246,7 @@ func RunServer(ctx *cli.Context) {
 	// Get user information of the Discord user that is currently logged in (the bot).
 	u, err := dg.User("@me")
 	if err != nil {
-		log.Println("Failed to obtain Discord bot information:", err)
+		log.Println("Discord bot information obtain failed:", err)
 		return
 	}
 
@@ -254,7 +261,7 @@ func RunServer(ctx *cli.Context) {
 	// Open the Discord websocket.
 	err = dg.Open()
 	if err != nil {
-		log.Println("Failed to open Discord websocket:", err)
+		log.Println("Discord websocket opening failed:", err)
 		return
 	}
 
@@ -274,7 +281,7 @@ func OnReady(s *discordgo.Session, r *discordgo.Ready) {
 	log.Println("Updating game string with currently booked servers.")
 	err := UpdateGameString()
 	if err != nil {
-		log.Println("Failed updating game string:", err)
+		log.Println("Game string update failed:", err)
 	} else {
 		log.Println("Successfully updated game string.")
 	}
@@ -308,7 +315,7 @@ func MessageCreate(s *discordgo.Session, m *discordgo.MessageCreate) {
 	// Lookup Discord channel.
 	channel, err := s.State.Channel(m.ChannelID)
 	if err != nil {
-		log.Println("Failed to lookup channels.", err)
+		log.Println("Channel lookup failed:", err)
 	}
 
 	if channel.IsPrivate {
