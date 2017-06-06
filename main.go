@@ -75,7 +75,10 @@ func main() {
 // RunServer is the subcommand handler that starts the TF2 Booking server.
 func RunServer(ctx *cli.Context) {
 	// Create the Booking client.
-	bookingClient := client.New("168.1.12.98", 9902)
+	bookingClient := client.New(
+		config.Conf.Booking.APIAddress,
+		config.Conf.Booking.APIPort,
+	)
 
 	// Initialise the server pool.
 	pool = &servers.APIServerPool{Tag: config.Conf.Booking.Tag, APIClient: bookingClient}

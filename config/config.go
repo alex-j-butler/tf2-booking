@@ -44,8 +44,9 @@ type Config struct {
 		UploadSTVCommand string `yaml:"upload_stv_command"`
 
 		// Settings used for the server API server runner.
-		Tag     string `yaml:"tag"`
-		BaseURL string `yaml:"base_url"`
+		Tag        string `yaml:"tag"`
+		APIAddress string `yaml:"api_address"`
+		APIPort    int    `yaml:"api_port"`
 
 		MaxIdleMinutes int `yaml:"max_idle_minutes"`
 		MinPlayers     int `yaml:"min_players"`
