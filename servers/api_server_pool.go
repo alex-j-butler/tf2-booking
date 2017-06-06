@@ -78,7 +78,7 @@ func (asp *APIServerPool) updateCache() error {
 				STVAddress:   fmt.Sprintf("%s:%d", apiServer.IPAddress, apiServer.STVPort),
 				RCONPassword: apiServer.RCONPassword,
 			}
-			server.Runner = NewBookingAPIRunner(asp.APIClient)
+			server.Runner = NewRunner(asp.APIClient)
 			asp.CachedServers[apiServer.UUID] = server
 		}
 	}

@@ -17,11 +17,6 @@ func InitialiseServers() {
 	if err != nil {
 		log.Println("Failed to initialise server configuration:", err)
 	}
-
-	// Use the default server runner for all servers.
-	for _, server := range Servers {
-		server.Init()
-	}
 }
 
 func GetAvailableServer(serverList []*Server) *Server {

@@ -18,12 +18,8 @@ import (
 	redis "gopkg.in/redis.v5"
 )
 
-// DefaultRunner is the default server runner.
-var DefaultRunner = ScriptServerRunner{}
-
 type Server struct {
-	// Interface implementation to use to run this server.
-	Runner ServerRunner `json:"-"`
+	Runner *ServerRunner
 
 	UUID       string `json:"-"`
 	Name       string `json:"-"`
@@ -68,13 +64,6 @@ type Server struct {
 
 	// ErrorMinutes is the number of minutes the server has been in an errored state for.
 	ErrorMinutes int
-}
-
-// Init sets the default runner if it hasn't already been set.
-func (s *Server) Init() {
-	if s.Runner == nil {
-		s.Runner = DefaultRunner
-	}
 }
 
 func (s *Server) SetServerVars(duration time.Duration, userID string) {
