@@ -120,12 +120,13 @@ func (b BookingAPIServerRunner) SendCommand(server *Server, command string) erro
 }
 
 func (b BookingAPIServerRunner) Console(server *Server) ([]string, error) {
+func (b BookingAPIServerRunner) Console(server *Server, lines int) ([]string, error) {
 	// Retrieve the API server instance from the API client.
 	apiServer, err := b.APIClient.GetServer(server.Context.Value(contextUUID).(string))
 	if err != nil {
 		return nil, err
 	}
-	consoleLines, err := apiServer.Console(b.APIClient)
+	consoleLines, err := apiServer.Console(b.APIClient, lines)
 
 	return consoleLines, err
 }

@@ -414,5 +414,5 @@ func (s *Server) SendRCONCommand(command string) (string, error) {
 
 // Console queries the server for the latest console lines.
 func (s *Server) Console() ([]string, error) {
-	return s.Runner.Console(s)
+	return s.Runner.Console(s, 0)
 }
