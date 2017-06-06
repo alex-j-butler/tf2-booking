@@ -1,15 +1,12 @@
 package servers
 
 import (
-	"context"
 	"encoding/json"
 	"errors"
 	"fmt"
 	"log"
 	"regexp"
 	"time"
-
-	"strings"
 
 	"alex-j-butler.com/tf2-booking/config"
 	"alex-j-butler.com/tf2-booking/globals"
@@ -28,11 +25,11 @@ type Server struct {
 	// Interface implementation to use to run this server.
 	Runner ServerRunner `json:"-"`
 
-	Name       string `json:"-" yaml:"name"`
-	Path       string `json:"-" yaml:"path"`
-	Address    string `json:"-" yaml:"address"`
-	STVAddress string `json:"-" yaml:"stv_address"`
-	// SessionName string `json:"-" yaml:"session_name"`
+	UUID       string `json:"-"`
+	Name       string `json:"-"`
+	Path       string `json:"-"`
+	Address    string `json:"-"`
+	STVAddress string `json:"-"`
 
 	// Whether this server has been sent the unbooking warning.
 	SentWarning bool
@@ -71,9 +68,6 @@ type Server struct {
 
 	// ErrorMinutes is the number of minutes the server has been in an errored state for.
 	ErrorMinutes int
-
-	// Context for storing additional information (such as a UUID).
-	Context context.Context
 }
 
 // Init sets the default runner if it hasn't already been set.
@@ -81,7 +75,6 @@ func (s *Server) Init() {
 	if s.Runner == nil {
 		s.Runner = DefaultRunner
 	}
-	s.Context = context.Background()
 }
 
 func (s *Server) SetServerVars(duration time.Duration, userID string) {
@@ -110,11 +103,6 @@ func (s *Server) ResetServerVars() {
 	s.ErrorMinutes = 0
 }
 
-// GetRedisName returns the processed server name to be stored in Redis.
-func (s *Server) GetRedisName() string {
-	return strings.Replace(s.Name, " ", "_", -1)
-}
-
 // Update performs an update of the server into the specified Redis client.
 func (s *Server) Update(redisClient *redis.Client) error {
 	// Serialise the server as JSON.
@@ -125,7 +113,7 @@ func (s *Server) Update(redisClient *redis.Client) error {
 	}
 
 	// Perform a SET command on the Redis client.
-	err = redisClient.Set(fmt.Sprintf("server.%s", s.GetRedisName()), serialised, 0).Err()
+	err = redisClient.Set(fmt.Sprintf("server.%s", s.UUID), serialised, 0).Err()
 	if err != nil {
 		log.Println("redis error:", err)
 		return err
@@ -136,7 +124,7 @@ func (s *Server) Update(redisClient *redis.Client) error {
 
 // Synchronise performs a synchronise of the server, retrieving the server data from the specified Redis client.
 func (s *Server) Synchronise(redisClient *redis.Client) error {
-	result, err := redisClient.Get(fmt.Sprintf("server.%s", s.GetRedisName())).Result()
+	result, err := redisClient.Get(fmt.Sprintf("server.%s", s.UUID)).Result()
 	if err != nil {
 		return err
 	}

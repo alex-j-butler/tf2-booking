@@ -65,7 +65,7 @@ func GetServerByAddress(serverList []*Server, address string) (*Server, error) {
 
 func GetServerBySessionName(serverList []*Server, sessionName string) (*Server, error) {
 	for i := 0; i < len(serverList); i++ {
-		if serverList[i].GetRedisName() == sessionName {
+		if serverList[i].UUID == sessionName {
 			return serverList[i], nil
 		}
 	}

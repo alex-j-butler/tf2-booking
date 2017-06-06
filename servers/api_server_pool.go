@@ -1,13 +1,12 @@
 package servers
 
 import (
-	"context"
 	"errors"
 	"fmt"
 	"log"
 	"path"
 
-	"alex-j-butler.com/tf2-booking/booking_api"
+	"github.com/Qixalite/booking-api/client"
 )
 
 var (
@@ -24,7 +23,7 @@ func (c contextKey) String() string {
 type APIServerPool struct {
 	Tag           string
 	CachedServers map[string]*Server
-	APIClient     *booking_api.BookingClient
+	APIClient     *client.Client
 }
 
 func (asp *APIServerPool) Initialise() error {
@@ -71,18 +70,15 @@ func (asp *APIServerPool) updateCache() error {
 	for _, apiServer := range apiServers {
 		// Check if we've seen this server before, and get the server it's mapped to.
 		if _, ok := asp.CachedServers[apiServer.UUID]; !ok {
-			ctx := context.Background()
-
 			server := &Server{
+				UUID:         apiServer.UUID,
 				Name:         apiServer.Name,
 				Path:         path.Dir(apiServer.Executable),
 				Address:      fmt.Sprintf("%s:%d", apiServer.IPAddress, apiServer.Port),
 				STVAddress:   fmt.Sprintf("%s:%d", apiServer.IPAddress, apiServer.STVPort),
 				RCONPassword: apiServer.RCONPassword,
-				Context:      context.WithValue(ctx, contextUUID, apiServer.UUID),
 			}
-			// server.Init()
-			server.Runner = &BookingAPIServerRunner{APIClient: asp.APIClient}
+			server.Runner = NewBookingAPIRunner(asp.APIClient)
 			asp.CachedServers[apiServer.UUID] = server
 		}
 	}
@@ -154,12 +150,12 @@ func (asp *APIServerPool) GetServerByName(name string) (*Server, error) {
 	return nil, errors.New("Server not found")
 }
 
-func (asp *APIServerPool) GetServerByRedisName(redisName string) (*Server, error) {
+func (asp *APIServerPool) GetServerByUUID(uuid string) (*Server, error) {
 	// Update server cache.
 	asp.updateCache()
 
 	for _, server := range asp.CachedServers {
-		if server.GetRedisName() == redisName {
+		if server.UUID == uuid {
 			return server, nil
 		}
 	}

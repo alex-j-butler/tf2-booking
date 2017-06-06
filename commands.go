@@ -188,7 +188,7 @@ func BookServer(m *discordgo.MessageCreate, command string, args []string) {
 			sendServerDetails(UserChannel.ID, Serv, ServerPassword, RCONPassword)
 
 			// Add the user's booked state.
-			if err := globals.RedisClient.Set(fmt.Sprintf("user.%s", m.Author.ID), Serv.GetRedisName(), 0).Err(); err != nil {
+			if err := globals.RedisClient.Set(fmt.Sprintf("user.%s", m.Author.ID), Serv.UUID, 0).Err(); err != nil {
 				log.Println("Redis error:", err)
 				log.Println("Failed to set user information for user:", m.Author.ID)
 				return
@@ -225,7 +225,7 @@ func UnbookServer(m *discordgo.MessageCreate, command string, args []string) {
 		return
 	}
 
-	Serv, err := pool.GetServerByRedisName(bookingInfoStr)
+	Serv, err := pool.GetServerByUUID(bookingInfoStr)
 
 	if err == nil && Serv != nil {
 		// Stop the server.
@@ -302,7 +302,7 @@ func ExtendServer(m *discordgo.MessageCreate, command string, args []string) {
 		return
 	}
 
-	Serv, err := pool.GetServerByRedisName(bookingInfoStr)
+	Serv, err := pool.GetServerByUUID(bookingInfoStr)
 
 	if err == nil && Serv != nil {
 		// Extend the booking.
@@ -359,7 +359,7 @@ func SendPassword(m *discordgo.MessageCreate, command string, args []string) {
 		return
 	}
 
-	Serv, err := pool.GetServerByRedisName(bookingInfoStr)
+	Serv, err := pool.GetServerByUUID(bookingInfoStr)
 
 	if err == nil && Serv != nil {
 		serverPassword, err := Serv.GetCurrentPassword()

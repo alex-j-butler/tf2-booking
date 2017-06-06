@@ -10,7 +10,6 @@ import (
 
 	redis "gopkg.in/redis.v5"
 
-	"alex-j-butler.com/tf2-booking/booking_api"
 	"alex-j-butler.com/tf2-booking/commands"
 	"alex-j-butler.com/tf2-booking/commands/ingame"
 	"alex-j-butler.com/tf2-booking/commands/ingame/loghandler"
@@ -20,6 +19,7 @@ import (
 	"alex-j-butler.com/tf2-booking/util"
 	"alex-j-butler.com/tf2-booking/wait"
 
+	"github.com/Qixalite/booking-api/client"
 	"github.com/bwmarrin/discordgo"
 	"github.com/robfig/cron"
 
@@ -74,8 +74,11 @@ func main() {
 
 // RunServer is the subcommand handler that starts the TF2 Booking server.
 func RunServer(ctx *cli.Context) {
+	// Create the Booking client.
+	bookingClient := client.New("168.1.12.98", 9902)
+
 	// Initialise the server pool.
-	pool = &servers.APIServerPool{Tag: config.Conf.Booking.Tag, APIClient: booking_api.New(config.Conf.Booking.BaseURL)}
+	pool = &servers.APIServerPool{Tag: config.Conf.Booking.Tag, APIClient: bookingClient}
 	err := pool.Initialise()
 	if err != nil {
 		log.Println(err)
@@ -126,9 +129,13 @@ func RunServer(ctx *cli.Context) {
 		return value
 	`)
 
-	// Write servers to Redis.
+	// Attempt to update all our servers (that we just got from the server pool) with the information from Redis.
+	// If no Redis entry exists, update Redis with the default server information.
 	for _, server := range pool.GetServers() {
-		server.Update(globals.RedisClient)
+		err := server.Synchronise(globals.RedisClient)
+		if err != nil {
+			server.Update(globals.RedisClient)
+		}
 	}
 
 	// Create the loghandler server
