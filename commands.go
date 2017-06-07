@@ -6,7 +6,6 @@ import (
 
 	"bytes"
 
-	"alex-j-butler.com/tf2-booking/config"
 	"alex-j-butler.com/tf2-booking/globals"
 	"alex-j-butler.com/tf2-booking/servers"
 	"alex-j-butler.com/tf2-booking/util"
@@ -306,14 +305,17 @@ func ExtendServer(m *discordgo.MessageCreate, command string, args []string) {
 
 	if err == nil && Serv != nil {
 		// Extend the booking.
-		Serv.ExtendBooking(config.Conf.Booking.ExtendDuration.Duration)
+		// TODO: Implement this properly.
+		// Serv.ExtendBooking(config.Conf.Booking.ExtendDuration.Duration)
 
 		// Notify server of successful operation.
 		Serv.SendCommand(
 			fmt.Sprintf(
 				"say @%s: Your booking has been extended by %s.",
 				m.Author.Username,
-				util.ToHuman(&config.Conf.Booking.ExtendDuration.Duration),
+				"0 minutes",
+				// TODO: Implement this properly.
+				// util.ToHuman(&config.Conf.Booking.ExtendDuration.Duration),
 			),
 		)
 
@@ -323,7 +325,9 @@ func ExtendServer(m *discordgo.MessageCreate, command string, args []string) {
 			fmt.Sprintf(
 				"%s: Your booking has been extended by %s.",
 				User.GetMention(),
-				util.ToHuman(&config.Conf.Booking.ExtendDuration.Duration),
+				"0 minutes",
+				// TODO: Implement this properly.
+				// util.ToHuman(&config.Conf.Booking.ExtendDuration.Duration),
 			),
 		)
 	} else {
