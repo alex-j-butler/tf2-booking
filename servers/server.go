@@ -27,9 +27,6 @@ type Server struct {
 	Address    string `json:"-"`
 	STVAddress string `json:"-"`
 
-	// Whether this server has been sent the unbooking warning.
-	SentWarning bool
-
 	// Whether this server has been sent the idle unbooking warning.
 	SentIdleWarning bool
 
@@ -47,9 +44,6 @@ type Server struct {
 	// Specifies when the server was booked.
 	BookedDate time.Time
 
-	// Timestamp indicating when the server is to be returned.
-	ReturnDate time.Time
-
 	// The ID of the Discord user who booked the server.
 	Booker string
 
@@ -66,13 +60,11 @@ type Server struct {
 	ErrorMinutes int
 }
 
-func (s *Server) SetServerVars(duration time.Duration, userID string) {
-	s.ReturnDate = time.Now().Add(duration)
+func (s *Server) SetServerVars(userID string) {
 	s.Booked = true
 	s.BookedDate = time.Now()
 	s.Booker = userID
 	s.BookerMention = fmt.Sprintf("<@%s>", userID)
-	s.SentWarning = false
 	s.SentIdleWarning = false
 	s.SentLobbyWarning = false
 	s.IdleMinutes = 0
@@ -80,12 +72,10 @@ func (s *Server) SetServerVars(duration time.Duration, userID string) {
 }
 
 func (s *Server) ResetServerVars() {
-	s.ReturnDate = time.Time{}
 	s.Booked = false
 	s.BookedDate = time.Time{}
 	s.Booker = ""
 	s.BookerMention = ""
-	s.SentWarning = false
 	s.SentIdleWarning = false
 	s.SentLobbyWarning = false
 	s.IdleMinutes = 0
@@ -173,9 +163,6 @@ func (s *Server) GetCurrentPassword() (string, error) {
 //  string - Server password
 //  error - Error of a failed setup, or nil if none
 func (s *Server) Setup() (string, string, error) {
-	// Reset the warning notification so that it can be sent again.
-	s.SentWarning = false
-
 	// Run the setup function from the runner implementation.
 	rconPassword, srvPassword, err := s.Runner.Setup(s)
 
@@ -215,7 +202,7 @@ func (s *Server) Stop() error {
 	return err
 }
 
-func (s *Server) Book(user *discordgo.User, duration time.Duration) (string, string, error) {
+func (s *Server) Book(user *discordgo.User) (string, string, error) {
 	if s.Booked == true {
 		return "", "", errors.New("Server is already booked")
 	}
@@ -262,7 +249,7 @@ func (s *Server) Book(user *discordgo.User, duration time.Duration) (string, str
 	defer s.Update(globals.RedisClient)
 
 	// Set the server variables.
-	s.SetServerVars(duration, user.ID)
+	s.SetServerVars(user.ID)
 
 	// Setup the server.
 	RCONPassword, ServerPassword, err := s.Setup()
@@ -301,8 +288,7 @@ func (s *Server) Unbook() error {
 }
 
 func (s *Server) ExtendBooking(amount time.Duration) {
-	// Add duration to the return date.
-	s.ReturnDate = s.ReturnDate.Add(amount)
+	// TODO: Implement this.
 
 	// Update the server in Redis.
 	s.Update(globals.RedisClient)

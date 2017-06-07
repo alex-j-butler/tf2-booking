@@ -30,10 +30,7 @@ type Config struct {
 
 	// Settings for the bookings
 	Booking struct {
-		Duration            util.DurationUtil `yaml:"duration"`
-		ExtendDuration      util.DurationUtil `yaml:"extend_duration"`
-		WarningDuration     util.DurationUtil `yaml:"warning_duration"`
-		IdleWarningDuration int               `yaml:"idle_warning_duration"`
+		IdleWarningDuration int `yaml:"idle_warning_duration"`
 
 		KickMessage string `yaml:"kick_message"`
 

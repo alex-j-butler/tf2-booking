@@ -3,99 +3,15 @@ package main
 import (
 	"fmt"
 	"log"
-	"time"
 
 	"alex-j-butler.com/tf2-booking/config"
 	"alex-j-butler.com/tf2-booking/globals"
 	"alex-j-butler.com/tf2-booking/servers"
-	"alex-j-butler.com/tf2-booking/util"
 
 	"strings"
 
 	"github.com/kidoman/go-steam"
 )
-
-// Check if any servers are ready to be unbooked by the automatic timeout after 4 hours.
-func CheckUnbookServers() {
-	// Iterate through servers.
-	for _, Serv := range pool.GetBookedServers() {
-		// Send the timelimit warning notification, if required.
-		if !Serv.SentWarning && (Serv.ReturnDate.Add(config.Conf.Booking.WarningDuration.Duration)).Before(time.Now()) {
-			// Only allow this message to be sent once.
-			Serv.SentWarning = true
-
-			// Send warning message.
-			Serv.SendCommand(
-				fmt.Sprintf(
-					"say Your booking will expire in %s, type 'extend' into Discord to extend the booking.",
-					util.ToHuman(&config.Conf.Booking.WarningDuration.Duration),
-				),
-			)
-		}
-
-		// Notify the user that their booking is about to timeout due to idle.
-		// This will happen x minutes before the max idle minute time (set to 15), configurable through the IdleWarningDuration option in the configuration file.
-		// This will only happen once, unless the idle timeout is reset.
-
-		// TODO: Move this to the configuration file?
-		maxIdleMinutes := 15
-		if !Serv.SentIdleWarning && (maxIdleMinutes-Serv.IdleMinutes) <= config.Conf.Booking.IdleWarningDuration {
-			// Only allow this message to be sent once.
-			Serv.SentIdleWarning = true
-
-			// Calculate minutes remaining before the idle timeout.
-			minutesRemaining := maxIdleMinutes - Serv.IdleMinutes
-
-			// Send warning message in server.
-			Serv.SendCommand(
-				fmt.Sprintf(
-					"say Your booking will timeout in %d %s, to prevent this, make sure 2 players are on the server.",
-					minutesRemaining,
-					util.PluralMinutes(minutesRemaining),
-				),
-			)
-
-			UserMention := Serv.BookerMention
-			// Send warning message in Discord.
-			Session.ChannelMessageSend(
-				config.Conf.Discord.DefaultChannel,
-				fmt.Sprintf("%s: Your booking will timeout in %d %s. To prevent this, make sure 2 players are on the server.", UserMention, minutesRemaining, util.PluralMinutes(minutesRemaining)),
-			)
-		}
-
-		// Check if their server is past the return date.
-		if Serv.ReturnDate.Before(time.Now()) {
-			UserID := Serv.Booker
-			UserMention := Serv.BookerMention
-
-			// Remove the user's booked state.
-			if err := globals.RedisClient.Set(fmt.Sprintf("user.%s", UserID), "", 0).Err(); err != nil {
-				log.Println("Redis error:", err)
-				log.Println("Failed to set user information for user:", UserID)
-				return
-			}
-
-			// Unbook the server.
-			Serv.Unbook()
-			Serv.Stop()
-
-			// Upload STV demos
-			STVMessage, err := Serv.UploadSTV()
-
-			// Send 'returned' message
-			Session.ChannelMessageSend(config.Conf.Discord.DefaultChannel, fmt.Sprintf("%s: Your server was automatically unbooked (timelimit reached).", UserMention))
-
-			// Send 'stv' message, if it uploaded successfully.
-			if err == nil {
-				Session.ChannelMessageSend(config.Conf.Discord.DefaultChannel, fmt.Sprintf("%s: %s", UserMention, STVMessage))
-			}
-
-			UpdateGameString()
-
-			log.Println(fmt.Sprintf("Automatically unbooked server \"%s\" from \"%s\", Reason: Booking timelimit reached", Serv.Name, UserID))
-		}
-	}
-}
 
 func CheckIdleMinutes() {
 	// Iterate through servers.

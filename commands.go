@@ -148,7 +148,7 @@ func BookServer(m *discordgo.MessageCreate, command string, args []string) {
 
 	if Serv != nil {
 		// Book the server.
-		RCONPassword, ServerPassword, err := Serv.Book(m.Author, config.Conf.Booking.Duration.Duration)
+		RCONPassword, ServerPassword, err := Serv.Book(m.Author)
 		if err != nil {
 			Session.ChannelMessageSend(m.ChannelID, fmt.Sprintf("%s: Something went wrong while trying to book your server, please try again later.", User.GetMention()))
 			log.Println(fmt.Sprintf("Failed to book server \"%s\" from \"%s\":", Serv.Name, m.Author.ID), err)
@@ -445,12 +445,12 @@ func PrintStats(m *discordgo.MessageCreate, command string, args []string) {
 			username = bookerUser.Username
 		}
 
-		data = append(data, []string{serv.Name, getServerStatusString(serv), serv.ReturnDate.String(), username, serv.Booker})
+		data = append(data, []string{serv.Name, getServerStatusString(serv), serv.BookedDate.String(), username, serv.Booker})
 	}
 
 	var buf bytes.Buffer
 	table := tablewriter.NewWriter(&buf)
-	table.SetHeader([]string{"Server name", "Status", "Unbook time", "Booker name", "Booker ID"})
+	table.SetHeader([]string{"Server name", "Status", "Book time", "Booker name", "Booker ID"})
 	table.SetBorders(tablewriter.Border{Left: true, Top: false, Right: true, Bottom: false})
 	table.SetCenterSeparator("|")
 	table.SetAutoFormatHeaders(false)
