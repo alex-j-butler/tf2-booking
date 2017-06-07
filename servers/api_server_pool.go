@@ -9,16 +9,6 @@ import (
 	"github.com/Qixalite/booking-api/client"
 )
 
-var (
-	contextUUID = contextKey("uuid")
-)
-
-type contextKey string
-
-func (c contextKey) String() string {
-	return "servers ctxkey " + string(c)
-}
-
 // APIServerPool is a server pool that is loaded from the booking API.
 type APIServerPool struct {
 	Tag           string
