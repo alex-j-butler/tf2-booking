@@ -115,7 +115,7 @@ func (sr ServerRunner) UploadSTV(server *Server) ([]models.Demo, error) {
 	}
 
 	// Upload demos.
-	demoURLs, err := apiServer.UploadDemos(sr.APIClient)
+	demoURLs, err := apiServer.UploadDemos(sr.APIClient, server.BookerFullname)
 	if err != nil {
 		return nil, err
 	}

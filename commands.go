@@ -3,6 +3,8 @@ package main
 import (
 	"fmt"
 	"log"
+	"net/url"
+	"strings"
 
 	"bytes"
 
@@ -103,7 +105,7 @@ func Help(m *discordgo.MessageCreate, command string, args []string) {
 	helpMessage := `book            - Book a new server
 unbook          - Unbook your current server
 send password   - Send the updated server details
-demos           - Send the link to the uploaded demos (soon!)
+demos           - Send the link to the uploaded demos
 help            - Display the help message (you're reading it!)
 
 For help, ping @Alex#4240 in this channel.
@@ -119,7 +121,18 @@ Note: Ozfortress booking commands also are accepted by this bot.`
 func DemoLink(m *discordgo.MessageCreate, command string, args []string) {
 	User := &util.PatchUser{m.Author}
 
-	Session.ChannelMessageSend(m.ChannelID, fmt.Sprintf("%s: https://stv.qixalite.com/", User.GetMention()))
+	demosTarget := strings.Join(args, " ")
+	if demosTarget == "" {
+		demosTarget = User.GetFullname()
+	}
+
+	Session.ChannelMessageSend(m.ChannelID,
+		fmt.Sprintf(
+			"%s: https://stv.qixalite.com/?q=%s",
+			User.GetMention(),
+			url.QueryEscape(demosTarget),
+		),
+	)
 }
 
 // BookServer command handler

@@ -11,6 +11,7 @@ import (
 	"alex-j-butler.com/tf2-booking/config"
 	"alex-j-butler.com/tf2-booking/globals"
 	"alex-j-butler.com/tf2-booking/models"
+	"alex-j-butler.com/tf2-booking/util"
 	"github.com/bwmarrin/discordgo"
 	"github.com/james4k/rcon"
 	"github.com/vattle/sqlboiler/queries/qm"
@@ -56,6 +57,9 @@ type Server struct {
 	// The mention string of the Discord user who booked the server.
 	BookerMention string
 
+	// The full name of the Discord user who booked the server.
+	BookerFullname string
+
 	// Booking ID that the server is currently associated with.
 	BookingID int
 
@@ -66,13 +70,12 @@ type Server struct {
 	ErrorMinutes int
 }
 
-func (s *Server) SetServerVars(duration time.Duration, userID string) {
-	s.ReturnDate = time.Now().Add(duration)
+func (s *Server) SetServerVars(userID string, fullname string) {
 	s.Booked = true
 	s.BookedDate = time.Now()
 	s.Booker = userID
 	s.BookerMention = fmt.Sprintf("<@%s>", userID)
-	s.SentWarning = false
+	s.BookerFullname = fullname
 	s.SentIdleWarning = false
 	s.SentLobbyWarning = false
 	s.IdleMinutes = 0
@@ -215,7 +218,9 @@ func (s *Server) Stop() error {
 	return err
 }
 
-func (s *Server) Book(user *discordgo.User, duration time.Duration) (string, string, error) {
+func (s *Server) Book(user *discordgo.User) (string, string, error) {
+	patchUser := &util.PatchUser{user}
+
 	if s.Booked == true {
 		return "", "", errors.New("Server is already booked")
 	}
@@ -262,7 +267,7 @@ func (s *Server) Book(user *discordgo.User, duration time.Duration) (string, str
 	defer s.Update(globals.RedisClient)
 
 	// Set the server variables.
-	s.SetServerVars(duration, user.ID)
+	s.SetServerVars(user.ID, patchUser.GetFullname())
 
 	// Setup the server.
 	RCONPassword, ServerPassword, err := s.Setup()
