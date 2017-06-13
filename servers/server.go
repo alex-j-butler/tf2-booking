@@ -28,9 +28,6 @@ type Server struct {
 	Address    string `json:"-"`
 	STVAddress string `json:"-"`
 
-	// Whether this server has been sent the unbooking warning.
-	SentWarning bool
-
 	// Whether this server has been sent the idle unbooking warning.
 	SentIdleWarning bool
 
@@ -47,9 +44,6 @@ type Server struct {
 
 	// Specifies when the server was booked.
 	BookedDate time.Time
-
-	// Timestamp indicating when the server is to be returned.
-	ReturnDate time.Time
 
 	// The ID of the Discord user who booked the server.
 	Booker string
@@ -83,12 +77,10 @@ func (s *Server) SetServerVars(userID string, fullname string) {
 }
 
 func (s *Server) ResetServerVars() {
-	s.ReturnDate = time.Time{}
 	s.Booked = false
 	s.BookedDate = time.Time{}
 	s.Booker = ""
 	s.BookerMention = ""
-	s.SentWarning = false
 	s.SentIdleWarning = false
 	s.SentLobbyWarning = false
 	s.IdleMinutes = 0
@@ -176,9 +168,6 @@ func (s *Server) GetCurrentPassword() (string, error) {
 //  string - Server password
 //  error - Error of a failed setup, or nil if none
 func (s *Server) Setup() (string, string, error) {
-	// Reset the warning notification so that it can be sent again.
-	s.SentWarning = false
-
 	// Run the setup function from the runner implementation.
 	rconPassword, srvPassword, err := s.Runner.Setup(s)
 
@@ -305,9 +294,11 @@ func (s *Server) Unbook() error {
 	return nil
 }
 
-func (s *Server) ExtendBooking(amount time.Duration) {
-	// Add duration to the return date.
-	s.ReturnDate = s.ReturnDate.Add(amount)
+func (s *Server) ExtendBooking() {
+	// TODO: Implement this.
+	// Reset the number of idle minutes, and allow the timeout warning message to be sent again.
+	s.SentIdleWarning = false
+	s.ResetIdleMinutes()
 
 	// Update the server in Redis.
 	s.Update(globals.RedisClient)

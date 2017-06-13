@@ -161,7 +161,7 @@ func BookServer(m *discordgo.MessageCreate, command string, args []string) {
 
 	if Serv != nil {
 		// Book the server.
-		RCONPassword, ServerPassword, err := Serv.Book(m.Author, config.Conf.Booking.Duration.Duration)
+		RCONPassword, ServerPassword, err := Serv.Book(m.Author)
 		if err != nil {
 			Session.ChannelMessageSend(m.ChannelID, fmt.Sprintf("%s: Something went wrong while trying to book your server, please try again later.", User.GetMention()))
 			log.Println(fmt.Sprintf("Failed to book server \"%s\" from \"%s\":", Serv.Name, m.Author.ID), err)
@@ -318,15 +318,14 @@ func ExtendServer(m *discordgo.MessageCreate, command string, args []string) {
 	Serv, err := pool.GetServerByUUID(bookingInfoStr)
 
 	if err == nil && Serv != nil {
-		// Extend the booking.
-		Serv.ExtendBooking(config.Conf.Booking.ExtendDuration.Duration)
+		Serv.ExtendBooking()
 
 		// Notify server of successful operation.
 		Serv.SendCommand(
 			fmt.Sprintf(
 				"say @%s: Your booking has been extended by %s.",
 				m.Author.Username,
-				util.ToHuman(&config.Conf.Booking.ExtendDuration.Duration),
+				fmt.Sprintf("%d minutes", config.Conf.Booking.MaxIdleMinutes),
 			),
 		)
 
@@ -336,7 +335,7 @@ func ExtendServer(m *discordgo.MessageCreate, command string, args []string) {
 			fmt.Sprintf(
 				"%s: Your booking has been extended by %s.",
 				User.GetMention(),
-				util.ToHuman(&config.Conf.Booking.ExtendDuration.Duration),
+				fmt.Sprintf("%d minutes", config.Conf.Booking.MaxIdleMinutes),
 			),
 		)
 	} else {
@@ -458,12 +457,12 @@ func PrintStats(m *discordgo.MessageCreate, command string, args []string) {
 			username = bookerUser.Username
 		}
 
-		data = append(data, []string{serv.Name, getServerStatusString(serv), serv.ReturnDate.String(), username, serv.Booker})
+		data = append(data, []string{serv.Name, getServerStatusString(serv), serv.BookedDate.String(), username, serv.Booker})
 	}
 
 	var buf bytes.Buffer
 	table := tablewriter.NewWriter(&buf)
-	table.SetHeader([]string{"Server name", "Status", "Unbook time", "Booker name", "Booker ID"})
+	table.SetHeader([]string{"Server name", "Status", "Book time", "Booker name", "Booker ID"})
 	table.SetBorders(tablewriter.Border{Left: true, Top: false, Right: true, Bottom: false})
 	table.SetCenterSeparator("|")
 	table.SetAutoFormatHeaders(false)

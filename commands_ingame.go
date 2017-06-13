@@ -51,6 +51,7 @@ func ReportServer(commandInfo ingame.CommandInfo, command string, args []string)
 }
 
 func TimeLeft(commandInfo ingame.CommandInfo, command string, args []string) {
-	duration := -time.Since(commandInfo.Server.ReturnDate)
-	commandInfo.Server.SendCommand(fmt.Sprintf("say %s remaining in booking.", util.ToHuman(&duration)))
+	// TODO: Implement this.
+	// duration := -time.Since(commandInfo.Server.ReturnDate)
+	// commandInfo.Server.SendCommand(fmt.Sprintf("say %s remaining in booking.", util.ToHuman(&duration)))
 }
