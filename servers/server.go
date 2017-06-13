@@ -287,8 +287,11 @@ func (s *Server) Unbook() error {
 	return nil
 }
 
-func (s *Server) ExtendBooking(amount time.Duration) {
+func (s *Server) ExtendBooking() {
 	// TODO: Implement this.
+	// Reset the number of idle minutes, and allow the timeout warning message to be sent again.
+	s.SentIdleWarning = false
+	s.ResetIdleMinutes()
 
 	// Update the server in Redis.
 	s.Update(globals.RedisClient)

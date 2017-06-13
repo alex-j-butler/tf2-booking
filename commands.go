@@ -305,9 +305,7 @@ func ExtendServer(m *discordgo.MessageCreate, command string, args []string) {
 	Serv, err := pool.GetServerByUUID(bookingInfoStr)
 
 	if err == nil && Serv != nil {
-		// Reset the number of idle minutes, and allow the timeout warning message to be sent again.
-		Serv.SentIdleWarning = false
-		Serv.ResetIdleMinutes()
+		Serv.ExtendBooking()
 
 		// Notify server of successful operation.
 		Serv.SendCommand(
