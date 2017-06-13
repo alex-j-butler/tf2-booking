@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	"log"
 )
 
 func GetGameString(num int) string {
@@ -15,6 +16,8 @@ func GetGameString(num int) string {
 }
 
 func UpdateGameString() error {
+	log.Println("Updating game string")
+
 	availableServers := len(pool.GetAvailableServers())
 
 	if availableServers == 0 {
