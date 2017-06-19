@@ -78,6 +78,7 @@ func RunServer(ctx *cli.Context) {
 	bookingClient := client.New(
 		config.Conf.Booking.APIAddress,
 		config.Conf.Booking.APIPort,
+		config.Conf.Booking.APIKey,
 	)
 
 	// Initialise the server pool.
