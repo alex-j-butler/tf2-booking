@@ -24,23 +24,8 @@ log_server:
 
 # Booking section
 booking:
-  # Duration of server booking.
-  duration: "4h"
-  # Duration of server booking extension.
-  extend_duration: "2h"
-  # Duration before the booking end to send warning message.
-  warning_duration: "-10m"
-
   # Message to send to clients while kicking them.
   kick_message: "Server has been unbooked!"
-  # Bash command to setup the server for booking.
-  setup_command: "book_server.sh"
-  # Bash command to start the server.
-  start_command: "run r"
-  # Bash command to stop the server.
-  stop_command: "run sp"
-  # Bash command to upload STV demos.
-  upload_stv_command: "stv.sh"
 
   # Number of minutes that a server is allowed to be idle before unbooking.
   max_idle_minutes: 15
@@ -49,6 +34,19 @@ booking:
 
   # Amount of query errors before a notification is sent.
   error_threshold: 5
+
+booking_api:
+  # Booking bot will only use servers tagged with this tag.
+  tag: "bookable"
+
+  # Address of the Booking API.
+  api_address: "127.0.0.1"
+
+  # Port of the Booking API.
+  api_port: 9902
+
+  # Key used to authenticate to the Booking API.
+  api_key: "example api key"
 
 commands:
   # Delay between the !report command can be used.
