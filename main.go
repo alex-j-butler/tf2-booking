@@ -23,7 +23,6 @@ import (
 	"github.com/robfig/cron"
 
 	"github.com/codegangsta/cli"
-	_ "github.com/lib/pq"
 )
 
 var version = "unknown"
