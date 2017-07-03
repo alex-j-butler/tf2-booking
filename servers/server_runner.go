@@ -5,10 +5,6 @@ import (
 	"time"
 
 	"github.com/Qixalite/booking-api/client"
-
-	null "gopkg.in/nullbio/null.v6"
-
-	"alex-j-butler.com/tf2-booking/models"
 )
 
 type ServerRunner struct {
@@ -107,7 +103,7 @@ func (sr ServerRunner) Stop(server *Server) error {
 	return err
 }
 
-func (sr ServerRunner) UploadSTV(server *Server) ([]models.Demo, error) {
+func (sr ServerRunner) UploadSTV(server *Server) ([]string, error) {
 	// Retrieve the API server instance from the API client.
 	apiServer, err := sr.getServer(server.UUID)
 	if err != nil {
@@ -120,9 +116,9 @@ func (sr ServerRunner) UploadSTV(server *Server) ([]models.Demo, error) {
 		return nil, err
 	}
 
-	demos := make([]models.Demo, 0, len(demoURLs))
+	demos := make([]string, 0, len(demoURLs))
 	for _, demoURL := range demoURLs {
-		demos = append(demos, models.Demo{UploadedTime: null.TimeFrom(time.Now()), URL: demoURL})
+		demos = append(demos, demoURL)
 	}
 
 	return demos, nil

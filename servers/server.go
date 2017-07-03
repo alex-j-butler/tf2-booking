@@ -10,7 +10,6 @@ import (
 
 	"alex-j-butler.com/tf2-booking/config"
 	"alex-j-butler.com/tf2-booking/globals"
-	"alex-j-butler.com/tf2-booking/models"
 	"alex-j-butler.com/tf2-booking/util"
 	"github.com/bwmarrin/discordgo"
 	"github.com/james4k/rcon"
@@ -254,10 +253,10 @@ func (s *Server) ExtendBooking() {
 	s.Update(globals.RedisClient)
 }
 
-func (s *Server) generateSTVReply(demos []models.Demo) string {
+func (s *Server) generateSTVReply(demos []string) string {
 	message := "STV Demo(s) uploaded:"
 	for i := 0; i < len(demos); i++ {
-		message = fmt.Sprintf("%s\n\t%s", message, demos[i].URL)
+		message = fmt.Sprintf("%s\n\t%s", message, demos[i])
 	}
 
 	return message
