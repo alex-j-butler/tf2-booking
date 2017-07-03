@@ -14,8 +14,6 @@ import (
 	"alex-j-butler.com/tf2-booking/util"
 	"github.com/bwmarrin/discordgo"
 	"github.com/james4k/rcon"
-	"github.com/vattle/sqlboiler/queries/qm"
-	"gopkg.in/nullbio/null.v6"
 	redis "gopkg.in/redis.v5"
 )
 
@@ -53,9 +51,6 @@ type Server struct {
 
 	// The full name of the Discord user who booked the server.
 	BookerFullname string
-
-	// Booking ID that the server is currently associated with.
-	BookingID int
 
 	// IdleMinutes is the number of minutes the server has been idle for.
 	IdleMinutes int
@@ -214,43 +209,6 @@ func (s *Server) Book(user *discordgo.User) (string, string, error) {
 		return "", "", errors.New("Server is already booked")
 	}
 
-	// TODO: Move the database handling to after the server setup
-	// in case an error occurs before then.
-
-	// Tries to select the user by discord id,
-	// if no record is found, insert a new record.
-	dbUser, err := models.Users(globals.DB, qm.Where("discord_id=?", user.ID)).One()
-	if err != nil {
-		// Insert new record.
-		var newUser models.User
-		newUser.DiscordID = null.StringFrom(user.ID)
-		newUser.Name = null.StringFrom(user.Username)
-
-		err = newUser.Insert(globals.DB)
-
-		if err != nil {
-			log.Println("Database error:", err)
-			return "", "", errors.New("User record could not be created")
-		}
-
-		dbUser = &newUser
-	}
-
-	// Adds a new booking to the database
-	// and set the booking id.
-	var booking models.Booking
-	booking.SetBooker(globals.DB, false, dbUser)
-	booking.ServerName = s.Name
-	booking.BookedTime = null.TimeFrom(time.Now())
-	err = booking.Insert(globals.DB)
-
-	if err != nil {
-		log.Println("Database error:", err)
-		return "", "", errors.New("Server record could not be created")
-	}
-
-	s.BookingID = booking.BookingID
-
 	// Update the server to Redis
 	// This is deferred to make sure it happens whether the server is setup or not.
 	defer s.Update(globals.RedisClient)
@@ -279,14 +237,6 @@ func (s *Server) Unbook() error {
 
 	// Reset server variables.
 	s.ResetServerVars()
-
-	booking, err := models.FindBooking(globals.DB, s.BookingID)
-	if err != nil {
-		return errors.New("Server record could not be updated")
-	}
-
-	booking.UnbookedTime = null.TimeFrom(time.Now())
-	booking.Update(globals.DB)
 
 	// Update the server in Redis.
 	s.Update(globals.RedisClient)
@@ -324,25 +274,6 @@ func (s *Server) UploadSTV() (string, error) {
 	}
 
 	message := s.generateSTVReply(demos)
-
-	// Grab the current booking.
-	booking, err := models.FindBooking(globals.DB, s.BookingID)
-	if err != nil {
-		log.Println("FindBooking failed")
-		return "", errors.New("Server record could not be updated")
-	}
-
-	// Add demos to booking.
-	for i := 0; i < len(demos); i++ {
-		booking.AddDemos(globals.DB, true, &demos[i])
-	}
-
-	// Update booking.
-	err = booking.Update(globals.DB)
-	if err != nil {
-		log.Println("Update failed")
-		return "", errors.New("Server record could not be updated")
-	}
 
 	return message, nil
 }

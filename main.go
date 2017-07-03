@@ -1,7 +1,6 @@
 package main
 
 import (
-	"database/sql"
 	"fmt"
 	"log"
 	"os"
@@ -90,18 +89,6 @@ func RunServer(ctx *cli.Context) {
 	}
 
 	SetupCron()
-
-	// Connect to the PostgreSQL database.
-	db, err := sql.Open("postgres", config.Conf.Database.DSN)
-	if err != nil {
-		log.Fatalln("Database connection failed:", err)
-	}
-	globals.DB = db
-
-	// Ping the database to make sure we're properly connected.
-	if err := globals.DB.Ping(); err != nil {
-		log.Fatalln("Database ping failed:", err)
-	}
 
 	// Setup the Redis client
 	// and PING it to make sure we properly connected
