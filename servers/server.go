@@ -28,10 +28,6 @@ type Server struct {
 	// Whether this server has been sent the idle unbooking warning.
 	SentIdleWarning bool
 
-	// Whether this server has been sent the TF2Center/TF2Stadium lobby warning message,
-	// informing them that they need 2 players on the server to prevent idle unbooking.
-	SentLobbyWarning bool
-
 	// Last known RCON password.
 	// If this RCON password is invalid, the server can send a tmux command to reset it.
 	RCONPassword string
@@ -65,7 +61,6 @@ func (s *Server) SetServerVars(userID string, fullname string) {
 	s.BookerMention = fmt.Sprintf("<@%s>", userID)
 	s.BookerFullname = fullname
 	s.SentIdleWarning = false
-	s.SentLobbyWarning = false
 	s.IdleMinutes = 0
 	s.ErrorMinutes = 0
 }
@@ -76,7 +71,6 @@ func (s *Server) ResetServerVars() {
 	s.Booker = ""
 	s.BookerMention = ""
 	s.SentIdleWarning = false
-	s.SentLobbyWarning = false
 	s.IdleMinutes = 0
 	s.ErrorMinutes = 0
 }
