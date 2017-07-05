@@ -346,7 +346,6 @@ func SetupCron() {
 	c = cron.New()
 	c.AddFunc("0 * * * *", CheckIdleMinutes)
 
-	c.AddFunc("@every 10s", Cron10Seconds)
 	c.AddFunc("@every 1m", Cron1Minute)
 
 	c.Start()
