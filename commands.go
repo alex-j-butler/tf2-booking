@@ -108,7 +108,7 @@ send password   - Send the updated server details
 demos           - Send the link to the uploaded demos
 help            - Display the help message (you're reading it!)
 
-For help, ping @Alex#4240 in this channel.
+For help, ping @Alex_#7324 in this channel.
 
 Note: Ozfortress booking commands also are accepted by this bot.`
 
