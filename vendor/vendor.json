@@ -13,14 +13,10 @@
 			"revisionTime": "2016-08-29T20:23:21Z"
 		},
 		{
-			"checksumSHA1": "ObgjIxEDk7Dqp5WZrB0jEWtYhB0=",
-			"origin": "github.com/alex-j-butler/discordgo",
+			"checksumSHA1": "C4z72KIqw5+mmsrWYXV7bDXvGBw=",
 			"path": "github.com/bwmarrin/discordgo",
-			"revision": "d1faf75e790180bdd28830bf066b757bf474274a",
-			"revisionTime": "2017-01-22T13:16:24Z",
-			"tree": true,
-			"version": "develop-fork",
-			"versionExact": "develop-fork"
+			"revision": "2fda7ce223a66a5b70b66987c22c3c94d022ee66",
+			"revisionTime": "2017-09-05T20:05:02Z"
 		},
 		{
 			"checksumSHA1": "Z3X1YJEJoQOHiWI9Czd6Q/3zMY4=",

@@ -243,7 +243,6 @@ func RunServer(ctx *cli.Context) {
 
 	// Register the OnReady handler.
 	dg.AddHandler(OnReady)
-	dg.AddHandler(OnGuildReady)
 
 	// Open the Discord websocket.
 	err = dg.Open()
@@ -272,12 +271,7 @@ func OnReady(s *discordgo.Session, r *discordgo.Ready) {
 	} else {
 		log.Println("Successfully updated game string.")
 	}
-	log.Println("Discord bot successfully started.")
-}
 
-// OnGuildReady handler for Discord.
-// Called when all the guilds have been lazy loaded.
-func OnGuildReady(s *discordgo.Session, r *discordgo.GuildReady) {
 	// Register a message create handler.
 	// This must be done in the OnGuildReady event, otherwise guild lookups would fail because of
 	// it not having the list of guilds yet.
@@ -286,7 +280,7 @@ func OnGuildReady(s *discordgo.Session, r *discordgo.GuildReady) {
 	}
 	MessageCreateFunc = s.AddHandler(MessageCreate)
 
-	log.Println("Discord guilds successfully loaded.")
+	log.Println("Discord bot successfully started.")
 }
 
 // MessageCreate handler for Discord.
@@ -305,13 +299,13 @@ func MessageCreate(s *discordgo.Session, m *discordgo.MessageCreate) {
 		log.Println("Channel lookup failed:", err)
 	}
 
-	if channel.IsPrivate {
+	if channel.Type == discordgo.ChannelTypeDM {
 		permissionsChannelID = config.Conf.Discord.DefaultChannel
 	}
 
 	// Configuration has a string slice containing channels the bot should operate in.
 	// If the channel of the newly received message is not in the slice, stop now.
-	if !util.Contains(config.Conf.Discord.AcceptableChannels, m.ChannelID) && !channel.IsPrivate {
+	if !util.Contains(config.Conf.Discord.AcceptableChannels, m.ChannelID) && channel.Type != discordgo.ChannelTypeDM {
 		return
 	}
 

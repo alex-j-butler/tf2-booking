@@ -88,7 +88,7 @@ func (c *Command) Handle(session *discordgo.Session, m *discordgo.MessageCreate,
 				log.Println("Failed to lookup channel.", err)
 			}
 
-			if channel.IsPrivate {
+			if channel.Type == discordgo.ChannelTypeDM {
 				continue
 			}
 		}

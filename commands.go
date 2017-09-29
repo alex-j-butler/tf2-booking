@@ -19,7 +19,7 @@ import (
 )
 
 func sendServerDetails(channelID string, serv *servers.Server, serverPassword, rconPassword string) {
-	Session.ChannelMessageSendEmbed(
+	Session.ChannelMessageSendEmbedWithContent(
 		channelID,
 		"**Here are the details for your booked server:**",
 		&discordgo.MessageEmbed{
@@ -44,7 +44,7 @@ func sendServerDetails(channelID string, serv *servers.Server, serverPassword, r
 			},
 		},
 	)
-	Session.ChannelMessageSendEmbed(
+	Session.ChannelMessageSendEmbedWithContent(
 		channelID,
 		"",
 		&discordgo.MessageEmbed{
@@ -64,7 +64,7 @@ func sendServerDetails(channelID string, serv *servers.Server, serverPassword, r
 			},
 		},
 	)
-	Session.ChannelMessageSendEmbed(
+	Session.ChannelMessageSendEmbedWithContent(
 		channelID,
 		"",
 		&discordgo.MessageEmbed{
