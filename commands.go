@@ -8,6 +8,7 @@ import (
 
 	"bytes"
 
+	"alex-j-butler.com/tablewriter"
 	"alex-j-butler.com/tf2-booking/config"
 	"alex-j-butler.com/tf2-booking/globals"
 	"alex-j-butler.com/tf2-booking/servers"
@@ -15,7 +16,6 @@ import (
 	"alex-j-butler.com/tf2-booking/wait"
 	"github.com/bwmarrin/discordgo"
 	"github.com/google/go-github/github"
-	"github.com/olekukonko/tablewriter"
 )
 
 func sendServerDetails(channelID string, serv *servers.Server, serverPassword, rconPassword string) {
@@ -463,8 +463,7 @@ func PrintStats(m *discordgo.MessageCreate, command string, args []string) {
 	var buf bytes.Buffer
 	table := tablewriter.NewWriter(&buf)
 	table.SetHeader([]string{"Server name", "Status", "Book time", "Booker name", "Booker ID"})
-	table.SetBorders(tablewriter.Border{Left: true, Top: false, Right: true, Bottom: false})
-	table.SetCenterSeparator("|")
+	table.SetBorders(tablewriter.Border{Left: true, Top: true, Right: true, Bottom: true})
 	table.SetAutoFormatHeaders(false)
 	table.AppendBulk(data)
 	table.Render()
