@@ -9,13 +9,13 @@ import (
 
 type ServerRunner struct {
 	APIClient     *client.Client
-	cachedServers map[string]*client.RPCServer
+	cachedServers map[string]*client.ServerResource
 }
 
 func NewRunner(apiClient *client.Client) *ServerRunner {
 	return &ServerRunner{
 		APIClient:     apiClient,
-		cachedServers: make(map[string]*client.RPCServer),
+		cachedServers: make(map[string]*client.ServerResource),
 	}
 }
 
@@ -47,7 +47,7 @@ func (sr ServerRunner) generatePassword() string {
 	return string(b)
 }
 
-func (sr ServerRunner) getServer(uuid string) (*client.RPCServer, error) {
+func (sr ServerRunner) getServer(uuid string) (*client.ServerResource, error) {
 	if server, ok := sr.cachedServers[uuid]; ok {
 		return server, nil
 	}
