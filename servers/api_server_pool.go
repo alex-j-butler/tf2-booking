@@ -6,7 +6,7 @@ import (
 	"log"
 	"path"
 
-	"github.com/Qixalite/booking-api/client"
+	"alex-j-butler.com/booking-api/client"
 )
 
 // APIServerPool is a server pool that is loaded from the booking API.
