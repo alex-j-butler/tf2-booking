@@ -3,6 +3,10 @@
 	"ignore": "test",
 	"package": [
 		{
+			"path": "alex-j-butler.com/booking-api/rpc",
+			"revision": ""
+		},
+		{
 			"path": "appengine/cloudsql",
 			"revision": ""
 		},
@@ -11,6 +15,12 @@
 			"path": "github.com/Sirupsen/logrus",
 			"revision": "3ec0642a7fb6488f65b06f9040adc67e3990296a",
 			"revisionTime": "2016-08-29T20:23:21Z"
+		},
+		{
+			"checksumSHA1": "jZRjBypErb1SsMaeEx0HqUMHJGA=",
+			"path": "github.com/alex-j-butler/booking-api/client",
+			"revision": "6c1b3b6af458eebcfaa81171027730e41582b15d",
+			"revisionTime": "2017-10-01T02:15:50Z"
 		},
 		{
 			"checksumSHA1": "C4z72KIqw5+mmsrWYXV7bDXvGBw=",
