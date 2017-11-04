@@ -8,7 +8,8 @@ environment:
 
 install:
   - go get -u github.com/kardianos/govendor
-  - go get -u github.com/alex-j-butler/booking-api
+  - go get -u github.com/alex-j-butler/booking-api/client
+  - go get -u github.com/alex-j-butler/booking-api/rpc
   - cd C:\Gopath\src\alex-j-butler.com\tf2-booking
   - C:\Gopath\bin\govendor sync
 
