@@ -204,6 +204,12 @@ func RunServer(ctx *cli.Context) {
 			RespondToDM(true),
 		"version",
 	)
+	Command.Add(
+		commands.NewCommand(UpdateAll).
+			Permissions(discordgo.PermissionManageServer).
+			RespondToDM(true),
+		"update",
+	)
 
 	// Register the ingame commands and their command handlers.
 	IngameCommand = ingame.New("!")

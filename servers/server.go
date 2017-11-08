@@ -271,6 +271,10 @@ func (s *Server) UploadSTV() (string, error) {
 	return message, nil
 }
 
+func (s *Server) SteamCMDUpdate() (bool, error) {
+	return s.Runner.Update(s)
+}
+
 func (s *Server) SendCommand(command string) error {
 	// Run the SendCommand function from the runner implementation.
 	err := s.Runner.SendCommand(s, command)

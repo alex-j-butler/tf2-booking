@@ -108,6 +108,11 @@ send password   - Send the updated server details
 demos           - Send the link to the uploaded demos
 help            - Display the help message (you're reading it!)
 
+Admin commands:
+update   - Updates all offline servers.
+stats    - Shows run status for all servers.
+exit     - Exits the booking bot.
+
 For help, ping @Alex_#7324 in this channel.
 
 Note: Ozfortress booking commands also are accepted by this bot.`
@@ -522,4 +527,30 @@ func Exit(m *discordgo.MessageCreate, command string, args []string) {
 	Session.ChannelMessageSend(m.ChannelID, fmt.Sprintf("%s: Shutting down `tf2-booking`.", User.GetMention()))
 
 	wait.Exit()
+}
+
+type UpdateResult struct {
+	ServerName string
+	Success    bool
+	Error      error
+}
+
+func UpdateAll(m *discordgo.MessageCreate, command string, args []string) {
+	User := &util.PatchUser{m.Author}
+	Session.ChannelMessageSend(m.ChannelID, fmt.Sprintf("%s: Updating all (non-running) servers.", User.GetMention()))
+
+	servs := pool.GetServers()
+
+	for _, server := range servs {
+		go func(s *servers.Server) {
+			success, err := s.SteamCMDUpdate()
+			if success {
+				Session.ChannelMessageSend(m.ChannelID, fmt.Sprintf("%s: %s updated", User.GetMention(), s.Name))
+			} else if !success && err == nil {
+				Session.ChannelMessageSend(m.ChannelID, fmt.Sprintf("%s: %s already up to date", User.GetMention(), s.Name))
+			} else if !success && err != nil {
+				Session.ChannelMessageSend(m.ChannelID, fmt.Sprintf("%s: %s failed with error: %s", User.GetMention(), s.Name, err))
+			}
+		}(server)
+	}
 }
