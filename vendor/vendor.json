@@ -539,6 +539,12 @@
 			"revisionTime": "2018-08-31T06:23:57Z"
 		},
 		{
+			"checksumSHA1": "9xvsJFstKF0Xdwwpbo0SdeYf5BI=",
+			"path": "github.com/valyala/gorpc",
+			"revision": "908281bef77441f2d0ec1792189b4032a1dace0c",
+			"revisionTime": "2016-05-19T17:16:14Z"
+		},
+		{
 			"checksumSHA1": "yfas6O5up+ci5bWDn/95EGhs7M8=",
 			"path": "github.com/vattle/sqlboiler",
 			"revision": "aab85fd2cde5468e3347c3c9e6430e6230bec2be",
