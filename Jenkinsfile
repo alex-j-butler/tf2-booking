@@ -33,8 +33,8 @@ node {
 					}
 				}
 			}
-		} catch (e) {
-			currentBuild.result = "FAILED"
 		}
+	} catch (e) {
+		currentBuild.result = "FAILED"
 	}
 }
