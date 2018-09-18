@@ -8,12 +8,12 @@ import (
 
 	"bytes"
 
-	"alex-j-butler.com/tablewriter"
 	"alex-j-butler.com/tf2-booking/config"
 	"alex-j-butler.com/tf2-booking/globals"
 	"alex-j-butler.com/tf2-booking/servers"
 	"alex-j-butler.com/tf2-booking/util"
 	"alex-j-butler.com/tf2-booking/wait"
+	"github.com/alex-j-butler/tablewriter"
 	"github.com/bwmarrin/discordgo"
 	"github.com/google/go-github/github"
 )

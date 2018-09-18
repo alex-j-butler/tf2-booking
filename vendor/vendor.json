@@ -23,6 +23,12 @@
 			"revisionTime": "2017-10-01T02:15:50Z"
 		},
 		{
+			"checksumSHA1": "kdCIcw2Hdl5cNzpA62J9nTgVlkE=",
+			"path": "github.com/alex-j-butler/tablewriter",
+			"revision": "bd5c4c182c24db6d7b37ed7109f886d9923c163b",
+			"revisionTime": "2017-10-01T02:59:13Z"
+		},
+		{
 			"checksumSHA1": "C4z72KIqw5+mmsrWYXV7bDXvGBw=",
 			"path": "github.com/bwmarrin/discordgo",
 			"revision": "2fda7ce223a66a5b70b66987c22c3c94d022ee66",
