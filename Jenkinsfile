@@ -1,6 +1,6 @@
 def build(os, arch) {
 	withEnv(["GOOS=${os}", "GOARCH=${arch}"]) {
-		sh """cd $GOPATH/src/alex-j-butler/tf2-booking/ && go build -o tf2-booking-$os-$arch"""
+		sh """cd $GOPATH/src/alex-j-butler.com/tf2-booking/ && go build -o tf2-booking-$os-$arch"""
 		archiveArtifacts artifacts: "tf2-booking-$os-$arch", fingerprint: true
 	}
 }
@@ -12,7 +12,7 @@ node {
 		// Export environment variables pointing to the directory where Go was installed
 		withEnv(["GOROOT=${root}", "PATH+GO=${root}/bin"]) {
 
-				ws("${JENKINS_HOME}/jobs/${JOB_NAME}/builds/${BUILD_ID}/src/alex-j-butler/tf2-booking/") {
+				ws("${JENKINS_HOME}/jobs/${JOB_NAME}/builds/${BUILD_ID}/src/alex-j-butler.com/tf2-booking/") {
 					withEnv(["GOPATH=${JENKINS_HOME}/jobs/${JOB_NAME}/builds/${BUILD_ID}"]) {
 						env.PATH="${GOPATH}/bin:$PATH"
 
@@ -21,7 +21,7 @@ node {
 						}
 
 						stage('Dependencies') {
-							sh """cd $GOPATH/src/alex-j-butler/tf2-booking/ && go get github.com/kardianos/govendor && govendor sync"""
+							sh """cd $GOPATH/src/alex-j-butler.com/tf2-booking/ && go get github.com/kardianos/govendor && govendor sync"""
 						}
 
 					stage('Build') {
