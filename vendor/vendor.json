@@ -827,10 +827,10 @@
 			"revisionTime": "2018-09-14T22:32:49Z"
 		},
 		{
-			"checksumSHA1": "Dsuo0iDvQHu53NprwYHQUQhSpGg=",
+			"checksumSHA1": "0kG5vpMjP6+zRY6DjIzf6CP6eco=",
 			"path": "google.golang.org/grpc",
-			"revision": "bd04c06895526e3d5a05d3a9d073f324edb491b6",
-			"revisionTime": "2018-09-17T22:03:21Z"
+			"revision": "8997b5fa08730b06a4b589dba174c115796fbb7b",
+			"revisionTime": "2018-09-20T23:48:47Z"
 		},
 		{
 			"checksumSHA1": "4yTqW34Ah/CewKahr++5qSyjdVs=",
