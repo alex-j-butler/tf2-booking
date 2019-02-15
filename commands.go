@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"fmt"
 	"log"
-	"net/url"
 	"strings"
 	"time"
 
@@ -123,26 +122,33 @@ Note: Ozfortress booking commands also are accepted by this bot.`
 // This function should send them the link to the Qixalite demo store.
 func DemoLink(m *discordgo.MessageCreate, command string, permissions commands.CommandPermissions, args commands.CommandArgList) {
 	User := &util.PatchUser{m.Author}
+	Session.ChannelMessageSend(m.ChannelID, fmt.Sprintf("%s: Sorry, demos command is currently unavailable.", User.GetMention()))
 
-	demosTarget := strings.Join(args.ToSlice()[1:], " ")
-	if demosTarget == "" {
-		demosTarget = User.GetFullname()
-	}
+	return
 
-	Session.ChannelMessageSend(m.ChannelID,
-		// Sort of dangerous - format string from a config file, but the config file should only be accessible by admins.
-		fmt.Sprintf(
-			"%s: "+config.Conf.Commands.DemoLink,
-			User.GetMention(),
-			url.QueryEscape(demosTarget),
-		),
-	)
+	// Fix the god damn demos-host.
+	/*
+		demosTarget := strings.Join(args.ToSlice()[1:], " ")
+		if demosTarget == "" {
+			demosTarget = User.GetFullname()
+		}
+
+		Session.ChannelMessageSend(m.ChannelID,
+			// Sort of dangerous - format string from a config file, but the config file should only be accessible by admins.
+			fmt.Sprintf(
+				"%s: "+config.Conf.Commands.DemoLink,
+				User.GetMention(),
+				url.QueryEscape(demosTarget),
+			),
+		)
+	*/
 }
 
 func Console(m *discordgo.MessageCreate, command string, permissions commands.CommandPermissions, args commands.CommandArgList) {
 	User := &util.PatchUser{m.Author}
 
 	serv, err := pool.GetServerByName(strings.Join(args.ToSlice()[1:], " "))
+	serv.Synchronise(globals.RedisClient)
 
 	if err != nil {
 		Session.ChannelMessageSend(m.ChannelID,
@@ -332,6 +338,7 @@ func UnbookServer(m *discordgo.MessageCreate, command string, permissions comman
 	}
 
 	Serv, err := pool.GetServerByUUID(bookingInfoStr)
+	Serv.Synchronise(globals.RedisClient)
 
 	if err == nil && Serv != nil {
 		// Get the booker name, before the server gets unbooked
@@ -436,6 +443,7 @@ func ExtendServer(m *discordgo.MessageCreate, command string, permissions comman
 	}
 
 	Serv, err := pool.GetServerByUUID(bookingInfoStr)
+	Serv.Synchronise(globals.RedisClient)
 
 	if err == nil && Serv != nil {
 		Serv.ExtendBooking()
@@ -512,6 +520,7 @@ func SendPassword(m *discordgo.MessageCreate, command string, permissions comman
 	}
 
 	Serv, err := pool.GetServerByUUID(bookingInfoStr)
+	Serv.Synchronise(globals.RedisClient)
 
 	if err == nil && Serv != nil {
 		serverPassword, err := Serv.GetCurrentPassword()
