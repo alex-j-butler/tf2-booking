@@ -310,25 +310,29 @@ func rpcLatency(from time.Time, to time.Time) (bytes.Buffer, error) {
 		}
 	}
 
-	sort.Float64s(points)
-	kPercentIndex := int(1.0 * float64(len(points)))
-	kPercentile := points[kPercentIndex-1]
+	if len(points) > 0 {
+		sort.Float64s(points)
+		kPercentIndex := int(1.0 * float64(len(points)))
+		kPercentile := points[kPercentIndex-1]
 
-	// Second units.
+		// Second units.
+		scaleFactor = 1.0
+		unitName = "s"
+		if kPercentile < 1.0 {
+			if kPercentile*1000.0 < 1.0 {
+				// Convert to microseconds
+				scaleFactor = 1000000.0
+				unitName = "us"
+			} else {
+				// Convert to milliseconds
+				scaleFactor = 1000.0
+				unitName = "ms"
+			}
+		}
+		log.Println("Calculated scale factor is:", scaleFactor)
+	}
 	scaleFactor = 1.0
 	unitName = "s"
-	if kPercentile < 1.0 {
-		if kPercentile*1000.0 < 1.0 {
-			// Convert to microseconds
-			scaleFactor = 1000000.0
-			unitName = "us"
-		} else {
-			// Convert to milliseconds
-			scaleFactor = 1000.0
-			unitName = "ms"
-		}
-	}
-	log.Println("Calculated scale factor is:", scaleFactor)
 
 	for i, metric := range metrics {
 		timeSeries := chart.TimeSeries{
