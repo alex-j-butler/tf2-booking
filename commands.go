@@ -1,21 +1,20 @@
 package main
 
 import (
+	"bytes"
 	"fmt"
 	"log"
 	"net/url"
 	"strings"
-
-	"bytes"
+	"time"
 
 	"alex-j-butler.com/tablewriter"
+	"alex-j-butler.com/tf2-booking/commands"
 	"alex-j-butler.com/tf2-booking/config"
 	"alex-j-butler.com/tf2-booking/globals"
 	"alex-j-butler.com/tf2-booking/servers"
 	"alex-j-butler.com/tf2-booking/util"
-	"alex-j-butler.com/tf2-booking/wait"
 	"github.com/bwmarrin/discordgo"
-	"github.com/google/go-github/github"
 )
 
 func sendServerDetails(channelID string, serv *servers.Server, serverPassword, rconPassword string) {
@@ -77,12 +76,12 @@ func sendServerDetails(channelID string, serv *servers.Server, serverPassword, r
 	)
 }
 
-func Version(m *discordgo.MessageCreate, command string, args []string) {
+func Version(m *discordgo.MessageCreate, command string, permissions commands.CommandPermissions, args commands.CommandArgList) {
 	User := &util.PatchUser{m.Author}
 	Session.ChannelMessageSend(m.ChannelID, fmt.Sprintf("%s: `tf2-booking` running git revision `%s`", User.GetMention(), version))
 }
 
-func SyncServers(m *discordgo.MessageCreate, command string, args []string) {
+func SyncServers(m *discordgo.MessageCreate, command string, permissions commands.CommandPermissions, args commands.CommandArgList) {
 	User := &util.PatchUser{m.Author}
 
 	for i, server := range servers.Servers {
@@ -99,7 +98,7 @@ func SyncServers(m *discordgo.MessageCreate, command string, args []string) {
 	Session.ChannelMessageSend(m.ChannelID, fmt.Sprintf("%s: Synchronised all servers.", User.GetMention()))
 }
 
-func Help(m *discordgo.MessageCreate, command string, args []string) {
+func Help(m *discordgo.MessageCreate, command string, permissions commands.CommandPermissions, args commands.CommandArgList) {
 	User := &util.PatchUser{m.Author}
 
 	helpMessage := `book            - Book a new server
@@ -109,7 +108,6 @@ demos           - Send the link to the uploaded demos
 help            - Display the help message (you're reading it!)
 
 Admin commands:
-update   - Updates all offline servers.
 stats    - Shows run status for all servers.
 exit     - Exits the booking bot.
 
@@ -123,19 +121,69 @@ Note: Ozfortress booking commands also are accepted by this bot.`
 // DemoLink command handler.
 // Called when the user types the 'demo' command into the Discord channel.
 // This function should send them the link to the Qixalite demo store.
-func DemoLink(m *discordgo.MessageCreate, command string, args []string) {
+func DemoLink(m *discordgo.MessageCreate, command string, permissions commands.CommandPermissions, args commands.CommandArgList) {
 	User := &util.PatchUser{m.Author}
 
-	demosTarget := strings.Join(args, " ")
+	demosTarget := strings.Join(args.ToSlice()[1:], " ")
 	if demosTarget == "" {
 		demosTarget = User.GetFullname()
 	}
 
 	Session.ChannelMessageSend(m.ChannelID,
+		// Sort of dangerous - format string from a config file, but the config file should only be accessible by admins.
 		fmt.Sprintf(
-			"%s: https://stv.qixalite.com/?q=%s",
+			"%s: "+config.Conf.Commands.DemoLink,
 			User.GetMention(),
 			url.QueryEscape(demosTarget),
+		),
+	)
+}
+
+func Console(m *discordgo.MessageCreate, command string, permissions commands.CommandPermissions, args commands.CommandArgList) {
+	User := &util.PatchUser{m.Author}
+
+	serv, err := pool.GetServerByName(strings.Join(args.ToSlice()[1:], " "))
+
+	if err != nil {
+		Session.ChannelMessageSend(m.ChannelID,
+			fmt.Sprintf(
+				"%s: Server not found\n%s",
+				User.GetMention(),
+				strings.Join(args.ToSlice()[1:], " "),
+			),
+		)
+
+		return
+	}
+
+	logLines, err := serv.ConsoleMax(10)
+	if err != nil {
+		Session.ChannelMessageSend(m.ChannelID,
+			fmt.Sprintf(
+				"%s: Console view for \"%s\" failed: %s",
+				User.GetMention(),
+				serv.Name,
+				err,
+			),
+		)
+		return
+	}
+
+	if len(logLines) > 0 {
+		Session.ChannelMessageSend(m.ChannelID,
+			fmt.Sprintf(
+				"```%s```",
+				strings.Join(logLines, "\n"),
+			),
+		)
+		return
+	}
+
+	Session.ChannelMessageSend(m.ChannelID,
+		fmt.Sprintf(
+			"%s: No log lines for \"%s\"",
+			User.GetMention(),
+			serv.Name,
 		),
 	)
 }
@@ -145,10 +193,30 @@ func DemoLink(m *discordgo.MessageCreate, command string, args []string) {
 // This function checks whether the user has a server booked, if not,
 // it books a new server, preventing it from being used by another user,
 // sets up the RCON password & Server Password and finally starts the TF2 server.
-func BookServer(m *discordgo.MessageCreate, command string, args []string) {
+func BookServer(m *discordgo.MessageCreate, command string, permissions commands.CommandPermissions, args commands.CommandArgList) {
 	User := &util.PatchUser{m.Author}
+	target := m.Author
 
-	bookingInfo, err := GetDefaultValue.Run(globals.RedisClient, []string{fmt.Sprintf("user.%s", m.Author.ID)}, nil).Result()
+	// handle admins unbooking servers for other users.
+	// `unbook @Alex` -> Unbooks a server from @Alex
+	if permissions.Test(discordgo.PermissionManageServer) && args.Num() > 1 {
+		// No point trying to decode if there are no valid mentions.
+		if len(m.Mentions) > 0 {
+			discordMention, _ := args.GetArg(1)
+			var dirtyDiscordID string
+			n, err := fmt.Sscanf(discordMention, "<@%s>", &dirtyDiscordID)
+			discordID := dirtyDiscordID[:len(dirtyDiscordID)-1]
+			if n == 1 || err == nil { // Ensure no error occurred, and that we only scanned 1 ID
+				user, err := Session.User(discordID)
+				if err == nil {
+					Session.ChannelMessageSend(m.ChannelID, fmt.Sprintf("%s: Using Discord user `%s`", User.GetMention(), user.Username))
+					target = user
+				}
+			}
+		}
+	}
+
+	bookingInfo, err := GetDefaultValue.Run(globals.RedisClient, []string{fmt.Sprintf("user.%s", target.ID)}, nil).Result()
 	if err != nil {
 		// Send a message to let the user know an error occurred.
 		Session.ChannelMessageSend(m.ChannelID, fmt.Sprintf("%s: Oops, looked like an error has occurred. Please contact an admin for assistance.", User.GetMention()))
@@ -166,10 +234,10 @@ func BookServer(m *discordgo.MessageCreate, command string, args []string) {
 
 	if Serv != nil {
 		// Book the server.
-		RCONPassword, ServerPassword, err := Serv.Book(m.Author)
+		RCONPassword, ServerPassword, err := Serv.Book(target)
 		if err != nil {
 			Session.ChannelMessageSend(m.ChannelID, fmt.Sprintf("%s: Something went wrong while trying to book your server, please try again later.", User.GetMention()))
-			log.Println(fmt.Sprintf("Failed to book server \"%s\" from \"%s\":", Serv.Name, m.Author.ID), err)
+			log.Println(fmt.Sprintf("Failed to book server \"%s\" from \"%s\":", Serv.Name, target.ID), err)
 		} else {
 			// Start the server.
 			go func(Serv *servers.Server, m *discordgo.MessageCreate) {
@@ -186,15 +254,15 @@ func BookServer(m *discordgo.MessageCreate, command string, args []string) {
 					log.Println("Failed to book server:", err)
 
 					// Reset the user's booked state.
-					if err := globals.RedisClient.Set(fmt.Sprintf("user.%s", m.Author.ID), "", 0).Err(); err != nil {
+					if err := globals.RedisClient.Set(fmt.Sprintf("user.%s", target.ID), "", 0).Err(); err != nil {
 						log.Println("Redis error:", err)
-						log.Println("Failed to set user information for user:", m.Author.ID)
+						log.Println("Failed to set user information for user:", target.ID)
 						return
 					}
 
 					UpdateGameString()
 
-					log.Println(fmt.Sprintf("Failed to start server \"%s\" from \"%s\"", Serv.Name, m.Author.ID))
+					log.Println(fmt.Sprintf("Failed to start server \"%s\" from \"%s\"", Serv.Name, target.ID))
 				}
 			}(Serv, m)
 
@@ -202,19 +270,19 @@ func BookServer(m *discordgo.MessageCreate, command string, args []string) {
 			Session.ChannelMessageSend(m.ChannelID, fmt.Sprintf("%s: Server details have been sent via private message.", User.GetMention()))
 
 			// Create the private DM channel, and then send the server details (and a small tip).
-			UserChannel, _ := Session.UserChannelCreate(m.Author.ID)
+			UserChannel, _ := Session.UserChannelCreate(target.ID)
 			sendServerDetails(UserChannel.ID, Serv, ServerPassword, RCONPassword)
 
 			// Add the user's booked state.
-			if err := globals.RedisClient.Set(fmt.Sprintf("user.%s", m.Author.ID), Serv.UUID, 0).Err(); err != nil {
+			if err := globals.RedisClient.Set(fmt.Sprintf("user.%s", target.ID), Serv.UUID, 0).Err(); err != nil {
 				log.Println("Redis error:", err)
-				log.Println("Failed to set user information for user:", m.Author.ID)
+				log.Println("Failed to set user information for user:", target.ID)
 				return
 			}
 
 			UpdateGameString()
 
-			log.Println(fmt.Sprintf("Booked server \"%s\" from \"%s\"", Serv.Name, m.Author.ID))
+			log.Println(fmt.Sprintf("Booked server \"%s\" from \"%s\"", Serv.Name, target.ID))
 		}
 	} else {
 		Session.ChannelMessageSend(m.ChannelID, fmt.Sprintf("%s: No servers are currently available.", User.GetMention()))
@@ -226,10 +294,30 @@ func BookServer(m *discordgo.MessageCreate, command string, args []string) {
 // This function checks whether the user has a server booked, if so,
 // it unbooks it, allowing it for use by another user, and shutting down
 // the TF2 server.
-func UnbookServer(m *discordgo.MessageCreate, command string, args []string) {
+func UnbookServer(m *discordgo.MessageCreate, command string, permissions commands.CommandPermissions, args commands.CommandArgList) {
 	User := &util.PatchUser{m.Author}
+	target := m.Author
 
-	bookingInfo, err := GetDefaultValue.Run(globals.RedisClient, []string{fmt.Sprintf("user.%s", m.Author.ID)}, nil).Result()
+	// handle admins unbooking servers for other users.
+	// `unbook @Alex` -> Unbooks a server from @Alex
+	if permissions.Test(discordgo.PermissionManageServer) && args.Num() > 1 {
+		// No point trying to decode if there are no valid mentions.
+		if len(m.Mentions) > 0 {
+			discordMention, _ := args.GetArg(1)
+			var dirtyDiscordID string
+			n, err := fmt.Sscanf(discordMention, "<@%s>", &dirtyDiscordID)
+			discordID := dirtyDiscordID[:len(dirtyDiscordID)-1]
+			if n == 1 || err == nil { // Ensure no error occurred, and that we only scanned 1 ID
+				user, err := Session.User(discordID)
+				if err == nil {
+					Session.ChannelMessageSend(m.ChannelID, fmt.Sprintf("%s: Using Discord user `%s`", User.GetMention(), user.Username))
+					target = user
+				}
+			}
+		}
+	}
+
+	bookingInfo, err := GetDefaultValue.Run(globals.RedisClient, []string{fmt.Sprintf("user.%s", target.ID)}, nil).Result()
 	if err != nil {
 		// Send a message to let the user know an error occurred.
 		Session.ChannelMessageSend(m.ChannelID, fmt.Sprintf("%s: Oops, looked like an error has occurred. Please contact an admin for assistance.", User.GetMention()))
@@ -246,6 +334,9 @@ func UnbookServer(m *discordgo.MessageCreate, command string, args []string) {
 	Serv, err := pool.GetServerByUUID(bookingInfoStr)
 
 	if err == nil && Serv != nil {
+		// Get the booker name, before the server gets unbooked
+		bookerName := Serv.BookerFullname
+
 		// Stop the server.
 		go func(Serv *servers.Server, m *discordgo.MessageCreate) {
 			err := Serv.Stop()
@@ -262,20 +353,24 @@ func UnbookServer(m *discordgo.MessageCreate, command string, args []string) {
 		}(Serv, m)
 
 		// Remove the user's booked state.
-		if err := globals.RedisClient.Set(fmt.Sprintf("user.%s", m.Author.ID), "", 0).Err(); err != nil {
+		if err := globals.RedisClient.Set(fmt.Sprintf("user.%s", target.ID), "", 0).Err(); err != nil {
 			log.Println("Redis error:", err)
-			log.Println("Failed to set user information for user:", m.Author.ID)
+			log.Println("Failed to set user information for user:", target.ID)
 			return
 		}
 
 		// Unbook the server.
-		Serv.Unbook()
+		err = Serv.Unbook()
+		if err != nil {
+			Session.ChannelMessageSend(m.ChannelID, fmt.Sprintf("%s: Unbook failed. Please contact an admin for assistance. (Failed to unreserve the server)", User.GetMention()))
+			return
+		}
 
 		// Upload STV demos
-		STVMessage, err := Serv.UploadSTV()
+		STVMessage, err := Serv.UploadSTV(bookerName)
 
 		// Send 'returned' message.
-		Session.ChannelMessageSend(m.ChannelID, fmt.Sprintf("%s: Server returned.", User.GetMention()))
+		Session.ChannelMessageSend(m.ChannelID, fmt.Sprintf("%s: Server unbooked.", User.GetMention()))
 
 		// Send 'stv' message, if it uploaded successfully.
 		if err == nil {
@@ -284,14 +379,14 @@ func UnbookServer(m *discordgo.MessageCreate, command string, args []string) {
 
 		UpdateGameString()
 
-		log.Println(fmt.Sprintf("Unbooked server \"%s\" from \"%s\"", Serv.Name, m.Author.ID))
+		log.Println(fmt.Sprintf("Unbooked server \"%s\" from \"%s\"", Serv.Name, target.ID))
 	} else {
 		Session.ChannelMessageSend(m.ChannelID, fmt.Sprintf("%s: You haven't booked a server. Type `book` to book a server.", User.GetMention()))
 
 		// We're in an invalid state, reset back to normal.
-		if err := globals.RedisClient.Set(fmt.Sprintf("user.%s", m.Author.ID), "", 0).Err(); err != nil {
+		if err := globals.RedisClient.Set(fmt.Sprintf("user.%s", target.ID), "", 0).Err(); err != nil {
 			log.Println("Redis error:", err)
-			log.Println("Failed to set user information for user:", m.Author.ID)
+			log.Println("Failed to set user information for user:", target.ID)
 			return
 		}
 
@@ -303,10 +398,30 @@ func UnbookServer(m *discordgo.MessageCreate, command string, args []string) {
 // Called when a user types the 'extend' command into the Discord channel.
 // This function checks whether the user has a server booked out, if so,
 // it will extend the booking by adding time onto the servers return time.
-func ExtendServer(m *discordgo.MessageCreate, command string, args []string) {
+func ExtendServer(m *discordgo.MessageCreate, command string, permissions commands.CommandPermissions, args commands.CommandArgList) {
 	User := &util.PatchUser{m.Author}
+	target := m.Author
 
-	bookingInfo, err := GetDefaultValue.Run(globals.RedisClient, []string{fmt.Sprintf("user.%s", m.Author.ID)}, nil).Result()
+	// handle admins unbooking servers for other users.
+	// `unbook @Alex` -> Unbooks a server from @Alex
+	if permissions.Test(discordgo.PermissionManageServer) && args.Num() > 1 {
+		// No point trying to decode if there are no valid mentions.
+		if len(m.Mentions) > 0 {
+			discordMention, _ := args.GetArg(1)
+			var dirtyDiscordID string
+			n, err := fmt.Sscanf(discordMention, "<@%s>", &dirtyDiscordID)
+			discordID := dirtyDiscordID[:len(dirtyDiscordID)-1]
+			if n == 1 || err == nil { // Ensure no error occurred, and that we only scanned 1 ID
+				user, err := Session.User(discordID)
+				if err == nil {
+					Session.ChannelMessageSend(m.ChannelID, fmt.Sprintf("%s: Using Discord user `%s`", User.GetMention(), user.Username))
+					target = user
+				}
+			}
+		}
+	}
+
+	bookingInfo, err := GetDefaultValue.Run(globals.RedisClient, []string{fmt.Sprintf("user.%s", target.ID)}, nil).Result()
 	if err != nil {
 		// Send a message to let the user know an error occurred.
 		Session.ChannelMessageSend(m.ChannelID, fmt.Sprintf("%s: Oops, looked like an error has occurred. Please contact an admin for assistance.", User.GetMention()))
@@ -329,7 +444,7 @@ func ExtendServer(m *discordgo.MessageCreate, command string, args []string) {
 		Serv.SendCommand(
 			fmt.Sprintf(
 				"say @%s: Your booking has been extended by %s.",
-				m.Author.Username,
+				target.Username,
 				fmt.Sprintf("%d minutes", config.Conf.Booking.MaxIdleMinutes),
 			),
 		)
@@ -349,9 +464,9 @@ func ExtendServer(m *discordgo.MessageCreate, command string, args []string) {
 
 		// If the program execution reaches here, the state of the users & user-servers map
 		// is invalid and should be reset to the 'unbooked' state.
-		if err := globals.RedisClient.Set(fmt.Sprintf("user.%s", m.Author.ID), "", 0).Err(); err != nil {
+		if err := globals.RedisClient.Set(fmt.Sprintf("user.%s", target.ID), "", 0).Err(); err != nil {
 			log.Println("Redis error:", err)
-			log.Println("Failed to set user information for user:", m.Author.ID)
+			log.Println("Failed to set user information for user:", target.ID)
 			return
 		}
 
@@ -359,10 +474,30 @@ func ExtendServer(m *discordgo.MessageCreate, command string, args []string) {
 	}
 }
 
-func SendPassword(m *discordgo.MessageCreate, command string, args []string) {
+func SendPassword(m *discordgo.MessageCreate, command string, permissions commands.CommandPermissions, args commands.CommandArgList) {
 	User := &util.PatchUser{m.Author}
+	target := m.Author
 
-	bookingInfo, err := GetDefaultValue.Run(globals.RedisClient, []string{fmt.Sprintf("user.%s", m.Author.ID)}, nil).Result()
+	// handle admins unbooking servers for other users.
+	// `unbook @Alex` -> Unbooks a server from @Alex
+	if permissions.Test(discordgo.PermissionManageServer) && args.Num() > 1 {
+		// No point trying to decode if there are no valid mentions.
+		if len(m.Mentions) > 0 {
+			discordMention, _ := args.GetArg(1)
+			var dirtyDiscordID string
+			n, err := fmt.Sscanf(discordMention, "<@%s>", &dirtyDiscordID)
+			discordID := dirtyDiscordID[:len(dirtyDiscordID)-1]
+			if n == 1 || err == nil { // Ensure no error occurred, and that we only scanned 1 ID
+				user, err := Session.User(discordID)
+				if err == nil {
+					Session.ChannelMessageSend(m.ChannelID, fmt.Sprintf("%s: Using Discord user `%s`", User.GetMention(), user.Username))
+					target = user
+				}
+			}
+		}
+	}
+
+	bookingInfo, err := GetDefaultValue.Run(globals.RedisClient, []string{fmt.Sprintf("user.%s", target.ID)}, nil).Result()
 	if err != nil {
 		// Send a message to let the user know an error occurred.
 		Session.ChannelMessageSend(m.ChannelID, fmt.Sprintf("%s: Oops, looked like an error has occurred. Please contact an admin for assistance.", User.GetMention()))
@@ -396,7 +531,7 @@ func SendPassword(m *discordgo.MessageCreate, command string, args []string) {
 		Session.ChannelMessageSend(m.ChannelID, fmt.Sprintf("%s: Server password have been sent via private message.", User.GetMention()))
 
 		// Send message to private DM, with server details.
-		UserChannel, _ := Session.UserChannelCreate(m.Author.ID)
+		UserChannel, _ := Session.UserChannelCreate(target.ID)
 		Session.ChannelMessageSend(
 			UserChannel.ID,
 			fmt.Sprintf(
@@ -413,9 +548,9 @@ func SendPassword(m *discordgo.MessageCreate, command string, args []string) {
 
 		// If the program execution reaches here, the state of the users & user-servers map
 		// is invalid and should be reset to the 'unbooked' state.
-		if err := globals.RedisClient.Set(fmt.Sprintf("user.%s", m.Author.ID), "", 0).Err(); err != nil {
+		if err := globals.RedisClient.Set(fmt.Sprintf("user.%s", target.ID), "", 0).Err(); err != nil {
 			log.Println("Redis error:", err)
-			log.Println("Failed to set user information for user:", m.Author.ID)
+			log.Println("Failed to set user information for user:", target.ID)
 			return
 		}
 
@@ -424,14 +559,34 @@ func SendPassword(m *discordgo.MessageCreate, command string, args []string) {
 }
 
 func getServerStatusString(server *servers.Server) string {
-	if server.IsBooked() {
-		return "Running"
+	if server.Reserved && server.Running {
+		return "Booked"
+	}
+	if server.Reserved && !server.Running {
+		return "Errored"
 	}
 	return "Stopped"
 }
 
-func PrintStats(m *discordgo.MessageCreate, command string, args []string) {
+func PrintStats(m *discordgo.MessageCreate, command string, permissions commands.CommandPermissions, args commands.CommandArgList) {
 	User := &util.PatchUser{m.Author}
+
+	now := time.Now()
+	to := now.Add(-4 * time.Hour)
+
+	rpcLatencyGraph, err := rpcLatency(now, to)
+	if err != nil {
+		Session.ChannelMessageSend(m.ChannelID, fmt.Sprintf("%s: Graph error: %s", User.GetMention(), err))
+	} else {
+		Session.ChannelFileSend(m.ChannelID, "rpc_latency.png", &rpcLatencyGraph)
+	}
+
+	rpcRequestsGraph, err := rpcRequests(now, to)
+	if err != nil {
+		Session.ChannelMessageSend(m.ChannelID, fmt.Sprintf("%s: Graph error: %s", User.GetMention(), err))
+	} else {
+		Session.ChannelFileSend(m.ChannelID, "rpc_requests.png", &rpcRequestsGraph)
+	}
 
 	servs := pool.GetServers()
 	// Sync the servers from redis.
@@ -451,25 +606,34 @@ func PrintStats(m *discordgo.MessageCreate, command string, args []string) {
 
 	data := make([][]string, 0, len(servs))
 	for _, serv := range servs {
+		log.Println(fmt.Sprintf("Server: %s, Reserved: %t, Running: %t", serv.Name, serv.Reserved, serv.Running))
+
 		// Retrieve the name of the Discord user who booked the server. Uses empty string if no one has booked the server.
 		bookerID := serv.Booker
 		bookerUser, err := Session.User(bookerID)
 
 		var username string
 		if err != nil {
-			username = ""
+			username = "Unknown"
 		} else {
 			username = bookerUser.Username
 		}
 
-		data = append(data, []string{serv.Name, getServerStatusString(serv), serv.BookedDate.String(), username, serv.Booker})
+		bookedTime := serv.BookedDate.String()
+		if serv.BookedDate.Equal(time.Time{}) {
+			bookedTime = ""
+		}
+
+		data = append(data, []string{serv.Name, getServerStatusString(serv), bookedTime, username})
 	}
 
 	var buf bytes.Buffer
 	table := tablewriter.NewWriter(&buf)
-	table.SetHeader([]string{"Server name", "Status", "Book time", "Booker name", "Booker ID"})
-	table.SetBorders(tablewriter.Border{Left: true, Top: true, Right: true, Bottom: true})
+	table.SetHeader([]string{"Server name", "Status", "Book time", "Booker name"})
+	table.SetHeaderLine(false)
+	table.SetBorders(tablewriter.Border{Left: false, Top: false, Right: false, Bottom: false})
 	table.SetAutoFormatHeaders(false)
+	table.SetRowSeparator("|")
 	table.AppendBulk(data)
 	table.Render()
 
@@ -477,80 +641,23 @@ func PrintStats(m *discordgo.MessageCreate, command string, args []string) {
 	Session.ChannelMessageSend(m.ChannelID, fmt.Sprintf("%s: %s", User.GetMention(), message))
 }
 
-func Update(m *discordgo.MessageCreate, command string, args []string) {
+func Graph(m *discordgo.MessageCreate, command string, permissions commands.CommandPermissions, args commands.CommandArgList) {
 	User := &util.PatchUser{m.Author}
+	numArgs := args.Num()
 
-	if len(args) <= 0 {
-		// Send usage.
-		Session.ChannelMessageSend(m.ChannelID, fmt.Sprintf("%s: Usage: `update <release tag>`", User.GetMention()))
-		return
-	}
+	if numArgs == 3 {
+		now := time.Now()
+		to := now.Add(-24 * time.Hour)
 
-	// Create a GitHub API client.
-	client := github.NewClient(nil)
-	// Tag name
-	tagName := args[0]
+		graphClient := NewGraphClient("dd5930a2b34093f052aea1eeb290f11b", "a138ebaed3072d4c04e063b8ee66f686980aa794")
+		graph, err := graphClient.Graph(args.ToSlice()[1], args.ToSlice()[2], now, to)
+		if err != nil {
+			Session.ChannelMessageSend(m.ChannelID, fmt.Sprintf("%s: Graph err, %s", User.GetMention(), err))
+			return
+		}
 
-	// Get release by tag.
-	release, _, err := client.Repositories.GetReleaseByTag("alex-j-butler", "tf2-booking", tagName)
-	if err != nil {
-		// Send error message.
-		Session.ChannelMessageSend(m.ChannelID, fmt.Sprintf("%s: Failed to retrieve release.", User.GetMention()))
-		return
-	}
-
-	asset, err := util.GetReleaseAsset(release.Assets, "tf2-booking-amd64")
-	if err != nil {
-		// Send error message.
-		Session.ChannelMessageSend(m.ChannelID, fmt.Sprintf("%s: Failed to retrieve release asset.", User.GetMention()))
-		return
-	}
-
-	//
-	Session.ChannelMessageSend(m.ChannelID, fmt.Sprintf("%s: Starting update to release %s", User.GetMention(), *release.TagName))
-
-	go func(asset github.ReleaseAsset) {
-		// Update the executable.
-		UpdateExecutable(*asset.BrowserDownloadURL)
-
-		// Send the success notification.
-		Session.ChannelMessageSend(m.ChannelID, fmt.Sprintf("%s: Updated `tf2-booking` & restarting now.", User.GetMention()))
-
-		// Annnnnd, exit.
-		wait.Exit()
-	}(asset)
-}
-
-func Exit(m *discordgo.MessageCreate, command string, args []string) {
-	User := &util.PatchUser{m.Author}
-
-	Session.ChannelMessageSend(m.ChannelID, fmt.Sprintf("%s: Shutting down `tf2-booking`.", User.GetMention()))
-
-	wait.Exit()
-}
-
-type UpdateResult struct {
-	ServerName string
-	Success    bool
-	Error      error
-}
-
-func UpdateAll(m *discordgo.MessageCreate, command string, args []string) {
-	User := &util.PatchUser{m.Author}
-	Session.ChannelMessageSend(m.ChannelID, fmt.Sprintf("%s: Updating all (non-running) servers.", User.GetMention()))
-
-	servs := pool.GetServers()
-
-	for _, server := range servs {
-		go func(s *servers.Server) {
-			success, err := s.SteamCMDUpdate()
-			if success {
-				Session.ChannelMessageSend(m.ChannelID, fmt.Sprintf("%s: %s updated", User.GetMention(), s.Name))
-			} else if !success && err == nil {
-				Session.ChannelMessageSend(m.ChannelID, fmt.Sprintf("%s: %s already up to date", User.GetMention(), s.Name))
-			} else if !success && err != nil {
-				Session.ChannelMessageSend(m.ChannelID, fmt.Sprintf("%s: %s failed with error: %s", User.GetMention(), s.Name, err))
-			}
-		}(server)
+		Session.ChannelFileSend(m.ChannelID, "graph.png", &graph)
+	} else {
+		Session.ChannelMessageSend(m.ChannelID, fmt.Sprintf("%s: %s", User.GetMention(), "graph <title> <dd query>"))
 	}
 }

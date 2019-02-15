@@ -2,9 +2,9 @@ package main
 
 import (
 	"fmt"
+	"io/ioutil"
 	"log"
 	"os"
-	"strings"
 	"time"
 
 	redis "gopkg.in/redis.v5"
@@ -42,7 +42,7 @@ var UserReportTimeouts map[string]time.Time
 var GetDefaultValue *redis.Script
 
 // Command system
-var Command *commands.Command
+var Command *commands.CommandSystem
 var IngameCommand *ingame.Command
 
 var pool servers.ServerPool
@@ -65,9 +65,28 @@ func main() {
 			Usage:   "run the server",
 			Action:  RunServer,
 		},
+		{
+			Name:    "graphtest",
+			Aliases: []string{"gt"},
+			Usage:   "test graphs",
+			Action:  GraphTest,
+		},
 	}
 
 	app.Run(os.Args)
+}
+
+func GraphTest(ctx *cli.Context) {
+	now := time.Now()
+	to := now.Add(-24 * (time.Hour * 7))
+
+	graphClient := NewGraphClient("dd5930a2b34093f052aea1eeb290f11b", "a138ebaed3072d4c04e063b8ee66f686980aa794")
+	// graphClient.Graph("avg:trace.rpc.request.duration{*} by {resource_name}", now, to)
+	graph, err := graphClient.Graph("Chart", "sum:booking_api.servers_running{*}.rollup(max)", now, to)
+	if err != nil {
+		log.Fatalln(err)
+	}
+	ioutil.WriteFile("graph.png", graph.Bytes(), 0644)
 }
 
 // RunServer is the subcommand handler that starts the TF2 Booking server.
@@ -141,7 +160,7 @@ func RunServer(ctx *cli.Context) {
 	logs.AddHandler(IngameMessageCreate)
 
 	// Register the commands and their command handlers.
-	Command = commands.New("")
+	Command = commands.New()
 	Command.Add(
 		commands.NewCommand(SyncServers),
 		"sync",
@@ -177,8 +196,17 @@ func RunServer(ctx *cli.Context) {
 	)
 	Command.Add(
 		commands.NewCommand(SendPassword),
-		"send password",
+		"password",
+		"string",
 		"/string",
+	)
+	Command.Add(
+		commands.NewCommand(Console),
+		"console",
+	)
+	Command.Add(
+		commands.NewCommand(Graph),
+		"graph",
 	)
 	Command.Add(
 		commands.NewCommand(PrintStats).
@@ -187,28 +215,10 @@ func RunServer(ctx *cli.Context) {
 		"stats",
 	)
 	Command.Add(
-		commands.NewCommand(Update).
-			Permissions(discordgo.PermissionManageServer).
-			RespondToDM(true),
-		"update",
-	)
-	Command.Add(
-		commands.NewCommand(Exit).
-			Permissions(discordgo.PermissionManageServer).
-			RespondToDM(true),
-		"exit",
-	)
-	Command.Add(
 		commands.NewCommand(Version).
 			Permissions(discordgo.PermissionManageServer).
 			RespondToDM(true),
 		"version",
-	)
-	Command.Add(
-		commands.NewCommand(UpdateAll).
-			Permissions(discordgo.PermissionManageServer).
-			RespondToDM(true),
-		"update",
 	)
 
 	// Register the ingame commands and their command handlers.
@@ -330,7 +340,7 @@ func MessageCreate(s *discordgo.Session, m *discordgo.MessageCreate) {
 	}
 
 	// Send the message content to the command handler to be dispatched appropriately.
-	Command.Handle(Session, m, strings.ToLower(m.Content), Permissions)
+	Command.Handle(Session, m, m.Content, Permissions)
 }
 
 // IngameMessageCreate handler for the ingame TF2 log handler.

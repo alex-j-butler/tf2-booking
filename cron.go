@@ -14,6 +14,8 @@ import (
 func CheckIdleMinutes() {
 	// Iterate through servers.
 	for _, Serv := range pool.GetBookedServers() {
+		Serv.Synchronise(globals.RedisClient)
+
 		go func(s *servers.Server) {
 			server, err := steam.Connect(s.Address)
 			if err != nil {
@@ -38,14 +40,14 @@ func CheckIdleMinutes() {
 			if info.Players < config.Conf.Booking.MinPlayers {
 				s.AddIdleMinute()
 			} else {
-				// Reset the number of idle minutes, and allow the timeout warning message to be sent again.
-				s.SentIdleWarning = false
+				// Reset the number of idle minutes
 				s.ResetIdleMinutes()
 			}
 
 			if s.IdleMinutes >= config.Conf.Booking.MaxIdleMinutes {
 				UserID := s.Booker
 				UserMention := s.BookerMention
+				UserName := s.BookerFullname
 
 				// Reset the idle minutes.
 				s.ResetIdleMinutes()
@@ -62,10 +64,10 @@ func CheckIdleMinutes() {
 				s.Stop()
 
 				// Upload STV demos
-				STVMessage, err := s.UploadSTV()
+				STVMessage, err := s.UploadSTV(UserName)
 
 				// Send 'returned' message
-				Session.ChannelMessageSend(config.Conf.Discord.DefaultChannel, fmt.Sprintf("%s: Your server was automatically unbooked (not enough players).", UserMention))
+				Session.ChannelMessageSend(config.Conf.Discord.DefaultChannel, fmt.Sprintf("%s: Your server was automatically unbooked.", UserMention))
 
 				// Send 'stv' message, if it uploaded successfully.
 				if err == nil {

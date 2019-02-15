@@ -25,15 +25,15 @@ type Server struct {
 	Address    string `json:"-"`
 	STVAddress string `json:"-"`
 
-	// Whether this server has been sent the idle unbooking warning.
-	SentIdleWarning bool
+	Running bool `json:"-"`
+
+	// true = server is currently booked and cannot be booked
+	// false = server is currently unbooked and is free to be booked
+	Reserved bool `json:"-"`
 
 	// Last known RCON password.
 	// If this RCON password is invalid, the server can send a tmux command to reset it.
 	RCONPassword string
-
-	// Specifies whether the server is currently booked.
-	Booked bool
 
 	// Specifies when the server was booked.
 	BookedDate time.Time
@@ -55,22 +55,20 @@ type Server struct {
 }
 
 func (s *Server) SetServerVars(userID string, fullname string) {
-	s.Booked = true
+	s.Reserved = true
 	s.BookedDate = time.Now()
 	s.Booker = userID
 	s.BookerMention = fmt.Sprintf("<@%s>", userID)
 	s.BookerFullname = fullname
-	s.SentIdleWarning = false
 	s.IdleMinutes = 0
 	s.ErrorMinutes = 0
 }
 
 func (s *Server) ResetServerVars() {
-	s.Booked = false
+	s.Reserved = false
 	s.BookedDate = time.Time{}
 	s.Booker = ""
 	s.BookerMention = ""
-	s.SentIdleWarning = false
 	s.IdleMinutes = 0
 	s.ErrorMinutes = 0
 }
@@ -110,15 +108,9 @@ func (s *Server) Synchronise(redisClient *redis.Client) error {
 	return nil
 }
 
-// Available returns whether the server is currently bookable,
-// or whether it's experiencing an error that would prevent it from being successfully booked.
-func (s *Server) Available() bool {
-	return s.Runner.IsAvailable(s) && !s.Runner.IsBooked(s)
-}
-
 // IsBooked returns whether the server is currently booked
 func (s *Server) IsBooked() bool {
-	return s.Booked && s.Runner.IsBooked(s)
+	return s.Reserved
 }
 
 func (s *Server) AddIdleMinute() {
@@ -198,7 +190,7 @@ func (s *Server) Stop() error {
 func (s *Server) Book(user *discordgo.User) (string, string, error) {
 	patchUser := &util.PatchUser{user}
 
-	if s.Booked == true {
+	if s.IsBooked() {
 		return "", "", errors.New("Server is already booked")
 	}
 
@@ -224,8 +216,9 @@ func (s *Server) Book(user *discordgo.User) (string, string, error) {
 }
 
 func (s *Server) Unbook() error {
-	if s.Booked == false {
-		return errors.New("Server is not booked")
+	err := s.Runner.Destroy(s)
+	if err != nil {
+		return err
 	}
 
 	// Reset server variables.
@@ -240,7 +233,6 @@ func (s *Server) Unbook() error {
 func (s *Server) ExtendBooking() {
 	// TODO: Implement this.
 	// Reset the number of idle minutes, and allow the timeout warning message to be sent again.
-	s.SentIdleWarning = false
 	s.ResetIdleMinutes()
 
 	// Update the server in Redis.
@@ -256,9 +248,12 @@ func (s *Server) generateSTVReply(demos []string) string {
 	return message
 }
 
-func (s *Server) UploadSTV() (string, error) {
+func (s *Server) UploadSTV(uploaderName string) (string, error) {
+	// Sync the server (booker ID needs to be updated for upload STVs to work)
+	s.Synchronise(globals.RedisClient)
+
 	// Run the uploadSTV function from the runner implementation.
-	demos, err := s.Runner.UploadSTV(s)
+	demos, err := s.Runner.UploadSTV(s, uploaderName)
 	if err != nil {
 		return "", err
 	}
@@ -272,7 +267,8 @@ func (s *Server) UploadSTV() (string, error) {
 }
 
 func (s *Server) SteamCMDUpdate() (bool, error) {
-	return s.Runner.Update(s)
+	// return s.Runner.Update(s)
+	return false, errors.New("Unimplemented")
 }
 
 func (s *Server) SendCommand(command string) error {
@@ -316,4 +312,9 @@ func (s *Server) SendRCONCommand(command string) (string, error) {
 // Console queries the server for the latest console lines.
 func (s *Server) Console() ([]string, error) {
 	return s.Runner.Console(s, 0)
+}
+
+// Console queries the server for the latest console lines with a maximum number of lines.
+func (s *Server) ConsoleMax(max int) ([]string, error) {
+	return s.Runner.Console(s, max)
 }

@@ -71,10 +71,28 @@ func (sr ServerRunner) Setup(server *Server) (rconPassword string, srvPassword s
 		return "", "", err
 	}
 
+	// Reserve the server, yo.
+	err = apiServer.Reserve(sr.APIClient, true)
+	if err != nil {
+		return "", "", err
+	}
+
 	// Set the password on the server.
 	err = apiServer.SetPassword(sr.APIClient, rconPassword, srvPassword)
 
 	return rconPassword, srvPassword, err
+}
+
+func (sr ServerRunner) Destroy(server *Server) (err error) {
+	// Retrieve the API server instance from the API client.
+	apiServer, err := sr.getServer(server.UUID)
+	if err != nil {
+		return err
+	}
+
+	// Unreserve the server, yo.
+	err = apiServer.Reserve(sr.APIClient, false)
+	return err
 }
 
 func (sr ServerRunner) Start(server *Server) error {
@@ -103,7 +121,7 @@ func (sr ServerRunner) Stop(server *Server) error {
 	return err
 }
 
-func (sr ServerRunner) UploadSTV(server *Server) ([]string, error) {
+func (sr ServerRunner) UploadSTV(server *Server, uploaderName string) ([]string, error) {
 	// Retrieve the API server instance from the API client.
 	apiServer, err := sr.getServer(server.UUID)
 	if err != nil {
@@ -111,7 +129,7 @@ func (sr ServerRunner) UploadSTV(server *Server) ([]string, error) {
 	}
 
 	// Upload demos.
-	demoURLs, err := apiServer.UploadDemos(sr.APIClient, server.BookerFullname)
+	demoURLs, err := apiServer.UploadDemos(sr.APIClient, uploaderName)
 	if err != nil {
 		return nil, err
 	}
@@ -148,22 +166,11 @@ func (sr ServerRunner) Console(server *Server, lines int) ([]string, error) {
 	return consoleLines, err
 }
 
-func (sr ServerRunner) IsAvailable(server *Server) bool {
-	// Attempt to request the server information, if it fails, the server is unavailable.
-	_, err := sr.APIClient.GetServer(server.UUID)
-	if err != nil {
-		// Unavailable!
-		return false
-	}
-
-	return true
-}
-
 func (sr ServerRunner) IsBooked(server *Server) bool {
 	apiServer, err := sr.APIClient.GetServer(server.UUID)
 	if err != nil {
 		return false
 	}
 
-	return apiServer.Running
+	return apiServer.Reserved
 }

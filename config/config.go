@@ -53,6 +53,8 @@ type Config struct {
 	} `yaml:"booking"`
 
 	Commands struct {
+		DemoLink string `yaml:"demo_link"`
+
 		ReportDuration util.DurationUtil `yaml:"report_duration"`
 	}
 
