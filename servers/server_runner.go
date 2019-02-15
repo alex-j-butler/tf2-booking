@@ -2,14 +2,16 @@ package servers
 
 import (
 	"math/rand"
+	"sync"
 	"time"
 
 	"github.com/Qixalite/booking-api/client"
 )
 
 type ServerRunner struct {
-	APIClient     *client.Client
-	cachedServers map[string]*client.ServerResource
+	APIClient          *client.Client
+	cachedServers      map[string]*client.ServerResource
+	cachedServersMutex sync.Mutex
 }
 
 func NewRunner(apiClient *client.Client) *ServerRunner {
@@ -48,6 +50,9 @@ func (sr ServerRunner) generatePassword() string {
 }
 
 func (sr ServerRunner) getServer(uuid string) (*client.ServerResource, error) {
+	sr.cachedServersMutex.Lock()
+	defer sr.cachedServersMutex.Unlock()
+
 	if server, ok := sr.cachedServers[uuid]; ok {
 		return server, nil
 	}
